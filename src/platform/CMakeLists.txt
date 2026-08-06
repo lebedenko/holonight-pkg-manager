@@ -1,0 +1,4 @@
+add_library(holonight_packages_platform INTERFACE)
+target_include_directories(holonight_packages_platform INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(holonight_packages_platform INTERFACE Qt6::Core Qt6::Gui Qt6::DBus)
+target_compile_features(holonight_packages_platform INTERFACE cxx_std_23)

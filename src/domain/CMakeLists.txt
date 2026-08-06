@@ -1,0 +1,4 @@
+add_library(holonight_packages_domain INTERFACE)
+target_include_directories(holonight_packages_domain INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(holonight_packages_domain INTERFACE Qt6::Core)
+target_compile_features(holonight_packages_domain INTERFACE cxx_std_23)

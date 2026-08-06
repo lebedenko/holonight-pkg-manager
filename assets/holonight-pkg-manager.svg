@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="tile" x1="38" y1="28" x2="222" y2="230" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#17243B"/>
+      <stop offset="1" stop-color="#090E1B"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="40" y1="34" x2="218" y2="220" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5DEBFF"/>
+      <stop offset=".52" stop-color="#57A8FF"/>
+      <stop offset="1" stop-color="#B56CFF"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#tile)" stroke="url(#accent)" stroke-width="8" stroke-linejoin="round"
+        d="M54 20h132l50 50v132l-34 34H70l-50-50V54z"/>
+  <path fill="#253653" opacity=".72" d="M54 35h126l41 41v8L174 47H47v127l-12 12V60z"/>
+  <path fill="#101B30" stroke="#DDF8FF" stroke-width="12" stroke-linejoin="round"
+        d="m128 65 67 35v76l-67 37-67-37v-76z"/>
+  <path fill="none" stroke="#65E7FF" stroke-width="12" stroke-linejoin="round"
+        d="m61 100 67 37 67-37M128 137v76M94 82l68 37"/>
+  <path fill="#B56CFF" d="m156 160 11 7 11-7v25l-11 7-11-7z"/>
+</svg>

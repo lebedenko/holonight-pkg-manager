@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-24.04
+    container: ghcr.io/lebedenko/holonight-pkg-manager-ci:latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: lebedenko/holonight-qt
+          path: holonight-qt-dep
+      - name: Install HoloNight Qt
+        run: |
+          cmake -S holonight-qt-dep -B holonight-qt-dep/build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build holonight-qt-dep/build --parallel
+          cmake --install holonight-qt-dep/build --prefix /usr
+      - name: Configure
+        run: cmake -B build -G Ninja -S . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBUILD_TESTS=ON
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --no-tests=error
+      - name: QML lint
+        run: cmake --build build --target qml-lint
+
+  static-checks:
+    runs-on: ubuntu-24.04
+    container: ghcr.io/lebedenko/holonight-pkg-manager-ci:latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: lebedenko/holonight-qt
+          path: holonight-qt-dep
+      - name: Install HoloNight Qt
+        run: |
+          cmake -S holonight-qt-dep -B holonight-qt-dep/build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build holonight-qt-dep/build --parallel
+          cmake --install holonight-qt-dep/build --prefix /usr
+      - name: Configure
+        run: cmake -B build -G Ninja -S . -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBUILD_TESTS=ON
+      - name: Format check
+        run: cmake --build build --target format-check
+      - name: Clang tidy
+        run: cmake --build build --target tidy

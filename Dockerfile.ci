@@ -1,0 +1,15 @@
+FROM archlinux:latest
+
+RUN pacman -Syu --noconfirm && \
+    pacman -S --noconfirm \
+        base-devel \
+        clang \
+        cmake \
+        dbus \
+        git \
+        gtest \
+        ninja \
+        pkgconf \
+        qt6-base \
+        qt6-declarative \
+    && pacman -Scc --noconfirm

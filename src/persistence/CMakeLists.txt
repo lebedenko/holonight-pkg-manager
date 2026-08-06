@@ -1,0 +1,4 @@
+add_library(holonight_packages_persistence INTERFACE)
+target_include_directories(holonight_packages_persistence INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(holonight_packages_persistence INTERFACE holonight_packages_domain Qt6::Core Qt6::Sql)
+target_compile_features(holonight_packages_persistence INTERFACE cxx_std_23)

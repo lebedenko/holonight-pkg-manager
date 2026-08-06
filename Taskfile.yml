@@ -1,0 +1,91 @@
+version: "3"
+
+vars:
+  BUILD_DIR: build
+  HOLONIGHT_QT_PREFIX: /tmp/holonight-qt-prefix
+  HOLONIGHT_QT_DIR: /tmp/holonight-qt-prefix/lib/cmake/HolonightQt
+  NPROC:
+    sh: nproc
+
+tasks:
+  build:qt-dependency:
+    desc: Build and install the sibling holonight-qt dependency
+    cmds:
+      - cmake --build ../holonight-qt/build -j{{.NPROC}}
+      - cmake --install ../holonight-qt/build --prefix {{.HOLONIGHT_QT_PREFIX}}
+
+  configure:
+    desc: Configure a debug build
+    deps: [build:qt-dependency]
+    cmds:
+      - cmake -B {{.BUILD_DIR}} -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=OFF -DENABLE_COVERAGE=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_PREFIX_PATH={{.HOLONIGHT_QT_PREFIX}} -DHolonightQt_DIR={{.HOLONIGHT_QT_DIR}} -S .
+      - ln -sf {{.BUILD_DIR}}/compile_commands.json .
+
+  configure-tests:
+    desc: Configure a debug build with tests
+    deps: [build:qt-dependency]
+    cmds:
+      - cmake -B {{.BUILD_DIR}} -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DENABLE_COVERAGE=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_PREFIX_PATH={{.HOLONIGHT_QT_PREFIX}} -DHolonightQt_DIR={{.HOLONIGHT_QT_DIR}} -S .
+      - ln -sf {{.BUILD_DIR}}/compile_commands.json .
+
+  configure-coverage:
+    desc: Configure tests with coverage instrumentation
+    deps: [build:qt-dependency]
+    cmds:
+      - cmake -B {{.BUILD_DIR}} -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DENABLE_COVERAGE=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_PREFIX_PATH={{.HOLONIGHT_QT_PREFIX}} -DHolonightQt_DIR={{.HOLONIGHT_QT_DIR}} -S .
+
+  build:
+    desc: Build the application
+    deps: [configure]
+    cmds:
+      - cmake --build {{.BUILD_DIR}} -j{{.NPROC}}
+
+  run:
+    desc: Build and run HoloNight Packages
+    deps: [build]
+    cmds:
+      - ./{{.BUILD_DIR}}/holonight-packages
+
+  test:
+    desc: Build and run tests
+    deps: [configure-tests]
+    cmds:
+      - cmake --build {{.BUILD_DIR}} -j{{.NPROC}}
+      - ctest --test-dir {{.BUILD_DIR}} --output-on-failure --no-tests=error
+
+  coverage:
+    desc: Generate an HTML coverage report
+    deps: [configure-coverage]
+    cmds:
+      - cmake --build {{.BUILD_DIR}} --target coverage
+    generates: ["{{.BUILD_DIR}}/coverage/index.html"]
+
+  format:
+    desc: Format C++ sources
+    deps: [configure]
+    cmds:
+      - cmake --build {{.BUILD_DIR}} --target format
+
+  format-check:
+    desc: Check C++ formatting
+    deps: [configure]
+    cmds:
+      - cmake --build {{.BUILD_DIR}} --target format-check
+
+  tidy:
+    desc: Run clang-tidy
+    deps: [configure-tests]
+    cmds:
+      - cmake --build {{.BUILD_DIR}} --target tidy
+
+  qml-lint:
+    desc: Run qmllint
+    deps: [configure]
+    cmds:
+      - cmake --build {{.BUILD_DIR}} --target qml-lint
+
+  clean:
+    desc: Remove the build directory
+    cmds:
+      - rm -rf {{.BUILD_DIR}}
+    prompt: Remove {{.BUILD_DIR}}/ entirely?
