@@ -5,6 +5,7 @@
 #include <memory>
 
 class QQuickView;
+class InstalledPackagesModel;
 
 class PackagesApplication : public QGuiApplication {
   Q_OBJECT
@@ -19,5 +20,6 @@ class PackagesApplication : public QGuiApplication {
   PackagesApplication& operator=(PackagesApplication&&) = delete;
 
  private:
+  std::unique_ptr<InstalledPackagesModel> installed_packages_model_;
   std::unique_ptr<QQuickView> view_;
 };

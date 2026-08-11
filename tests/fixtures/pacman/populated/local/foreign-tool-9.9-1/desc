@@ -1,0 +1,15 @@
+%NAME%
+foreign-tool
+
+%VERSION%
+9.9-1
+
+%BASE%
+foreign-tool
+
+%REASON%
+0
+
+%VALIDATION%
+none
+

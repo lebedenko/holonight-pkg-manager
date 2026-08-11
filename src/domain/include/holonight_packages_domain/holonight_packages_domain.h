@@ -1,3 +1,4 @@
 #pragma once
 
-namespace holonight_packages_domain {}
+#include "holonight_packages_domain/package.h"
+#include "holonight_packages_domain/package_source.h"

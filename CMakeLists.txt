@@ -8,7 +8,7 @@ set(CMAKE_AUTORCC ON)
 
 include(GNUInstallDirs)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick Qml Network Sql DBus)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick Qml Network Sql DBus Concurrent)
 find_package(HolonightQt REQUIRED)
 
 qt_policy(SET QTP0004 NEW)
@@ -95,7 +95,7 @@ endif()
 
 if(QMLLINT)
   add_custom_target(qml-lint
-    COMMAND ${QMLLINT} --unqualified disable --unused-imports disable
+    COMMAND ${QMLLINT} --unused-imports disable
       -I "${CMAKE_CURRENT_BINARY_DIR}/apps/packages"
       -I "${CMAKE_BINARY_DIR}"
       -I "/tmp/holonight-qt-prefix/lib/qt6/qml"

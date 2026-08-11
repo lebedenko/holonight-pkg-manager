@@ -2,6 +2,8 @@ qt_add_executable(holonight-packages
   main.cpp
   app/PackagesApplication.h
   app/PackagesApplication.cpp
+  app/InstalledPackagesModel.h
+  app/InstalledPackagesModel.cpp
 )
 
 set_target_properties(holonight-packages PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
@@ -25,6 +27,7 @@ qt_add_qml_module(holonight-packages
   RESOURCE_PREFIX "/"
   NO_IMPORT_SCAN
   QML_FILES ${HOLONIGHT_PACKAGES_QML_FILES}
+  SOURCES app/InstalledPackagesModel.h
   RESOURCES ${HOLONIGHT_PACKAGES_RESOURCES}
 )
 
@@ -36,7 +39,7 @@ target_link_libraries(holonight-packages PRIVATE
   holonight_packages_advisor
   holonight_packages_persistence
   holonight_packages_platform
-  Qt6::Core Qt6::Gui Qt6::Quick Qt6::Qml
+  Qt6::Core Qt6::Gui Qt6::Quick Qt6::Qml Qt6::Concurrent
 )
 
 target_compile_definitions(holonight-packages PRIVATE HOLONIGHT_PACKAGES_VERSION="${PROJECT_VERSION}")
