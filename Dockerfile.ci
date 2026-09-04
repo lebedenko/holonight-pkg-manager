@@ -12,4 +12,6 @@ RUN pacman -Syu --noconfirm && \
         pkgconf \
         qt6-base \
         qt6-declarative \
+        qt6-svg \
+        tomlplusplus \
     && pacman -Scc --noconfirm
