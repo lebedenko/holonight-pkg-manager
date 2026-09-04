@@ -36,9 +36,9 @@
   - REQs: REQ-F-002, REQ-F-006, REQ-F-007, REQ-NF-001, REQ-C-004
   - Check: `tests/backends/alpm_package_source_test.cpp` passes at least 5 tests: valid populated fixture returns 3 packages with correct fields, empty fixture returns 0 packages (no error), invalid root path returns error without crashing, foreign-tool is marked Foreign/Official sync membership is correct, and at least one Explicit and one Dependency installReason are present.
 
-- [x] T-010: Application layer PackageListUseCase header — constructor and getInstalledPackages declaration
+- [x] T-010: Application layer PackageListUseCase header — constructor and enumerateInstalledPackages declaration
   - REQs: REQ-F-003
-  - Check: `src/application/include/holonight_packages_application/package_list_use_case.h` declares constructor taking `std::shared_ptr<PackageSource>` and `getInstalledPackages()` method returning `std::expected<std::vector<Package>, PackageSourceError>`; no Qt/QML types appear in the header.
+  - Check: `src/application/include/holonight_packages_application/package_list_use_case.h` declares constructor taking `std::shared_ptr<PackageSource>` and `enumerateInstalledPackages()` returning `std::expected<std::vector<Package>, PackageSourceError>`; no Qt/QML types appear in the header.
 
 - [x] T-011: Application layer PackageListUseCase implementation — sorting and error passthrough
   - REQs: REQ-F-003, REQ-C-003
@@ -58,7 +58,7 @@
 
 - [x] T-015: QML model InstalledPackagesModel implementation — async with QtConcurrent and state machine
   - REQs: REQ-F-004, REQ-F-005, REQ-F-006, REQ-F-007, REQ-NF-002, REQ-C-003
-  - Check: `apps/packages/app/InstalledPackagesModel.cpp` constructs in Loading state, launches `QtConcurrent::run([uc]{ return uc->getInstalledPackages(); })`, listens to `QFutureWatcher::finished()`, transitions to Loaded or Error, emits statusChanged, implements rowCount/data/roleNames per QAbstractListModel contract, guards refresh() against reentrancy with `watcher_.isRunning()`, and passes clang-format and clang-tidy.
+  - Check: `apps/packages/app/InstalledPackagesModel.cpp` constructs in Loading state, launches `QtConcurrent::run([uc]{ return uc->enumerateInstalledPackages(); })`, listens to `QFutureWatcher::finished()`, transitions to Loaded or Error, emits statusChanged, implements rowCount/data/roleNames per QAbstractListModel contract, guards refresh() against reentrancy with a logical loading flag, and passes clang-format and clang-tidy.
 
 - [x] T-016: Update apps/packages CMakeLists.txt to include new model sources and link Qt6::Concurrent
   - REQs: REQ-F-005, REQ-C-002

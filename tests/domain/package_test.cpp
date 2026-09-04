@@ -18,7 +18,7 @@ TEST(Package, DefaultConstructionLeavesEmptyStringsAndForeignExplicitDefaults) {
 }
 
 TEST(Package, FieldAssignmentRoundTripsThroughAllSevenFields) {
-  Package package{
+  Package package = {
       .identity = "apple",
       .name = "apple",
       .installedVersion = "2.3-4",
@@ -38,7 +38,7 @@ TEST(Package, FieldAssignmentRoundTripsThroughAllSevenFields) {
 }
 
 TEST(Package, EqualityComparesAllSevenFields) {
-  Package base{
+  Package base = {
       .identity = "apple",
       .name = "apple",
       .installedVersion = "2.3-4",

@@ -149,4 +149,33 @@ TEST(InstalledPackagesModel, RefreshWhileRunningIsANoOp) {
   EXPECT_EQ(model.status(), InstalledPackagesModel::Status::Loaded);
 }
 
+TEST(InstalledPackagesModel, ReentrantRefreshWithImmediateFutureStartsExactlyOneNewLoad) {
+  auto mock_source = std::make_shared<MockPackageSource>();
+  {
+    ::testing::InSequence sequence;
+    EXPECT_CALL(*mock_source, enumerateInstalledPackages()).WillOnce(Return(std::vector<Package>{}));
+    EXPECT_CALL(*mock_source, enumerateInstalledPackages()).Times(1).WillOnce(Return(std::vector<Package>{}));
+  }
+
+  InstalledPackagesModel model(makeUseCase(mock_source));
+  QSignalSpy initial_status_changed(&model, &InstalledPackagesModel::statusChanged);
+  ASSERT_TRUE(initial_status_changed.wait(2000));
+  ASSERT_EQ(model.status(), InstalledPackagesModel::Status::Loaded);
+
+  bool reentered = false;
+  QObject::connect(&model, &InstalledPackagesModel::statusChanged, [&model, &reentered] {
+    if (!reentered && model.status() == InstalledPackagesModel::Status::Loading) {
+      reentered = true;
+      model.refresh();
+    }
+  });
+
+  QSignalSpy status_changed(&model, &InstalledPackagesModel::statusChanged);
+  model.refresh();
+  ASSERT_TRUE(status_changed.wait(2000));
+
+  EXPECT_TRUE(reentered);
+  EXPECT_EQ(model.status(), InstalledPackagesModel::Status::Loaded);
+}
+
 }  // namespace

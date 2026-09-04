@@ -28,13 +28,51 @@ TEST(PackageListUseCase, ReturnsPackagesSortedAlphabeticallyByName) {
   EXPECT_CALL(*mock_source, enumerateInstalledPackages()).WillOnce(Return(unsorted));
 
   const PackageListUseCase use_case(mock_source);
-  const auto result = use_case.getInstalledPackages();
+  const auto result = use_case.enumerateInstalledPackages();
 
   ASSERT_TRUE(result.has_value());
   ASSERT_EQ(result->size(), 3U);
   EXPECT_EQ((*result)[0].name, "apple");
   EXPECT_EQ((*result)[1].name, "banana");
   EXPECT_EQ((*result)[2].name, "zebra");
+}
+
+TEST(PackageListUseCase, SortIsCaseInsensitive) {
+  auto mock_source = std::make_shared<MockPackageSource>();
+  const std::vector<Package> unsorted{
+      Package{.name = "Zebra"},
+      Package{.name = "apple"},
+      Package{.name = "Banana"},
+  };
+  EXPECT_CALL(*mock_source, enumerateInstalledPackages()).WillOnce(Return(unsorted));
+
+  const PackageListUseCase use_case(mock_source);
+  const auto result = use_case.enumerateInstalledPackages();
+
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(result->size(), 3U);
+  EXPECT_EQ((*result)[0].name, "apple");
+  EXPECT_EQ((*result)[1].name, "Banana");
+  EXPECT_EQ((*result)[2].name, "Zebra");
+}
+
+TEST(PackageListUseCase, CaseOnlyTiesUseDeterministicBytewiseOrder) {
+  auto mock_source = std::make_shared<MockPackageSource>();
+  const std::vector<Package> unsorted{
+      Package{.name = "apple"},
+      Package{.name = "APPLE"},
+      Package{.name = "Apple"},
+  };
+  EXPECT_CALL(*mock_source, enumerateInstalledPackages()).WillOnce(Return(unsorted));
+
+  const PackageListUseCase use_case(mock_source);
+  const auto result = use_case.enumerateInstalledPackages();
+
+  ASSERT_TRUE(result.has_value());
+  ASSERT_EQ(result->size(), 3U);
+  EXPECT_EQ((*result)[0].name, "APPLE");
+  EXPECT_EQ((*result)[1].name, "Apple");
+  EXPECT_EQ((*result)[2].name, "apple");
 }
 
 TEST(PackageListUseCase, PassesThroughBackendErrorUnchanged) {
@@ -44,7 +82,7 @@ TEST(PackageListUseCase, PassesThroughBackendErrorUnchanged) {
   EXPECT_CALL(*mock_source, enumerateInstalledPackages()).WillOnce(Return(std::unexpected(expected_error)));
 
   const PackageListUseCase use_case(mock_source);
-  const auto result = use_case.getInstalledPackages();
+  const auto result = use_case.enumerateInstalledPackages();
 
   ASSERT_FALSE(result.has_value());
   EXPECT_EQ(result.error().code, PackageSourceErrorCode::DatabaseOpenFailed);
@@ -56,7 +94,7 @@ TEST(PackageListUseCase, EmptyBackendResultReturnsEmptyListWithoutError) {
   EXPECT_CALL(*mock_source, enumerateInstalledPackages()).WillOnce(Return(std::vector<Package>{}));
 
   const PackageListUseCase use_case(mock_source);
-  const auto result = use_case.getInstalledPackages();
+  const auto result = use_case.enumerateInstalledPackages();
 
   ASSERT_TRUE(result.has_value());
   EXPECT_TRUE(result->empty());

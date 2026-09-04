@@ -51,7 +51,7 @@ domain stays framework-agnostic and constructible/testable without a `QCoreAppli
 | File | Contents |
 |---|---|
 | `include/holonight_packages_application/package_list_use_case.h` | `PackageListUseCase` (REQ-F-003) |
-| `src/package_list_use_case.cpp` | Constructor + `getInstalledPackages()` (delegates to the injected `PackageSource`, sorts ascending by `name`) |
+| `src/package_list_use_case.cpp` | Constructor + `enumerateInstalledPackages()` (delegates to the injected `PackageSource`, sorts ascending by `name`) |
 
 ### `apps/packages/`
 
@@ -97,9 +97,9 @@ sequenceDiagram
 
     Note over Model: status = Loading (constructor)
     QML->>Model: bind ListView.model, status, errorMessage
-    Model->>Pool: QtConcurrent::run([uc]{ return uc->getInstalledPackages(); })
+    Model->>Pool: QtConcurrent::run([uc]{ return uc->enumerateInstalledPackages(); })
     Note over QML: spinner visible, list/error hidden — GUI thread never blocks
-    Pool->>UC: getInstalledPackages()
+    Pool->>UC: enumerateInstalledPackages()
     UC->>BE: enumerateInstalledPackages()
     BE->>Alpm: alpm_initialize(root, dbpath, &err)
     alt handle == nullptr
@@ -140,7 +140,7 @@ Narrative:
    `QMetaObject::invokeMethod` needed). The model resets its rows or records the error, then emits
    `statusChanged()`; QML re-evaluates its bindings same-frame.
 5. A `refresh()` invocation (future "reload" affordance, not required by this SPEC but cheap to expose as
-   `Q_INVOKABLE`) re-enters at step 2, guarded by `!watcher_.isRunning()` to avoid two concurrent libalpm calls on
+   `Q_INVOKABLE`) re-enters at step 2, guarded by a logical `load_in_progress_` flag to avoid two concurrent libalpm calls on
    the same `AlpmPackageSource` (see thread-safety note, §9).
 
 ---
@@ -253,7 +253,7 @@ class PackageListUseCase {
   explicit PackageListUseCase(std::shared_ptr<holonight_packages_domain::PackageSource> source);
 
   std::expected<std::vector<holonight_packages_domain::Package>, holonight_packages_domain::PackageSourceError>
-  getInstalledPackages() const;
+  enumerateInstalledPackages() const;
 
  private:
   std::shared_ptr<holonight_packages_domain::PackageSource> source_;
@@ -262,7 +262,7 @@ class PackageListUseCase {
 }  // namespace holonight_packages_application
 ```
 
-`getInstalledPackages()` calls `source_->enumerateInstalledPackages()`; on success it `std::sort`s the vector by
+`enumerateInstalledPackages()` calls `source_->enumerateInstalledPackages()`; on success it `std::sort`s the vector by
 `name` (ascending) and returns it; on failure it passes the `PackageSourceError` through unchanged. No QML/Qt/UI
 type appears anywhere in this header or its `.cpp` (REQ-F-003's constraint), which is exactly what lets
 `PackageListUseCase` be unit-tested with a mock `PackageSource` and zero Qt GUI machinery (only `Qt6::Core`, already
@@ -383,15 +383,16 @@ Thread-safety consequence (this is the load-bearing constraint, see §9): `alpm_
 `AlpmPackageSource::enumerateInstalledPackages()` is designed to be entirely self-contained per call — it opens a
 fresh `alpm_handle_t`, does all its work, and calls `alpm_release()` before returning, all within the single
 lambda passed to `QtConcurrent::run`. No `alpm_handle_t` is ever cached as a member or touched from more than one
-thread. `InstalledPackagesModel::refresh()` guards against re-entrancy (`if (watcher_.isRunning()) return;`) so two
+thread. `InstalledPackagesModel::refresh()` guards against re-entrancy with a logical loading flag so two
 concurrent calls into the same `AlpmPackageSource` instance from two pool threads can't happen.
 
 ```cpp
 void InstalledPackagesModel::refresh() {
-  if (watcher_.isRunning()) return;
+  if (load_in_progress_) return;
+  load_in_progress_ = true;
   status_ = Status::Loading;
   emit statusChanged();
-  watcher_.setFuture(QtConcurrent::run([uc = use_case_] { return uc->getInstalledPackages(); }));
+  watcher_.setFuture(QtConcurrent::run([uc = use_case_] { return uc->enumerateInstalledPackages(); }));
 }
 ```
 

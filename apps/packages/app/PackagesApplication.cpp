@@ -4,6 +4,8 @@
 #include "holonight_packages_application/package_list_use_case.h"
 #include "holonight_packages_backends/alpm_package_source.h"
 
+#include <QDebug>
+#include <QQmlError>
 #include <QQuickView>
 #include <QVariant>
 
@@ -24,8 +26,20 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
   view_->setInitialProperties(
       {{QStringLiteral("installedPackagesModel"), QVariant::fromValue(installed_packages_model_.get())}});
   view_->setSource(QUrl(QStringLiteral("qrc:/HolonightPackages/workspace/WorkspaceWindow.qml")));
+  if (view_->status() == QQuickView::Error) {
+    for (const QQmlError& error : view_->errors()) {
+      qCritical() << error;
+    }
+    return;
+  }
   view_->setTitle(applicationDisplayName());
   view_->show();
+  ready_ = true;
 }
 
-PackagesApplication::~PackagesApplication() = default;
+PackagesApplication::~PackagesApplication() {
+  view_.reset();
+  installed_packages_model_.reset();
+}
+
+bool PackagesApplication::isReady() const { return ready_; }

@@ -1,5 +1,7 @@
 #include "holonight_packages_backends/alpm_package_source.h"
 
+#include "alpm_package_conversion.h"
+
 #include <algorithm>
 #include <alpm.h>
 #include <expected>
@@ -59,11 +61,13 @@ SyncDatabasesResult registerSyncDatabases(alpm_handle_t* handle, const std::file
 
   std::vector<std::string> repository_names;
   std::error_code iterate_error;
-  for (const auto& entry : std::filesystem::directory_iterator(sync_dir, iterate_error)) {
-    if (entry.path().extension() != ".db") {
+  const std::filesystem::directory_iterator end;
+  for (auto it = std::filesystem::directory_iterator(sync_dir, iterate_error); !iterate_error && it != end;
+       it.increment(iterate_error)) {
+    if (it->path().extension() != ".db") {
       continue;
     }
-    repository_names.push_back(entry.path().stem().string());
+    repository_names.push_back(it->path().stem().string());
   }
   if (iterate_error) {
     return std::unexpected(databaseError("Failed to enumerate sync databases: " + iterate_error.message()));
@@ -85,28 +89,45 @@ SyncDatabasesResult registerSyncDatabases(alpm_handle_t* handle, const std::file
   return sync_dbs;
 }
 
-Package toPackage(alpm_pkg_t* pkg, const std::vector<alpm_db_t*>& sync_dbs) {
+std::expected<Package, PackageSourceError> toPackage(alpm_pkg_t* pkg, const std::vector<alpm_db_t*>& sync_dbs) {
   const char* name = alpm_pkg_get_name(pkg);
-
-  Package package;
-  package.identity = name;
-  package.name = name;
-  package.installedVersion = alpm_pkg_get_version(pkg);
-  package.installReason = toInstallReason(alpm_pkg_get_reason(pkg));
-  package.backendSpecificId = name;
-
   for (alpm_db_t* sync_db : sync_dbs) {
-    if (alpm_db_get_pkg(sync_db, name) != nullptr) {
-      package.sourceType = SourceType::Official;
-      package.repository = alpm_db_get_name(sync_db);
-      return package;
+    if (name != nullptr && alpm_db_get_pkg(sync_db, name) != nullptr) {
+      return detail::convertPackageFields(name, alpm_pkg_get_version(pkg), alpm_db_get_name(sync_db),
+                                          SourceType::Official, toInstallReason(alpm_pkg_get_reason(pkg)));
     }
   }
-  package.sourceType = SourceType::Foreign;
-  return package;
+  return detail::convertPackageFields(name, alpm_pkg_get_version(pkg), "", SourceType::Foreign,
+                                      toInstallReason(alpm_pkg_get_reason(pkg)));
 }
 
 }  // namespace
+
+std::expected<Package, PackageSourceError> detail::convertPackageFields(const char* name, const char* version,
+                                                                        const char* repository, SourceType source_type,
+                                                                        InstallReason install_reason) {
+  const auto missingField = [](const char* field) {
+    return std::unexpected(PackageSourceError{.code = PackageSourceErrorCode::Unknown,
+                                              .message = std::string("libalpm returned a null ") + field});
+  };
+  if (name == nullptr) {
+    return missingField("package name");
+  }
+  if (version == nullptr) {
+    return missingField("package version");
+  }
+  if (repository == nullptr) {
+    return missingField("repository name");
+  }
+
+  return Package{.identity = name,
+                 .name = name,
+                 .installedVersion = version,
+                 .sourceType = source_type,
+                 .repository = repository,
+                 .installReason = install_reason,
+                 .backendSpecificId = name};
+}
 
 AlpmPackageSource::AlpmPackageSource(std::filesystem::path database_root, std::filesystem::path database_path)
     : database_root_(std::move(database_root)), database_path_(std::move(database_path)) {}
@@ -137,7 +158,11 @@ AlpmPackageSource::enumerateInstalledPackages() const {
 
   std::vector<Package> packages;
   for (alpm_list_t* node = pkgcache; node != nullptr; node = alpm_list_next(node)) {
-    packages.push_back(toPackage(static_cast<alpm_pkg_t*>(node->data), *sync_dbs));
+    auto package = toPackage(static_cast<alpm_pkg_t*>(node->data), *sync_dbs);
+    if (!package.has_value()) {
+      return std::unexpected(std::move(package.error()));
+    }
+    packages.push_back(std::move(*package));
   }
   return packages;
 }

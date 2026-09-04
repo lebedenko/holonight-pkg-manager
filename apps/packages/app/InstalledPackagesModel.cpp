@@ -1,9 +1,10 @@
 #include "InstalledPackagesModel.h"
 
+#include "holonight_packages_domain/require_non_null.h"
+
 #include <QtConcurrentRun>
 
 #include <exception>
-#include <stdexcept>
 
 namespace {
 
@@ -16,10 +17,9 @@ QString sourceLabel(holonight_packages_domain::SourceType source_type) {
 
 InstalledPackagesModel::InstalledPackagesModel(
     std::shared_ptr<holonight_packages_application::PackageListUseCase> use_case, QObject* parent)
-    : QAbstractListModel(parent), use_case_(std::move(use_case)) {
-  if (!use_case_) {
-    throw std::invalid_argument("InstalledPackagesModel requires a package list use case");
-  }
+    : QAbstractListModel(parent),
+      use_case_(holonight_packages_domain::requireNonNull(std::move(use_case),
+                                                          "InstalledPackagesModel requires a package list use case")) {
   connect(&watcher_, &QFutureWatcher<LoadResult>::finished, this, &InstalledPackagesModel::onEnumerationFinished);
   startLoading();
 }
@@ -66,18 +66,18 @@ InstalledPackagesModel::Status InstalledPackagesModel::status() const { return s
 QString InstalledPackagesModel::errorMessage() const { return error_message_; }
 
 void InstalledPackagesModel::refresh() {
-  if (watcher_.isRunning()) {
+  if (load_in_progress_) {
     return;
   }
   startLoading();
 }
 
 void InstalledPackagesModel::startLoading() {
+  load_in_progress_ = true;
   status_ = Status::Loading;
-  emit statusChanged();
   watcher_.setFuture(QtConcurrent::run([use_case = use_case_] -> LoadResult {
     try {
-      return use_case->getInstalledPackages();
+      return use_case->enumerateInstalledPackages();
     } catch (const std::exception& exception) {
       return std::unexpected(holonight_packages_domain::PackageSourceError{
           .code = holonight_packages_domain::PackageSourceErrorCode::Unknown, .message = exception.what()});
@@ -87,6 +87,7 @@ void InstalledPackagesModel::startLoading() {
           .message = "Unknown package enumeration failure"});
     }
   }));
+  emit statusChanged();
 }
 
 void InstalledPackagesModel::onEnumerationFinished() {
@@ -104,5 +105,6 @@ void InstalledPackagesModel::onEnumerationFinished() {
     status_ = Status::Error;
     error_message_ = QString::fromStdString(result.error().message);
   }
+  load_in_progress_ = false;
   emit statusChanged();
 }

@@ -15,7 +15,7 @@ class PackageListUseCase {
 
   [[nodiscard]] std::expected<std::vector<holonight_packages_domain::Package>,
                               holonight_packages_domain::PackageSourceError>
-  getInstalledPackages() const;
+  enumerateInstalledPackages() const;
 
  private:
   std::shared_ptr<holonight_packages_domain::PackageSource> source_;

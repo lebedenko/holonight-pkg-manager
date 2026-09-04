@@ -2,6 +2,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(Alpm REQUIRED IMPORTED_TARGET libalpm)
 
 add_library(holonight_packages_backends STATIC
+  src/alpm_package_conversion.h
   src/alpm_package_source.cpp
 )
 target_include_directories(holonight_packages_backends PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

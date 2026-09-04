@@ -12,7 +12,8 @@ add_executable(test_holonight_packages
 )
 target_include_directories(test_holonight_packages PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/application
-  ${PROJECT_SOURCE_DIR}/apps/packages/app)
+  ${PROJECT_SOURCE_DIR}/apps/packages/app
+  ${PROJECT_SOURCE_DIR}/src/backends/src)
 set_target_properties(test_holonight_packages PROPERTIES AUTOMOC ON)
 target_compile_features(test_holonight_packages PRIVATE cxx_std_23)
 target_compile_definitions(test_holonight_packages PRIVATE

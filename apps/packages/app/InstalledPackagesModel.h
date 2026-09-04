@@ -63,6 +63,7 @@ class InstalledPackagesModel : public QAbstractListModel {
   std::shared_ptr<holonight_packages_application::PackageListUseCase> use_case_;
   QFutureWatcher<LoadResult> watcher_;
   std::vector<holonight_packages_domain::Package> packages_;
+  bool load_in_progress_ = false;
   Status status_ = Status::Loading;
   QString error_message_;
 };
