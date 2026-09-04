@@ -41,11 +41,11 @@ The code is a modular monolith with dependency direction toward the domain:
 | `holonight_packages_application` | Use cases (e.g. `PackageListUseCase`) — no Qt/QML types |
 | `holonight_packages_backends` | Native package-manager adapters (`AlpmPackageSource`, via libalpm) |
 | `holonight_packages_advisor` | Deterministic update assessment and evidence collection |
-| `holonight_packages_persistence` | Cache, settings, and transaction history |
+| `holonight_packages_persistence` | Cache (e.g. `AlpmConnectionCache`), settings, and transaction history |
 | `holonight_packages_platform` | D-Bus, notifications, systemd, and desktop integration |
 | `holonight-packages` | Qt Quick user interface, QML-facing view-models, and composition root |
 
-`domain`, `application`, and `backends` are `STATIC` libraries. `advisor`, `persistence`, and `platform` are still
+`domain`, `application`, `backends`, and `persistence` are `STATIC` libraries. `advisor` and `platform` are still
 `INTERFACE` stubs — convert a target to `STATIC` when its first implementation file is added. The planned
 `holonight-packaged` user service and privileged `holonight-package-helper` remain separate processes; their
 interfaces should be designed before executable stubs are introduced.

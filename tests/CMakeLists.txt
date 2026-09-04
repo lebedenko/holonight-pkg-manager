@@ -5,6 +5,7 @@ add_executable(test_holonight_packages
   test_placeholder.cpp
   domain/package_test.cpp
   backends/alpm_package_source_test.cpp
+  persistence/alpm_connection_cache_test.cpp
   application/package_list_use_case_test.cpp
   apps/installed_packages_model_test.cpp
   apps/installed_packages_view_test.cpp
@@ -23,6 +24,7 @@ target_link_libraries(test_holonight_packages PRIVATE
   GTest::gtest GTest::gmock Qt6::Gui Qt6::Quick Qt6::Qml Qt6::Test Qt6::Concurrent
   holonight_packages_domain
   holonight_packages_backends
+  holonight_packages_persistence
   holonight_packages_application
 )
 gtest_discover_tests(test_holonight_packages

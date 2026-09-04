@@ -277,6 +277,58 @@ TEST(AlpmPackageSource, SyncDirectoryWithNoReadPermissionReturnsErrorWithoutCras
   EXPECT_FALSE(result.error().message.empty());
 }
 
+TEST(AlpmPackageSource, SecondCallWithUnchangedDatabaseReturnsIdenticalPackages) {
+  const auto root = fixturePath("populated");
+  AlpmPackageSource source(root, root);
+
+  const auto result1 = source.enumerateInstalledPackages();
+  const auto result2 = source.enumerateInstalledPackages();
+
+  ASSERT_TRUE(result1.has_value());
+  ASSERT_TRUE(result2.has_value());
+  EXPECT_EQ(*result1, *result2);
+}
+
+TEST(AlpmPackageSource, RepositoryChangeAfterWarmCacheIsReflectedOnNextCall) {
+  TemporaryDatabase database;
+  AlpmPackageSource source(database.root(), database.root());
+
+  const auto warm = source.enumerateInstalledPackages();
+  ASSERT_TRUE(warm.has_value());
+
+  const auto sync_path = database.root() / "sync";
+  std::filesystem::rename(sync_path / "core.db", sync_path / "zeta.db");
+  std::filesystem::copy_file(sync_path / "zeta.db", sync_path / "alpha.db");
+
+  const auto result = source.enumerateInstalledPackages();
+
+  ASSERT_TRUE(result.has_value());
+  const Package* apple = findByName(*result, "apple");
+  ASSERT_NE(apple, nullptr);
+  EXPECT_EQ(apple->repository, "alpha");
+}
+
+TEST(AlpmPackageSource, LocalPackageChangeAfterWarmCacheIsReflectedOnNextCall) {
+  TemporaryDatabase database;
+  AlpmPackageSource source(database.root(), database.root());
+
+  const auto warm = source.enumerateInstalledPackages();
+  ASSERT_TRUE(warm.has_value());
+  const Package* original_apple = findByName(*warm, "apple");
+  ASSERT_NE(original_apple, nullptr);
+  EXPECT_EQ(original_apple->installReason, InstallReason::Explicit);
+
+  std::ofstream(database.root() / "local" / "apple-2.3-4" / "desc", std::ios::trunc)
+      << "%NAME%\napple\n\n%VERSION%\n2.3-4\n\n%BASE%\napple\n\n%REASON%\n1\n\n%VALIDATION%\nnone\n\n";
+
+  const auto refreshed = source.enumerateInstalledPackages();
+
+  ASSERT_TRUE(refreshed.has_value());
+  const Package* refreshed_apple = findByName(*refreshed, "apple");
+  ASSERT_NE(refreshed_apple, nullptr);
+  EXPECT_EQ(refreshed_apple->installReason, InstallReason::Dependency);
+}
+
 TEST(AlpmPackageSource, InvalidRootPathReturnsErrorWithoutCrashing) {
   const std::filesystem::path invalid_root = fixturePath("populated") / "does-not-exist";
   AlpmPackageSource source(invalid_root, invalid_root);

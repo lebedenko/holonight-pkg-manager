@@ -8,6 +8,6 @@ add_library(holonight_packages_backends STATIC
 target_include_directories(holonight_packages_backends PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(holonight_packages_backends
   PUBLIC holonight_packages_domain Qt6::Core Qt6::Network
-  PRIVATE PkgConfig::Alpm
+  PRIVATE PkgConfig::Alpm holonight_packages_persistence
 )
 target_compile_features(holonight_packages_backends PUBLIC cxx_std_23)

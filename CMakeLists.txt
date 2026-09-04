@@ -17,9 +17,9 @@ qt_policy(SET QTP0004 NEW)
 
 add_subdirectory(src/domain)
 add_subdirectory(src/application)
+add_subdirectory(src/persistence)
 add_subdirectory(src/backends)
 add_subdirectory(src/advisor)
-add_subdirectory(src/persistence)
 add_subdirectory(src/platform)
 add_subdirectory(apps/packages)
 
