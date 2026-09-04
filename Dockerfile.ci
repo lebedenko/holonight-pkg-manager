@@ -14,4 +14,5 @@ RUN pacman -Syu --noconfirm && \
         qt6-declarative \
         qt6-svg \
         tomlplusplus \
+        wayland-protocols \
     && pacman -Scc --noconfirm
