@@ -8,6 +8,10 @@ vars:
     sh: nproc
 
 tasks:
+  license-check:
+    desc: Validate REUSE licensing metadata
+    cmds: [reuse lint]
+
   build:qt-dependency:
     desc: Build and install the sibling holonight-qt dependency
     cmds:

@@ -7,6 +7,8 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 include(GNUInstallDirs)
+install(FILES LICENSE LICENSES/GPL-3.0-or-later.txt
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/${PROJECT_NAME}")
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick Qml Network Sql DBus Concurrent)
 find_package(HolonightQt REQUIRED)
