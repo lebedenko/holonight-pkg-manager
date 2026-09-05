@@ -20,28 +20,28 @@ HnListDelegate {
     required property string sizeLabel
     required property string installReason
 
-    readonly property int checkboxColumnWidth: 40
-    readonly property int originColumnWidth: 160
-    readonly property int versionColumnWidth: 120
-    readonly property int sizeColumnWidth: 90
-    readonly property int reasonColumnWidth: 100
+    required property PackageTableColumns columns
     readonly property string reasonLabel: root.installReason === "explicit" ? qsTr("Explicit") : qsTr("Dependency")
     readonly property bool isOfficial: root.sourceLabel === "official"
     readonly property string originText: root.isOfficial
-        ? (root.repository.length > 0 ? qsTr("Official · %1").arg(root.repository) : qsTr("Official"))
-        : qsTr("AUR")
+        ? (root.repository.length > 0 ? root.repository : qsTr("Official"))
+        : qsTr("Foreign")
 
     implicitHeight: 64
+    leftPadding: root.columns.padding
+    rightPadding: root.columns.padding
     selectionStyle: HnListDelegate.AccentEdge
     Accessible.name: root.name
     Accessible.description: root.description
 
     contentItem: RowLayout {
-        spacing: 12
+        spacing: root.columns.spacing
 
         CheckBox {
             objectName: "packageRowCheckBox"
-            Layout.preferredWidth: root.checkboxColumnWidth
+            Layout.minimumWidth: root.columns.checkbox
+            Layout.maximumWidth: root.columns.checkbox
+            Layout.preferredWidth: root.columns.checkbox
             Layout.alignment: Qt.AlignVCenter
 
             ToolTip.text: qsTr("Not implemented yet")
@@ -50,8 +50,8 @@ HnListDelegate {
         }
 
         Rectangle {
-            Layout.preferredWidth: 32
-            Layout.preferredHeight: 32
+            Layout.preferredWidth: root.columns.icon
+            Layout.preferredHeight: root.columns.icon
             Layout.alignment: Qt.AlignVCenter
             radius: 8
             color: HoloniightPalette.surfaceElevated
@@ -73,12 +73,20 @@ HnListDelegate {
                 rawText: root.name
                 color: HoloniightPalette.textPrimary
                 elide: Text.ElideRight
+                ToolTip.text: text
+                ToolTip.visible: truncated && nameHover.hovered
+                ToolTip.delay: 500
+                HoverHandler { id: nameHover }
                 Layout.fillWidth: true
             }
 
             HnLabel {
                 role: HnTypographyRole.Caption
                 rawText: root.description
+                ToolTip.text: text
+                ToolTip.visible: truncated && descriptionHover.hovered
+                ToolTip.delay: 500
+                HoverHandler { id: descriptionHover }
                 color: HoloniightPalette.textMuted
                 elide: Text.ElideRight
                 maximumLineCount: 1
@@ -87,35 +95,68 @@ HnListDelegate {
             }
         }
 
-        PackageOriginBadge {
-            text: root.originText
-            emphasized: root.isOfficial
-            Layout.preferredWidth: root.originColumnWidth
+        Item {
+            Layout.minimumWidth: root.columns.origin
+            Layout.maximumWidth: root.columns.origin
+            Layout.preferredWidth: root.columns.origin
+            Layout.preferredHeight: originBadge.implicitHeight
             Layout.alignment: Qt.AlignVCenter
+
+            PackageOriginBadge {
+                id: originBadge
+                objectName: "packageRowOriginBadge"
+
+                text: root.originText
+                emphasized: root.isOfficial
+                maximumWidth: parent.width
+                toolTipText: root.isOfficial && root.repository.length > 0
+                    ? qsTr("Repository: %1").arg(root.repository) : text
+            }
         }
 
         HnLabel {
             role: HnTypographyRole.Body
             rawText: root.installedVersion
+            ToolTip.text: text
+            ToolTip.visible: truncated && versionHover.hovered
+            ToolTip.delay: 500
+            HoverHandler { id: versionHover }
             color: HoloniightPalette.textSecondary
             elide: Text.ElideRight
-            Layout.preferredWidth: root.versionColumnWidth
+            Layout.minimumWidth: root.columns.version
+            Layout.maximumWidth: root.columns.version
+            Layout.preferredWidth: root.columns.version
             Layout.alignment: Qt.AlignVCenter
         }
 
         HnLabel {
             role: HnTypographyRole.Body
+            elide: Text.ElideRight
             rawText: root.sizeLabel
+            ToolTip.text: text
+            ToolTip.visible: truncated && sizeHover.hovered
+            ToolTip.delay: 500
+            HoverHandler { id: sizeHover }
             color: HoloniightPalette.textSecondary
-            Layout.preferredWidth: root.sizeColumnWidth
+            Layout.minimumWidth: root.columns.size
+            Layout.maximumWidth: root.columns.size
+            horizontalAlignment: Text.AlignRight
+            Layout.preferredWidth: root.columns.size
             Layout.alignment: Qt.AlignVCenter
         }
 
         HnLabel {
             role: HnTypographyRole.Body
+            elide: Text.ElideRight
             rawText: root.reasonLabel
+            ToolTip.text: text
+            ToolTip.visible: truncated && reasonHover.hovered
+            ToolTip.delay: 500
+            HoverHandler { id: reasonHover }
             color: HoloniightPalette.textSecondary
-            Layout.preferredWidth: root.reasonColumnWidth
+            Layout.minimumWidth: root.columns.reason
+            Layout.maximumWidth: root.columns.reason
+            Layout.preferredWidth: root.columns.reason
             Layout.alignment: Qt.AlignVCenter
         }
     }

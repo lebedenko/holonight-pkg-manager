@@ -36,13 +36,17 @@ HnSurfaceFrame {
     }
 
     ScrollView {
+        id: detailScroll
+        objectName: "packageDetailScrollView"
         anchors.fill: parent
         visible: root.hasSelection
         contentWidth: availableWidth
+        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+        ScrollBar.vertical: H.ScrollBar {}
         clip: true
 
         Loader {
-            width: parent.width
+            width: detailScroll.availableWidth
             active: root.hasSelection
             sourceComponent: detailContent
         }

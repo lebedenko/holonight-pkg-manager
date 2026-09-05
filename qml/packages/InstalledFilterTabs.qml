@@ -49,6 +49,7 @@ Flow {
 
             required property var modelData
 
+            implicitWidth: implicitContentWidth + leftPadding + rightPadding
             selectionStyle: HnListDelegate.Fill
             title: tabDelegate.modelData.label
             checked: root.filterModel.tabFilter === tabDelegate.modelData.tab

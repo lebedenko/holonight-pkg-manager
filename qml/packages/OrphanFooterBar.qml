@@ -25,6 +25,9 @@ HnActionBar {
             HnLabel {
                 objectName: "orphanFooterSummaryLabel"
                 role: HnTypographyRole.Body
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
                 rawText: qsTr("%1 orphaned packages · %2 can be reclaimed")
                     .arg(root.installedPackagesModel.orphanPackageCount)
                     .arg(root.installedPackagesModel.formatSize(root.installedPackagesModel.reclaimableSizeBytes))

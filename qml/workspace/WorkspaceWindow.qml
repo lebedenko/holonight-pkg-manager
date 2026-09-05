@@ -2,14 +2,15 @@ import QtQuick
 import QtQuick.Layouts
 import Holonight.Core
 import HolonightPackages
+import "../packages"
 
 Rectangle {
     id: root
 
     required property InstalledPackagesModel installedPackagesModel
 
-    width: 1100
-    height: 720
+    width: 1360
+    height: 890
     color: HoloniightPalette.background
 
     Component.onCompleted: HoloniightPalette.reload()
@@ -19,9 +20,9 @@ Rectangle {
         spacing: 0
 
         Sidebar {
-            Layout.preferredWidth: 220
+            Layout.preferredWidth: 196
             Layout.fillHeight: true
-            Layout.margins: 16
+            Layout.margins: 12
         }
 
         InstalledPackagesView {

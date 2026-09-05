@@ -17,12 +17,24 @@ Item {
         anchors.fill: parent
         spacing: 24
 
-        HnAppTitle {
-            objectName: "sidebarAppTitle"
-            applicationName: qsTr("Packages")
-            iconSource: "qrc:/HolonightPackages/assets/holonight-pkg-manager.svg"
+        ColumnLayout {
+            spacing: 2
             Layout.leftMargin: 8
             Layout.topMargin: 8
+            Layout.fillWidth: true
+
+            HnAppTitle {
+                objectName: "sidebarAppTitle"
+                applicationName: ""
+                iconSource: "qrc:/HolonightPackages/assets/holonight-pkg-manager.svg"
+                Layout.fillWidth: true
+            }
+
+            HnLabel {
+                role: HnTypographyRole.Title
+                rawText: qsTr("Packages")
+                color: HoloniightPalette.textPrimary
+            }
         }
 
         ColumnLayout {

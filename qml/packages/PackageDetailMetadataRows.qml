@@ -18,54 +18,39 @@ ColumnLayout {
 
     spacing: 0
 
-    HnSettingsRow {
-        titleText: qsTr("Installed")
-        Layout.fillWidth: true
+    Repeater {
+        model: [
+            { label: qsTr("Installed"), value: root.installedDateText },
+            { label: qsTr("Version"), value: root.installedVersion },
+            { label: qsTr("Size"), value: root.sizeLabel },
+            { label: qsTr("Reason"), value: root.reasonLabel }
+        ]
 
-        trailingContent: Component {
+        RowLayout {
+            required property var modelData
+            id: metadataRow
+
+            spacing: 12
+            Layout.fillWidth: true
+
             HnLabel {
                 role: HnTypographyRole.Body
-                rawText: root.installedDateText
-                color: HoloniightPalette.textSecondary
+                rawText: metadataRow.modelData.label
+                color: HoloniightPalette.textPrimary
+                Layout.alignment: Qt.AlignTop
+                Layout.topMargin: 8
             }
-        }
-    }
 
-    HnSettingsRow {
-        titleText: qsTr("Version")
-        Layout.fillWidth: true
-
-        trailingContent: Component {
             HnLabel {
                 role: HnTypographyRole.Body
-                rawText: root.installedVersion
+                rawText: metadataRow.modelData.value
                 color: HoloniightPalette.textSecondary
-            }
-        }
-    }
-
-    HnSettingsRow {
-        titleText: qsTr("Size")
-        Layout.fillWidth: true
-
-        trailingContent: Component {
-            HnLabel {
-                role: HnTypographyRole.Body
-                rawText: root.sizeLabel
-                color: HoloniightPalette.textSecondary
-            }
-        }
-    }
-
-    HnSettingsRow {
-        titleText: qsTr("Reason")
-        Layout.fillWidth: true
-
-        trailingContent: Component {
-            HnLabel {
-                role: HnTypographyRole.Body
-                rawText: root.reasonLabel
-                color: HoloniightPalette.textSecondary
+                wrapMode: Text.WrapAnywhere
+                horizontalAlignment: Text.AlignRight
+                Layout.fillWidth: true
+                Layout.minimumWidth: 0
+                Layout.topMargin: 8
+                Layout.bottomMargin: 8
             }
         }
     }

@@ -14,7 +14,9 @@ ScrollView {
 
     // Keep the name column readable alongside the fixed metadata columns. Narrow windows
     // scroll the header and rows together instead of squeezing names out of the layout.
-    readonly property int minimumTableWidth: 850
+    readonly property int minimumTableWidth: columnSizes.minimumWidth
+
+    PackageTableColumns { id: columnSizes }
 
     objectName: "installedPackageTable"
     implicitWidth: 0
@@ -31,6 +33,7 @@ ScrollView {
         spacing: 0
 
         PackageTableHeader {
+            columns: columnSizes
             Layout.fillWidth: true
         }
 
@@ -59,6 +62,8 @@ ScrollView {
 
             delegate: PackageTableRow {
                 id: delegate
+
+                columns: columnSizes
 
                 required property int index
 

@@ -30,7 +30,7 @@ Item {
 
         objectName: "installedPageScrollView"
         anchors.fill: parent
-        anchors.margins: 24
+        anchors.margins: 16
         contentWidth: availableWidth
         contentHeight: content.implicitHeight
         visible: root.hasPackages
@@ -71,9 +71,10 @@ Item {
                 // Allocate the remaining viewport space without reading this layout's own size hints.
                 height: Math.max(minimumContentHeight, pageScroll.availableHeight
                     - toolbar.height - filterTabs.height - footer.height - 3 * content.spacing)
-                columns: content.width >= 780 ? 2 : 1
-                columnSpacing: 16
-                rowSpacing: 16
+                objectName: "installedPackageLayout"
+                columns: content.width >= 1092 ? 2 : 1
+                columnSpacing: 12
+                rowSpacing: 12
 
                 PackageTable {
                     id: packageTable
@@ -89,7 +90,8 @@ Item {
 
                     filterModel: filterModel
                     Layout.minimumHeight: 200
-                    Layout.preferredWidth: 380
+                    objectName: "packageDetailPanel"
+                    Layout.preferredWidth: 300
                     Layout.fillWidth: packageLayout.columns === 1
                     Layout.fillHeight: true
                 }

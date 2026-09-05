@@ -43,22 +43,24 @@ ColumnLayout {
                 font.bold: true
                 rawText: root.name
                 color: HoloniightPalette.textPrimary
-                elide: Text.ElideRight
+                wrapMode: Text.WrapAnywhere
                 Layout.fillWidth: true
             }
 
-            RowLayout {
+            Flow {
+                id: badges
+
                 spacing: 8
+                Layout.fillWidth: true
 
                 PackageOriginBadge {
-                    text: root.sourceLabel === "official" ? qsTr("Official") : qsTr("AUR")
-                    emphasized: true
-                }
-
-                PackageOriginBadge {
-                    text: root.repository
-                    emphasized: false
-                    visible: root.repository.length > 0
+                    objectName: "packageDetailOriginBadge"
+                    text: root.sourceLabel === "official"
+                        ? (root.repository.length > 0 ? root.repository : qsTr("Official")) : qsTr("Foreign")
+                    emphasized: root.sourceLabel === "official"
+                    maximumWidth: badges.width
+                    toolTipText: root.sourceLabel === "official" && root.repository.length > 0
+                        ? qsTr("Repository: %1").arg(root.repository) : text
                 }
 
                 HnStatusIndicator {

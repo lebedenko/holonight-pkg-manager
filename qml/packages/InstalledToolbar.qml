@@ -22,19 +22,20 @@ ColumnLayout {
     ]
     readonly property int currentSortIndex: root.sortOptions.findIndex(option =>
         option.field === root.filterModel.sortField && option.descending === root.filterModel.sortDescending)
-    readonly property bool compact: root.width < 780
+    readonly property bool narrow: root.width < 600
+    readonly property bool compact: root.width < 1000
 
     spacing: 12
 
     GridLayout {
-        columns: root.compact ? 4 : 6
-        columnSpacing: 16
+        columns: root.narrow ? 3 : (root.compact ? 4 : 5)
+        columnSpacing: 12
         rowSpacing: 12
         Layout.fillWidth: true
 
         ColumnLayout {
             spacing: 2
-            Layout.columnSpan: root.compact ? 4 : 1
+            Layout.columnSpan: root.narrow ? 3 : (root.compact ? 4 : 1)
 
             HnLabel {
                 role: HnTypographyRole.Heading
@@ -53,18 +54,14 @@ ColumnLayout {
             }
         }
 
-        Item {
-            visible: !root.compact
-            Layout.fillWidth: true
-        }
-
         HnSearchField {
             objectName: "installedSearchField"
             placeholderText: qsTr("Search installed packages")
             text: root.filterModel.searchText
             Layout.minimumWidth: 100
             Layout.preferredWidth: 320
-            Layout.fillWidth: root.compact
+            Layout.fillWidth: true
+            Layout.columnSpan: root.narrow ? 3 : 1
 
             onTextChanged: root.filterModel.searchText = text
         }
@@ -72,6 +69,7 @@ ColumnLayout {
         H.ComboBox {
             id: sortComboBox
 
+            Layout.fillWidth: root.narrow
             objectName: "installedSortComboBox"
             textRole: "text"
             model: root.sortOptions

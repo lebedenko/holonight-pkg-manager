@@ -9,11 +9,7 @@ import Holonight.Controls
 Item {
     id: root
 
-    readonly property int checkboxColumnWidth: 40
-    readonly property int originColumnWidth: 160
-    readonly property int versionColumnWidth: 120
-    readonly property int sizeColumnWidth: 90
-    readonly property int reasonColumnWidth: 100
+    required property PackageTableColumns columns
 
     implicitHeight: content.implicitHeight + 16
 
@@ -21,18 +17,24 @@ Item {
         id: content
 
         anchors.fill: parent
-        anchors.leftMargin: 8
-        anchors.rightMargin: 8
-        spacing: 12
+        anchors.leftMargin: root.columns.padding
+        anchors.rightMargin: root.columns.padding
+        spacing: root.columns.spacing
 
         CheckBox {
             objectName: "selectAllCheckBox"
-            Layout.preferredWidth: root.checkboxColumnWidth
+            Layout.minimumWidth: root.columns.checkbox
+            Layout.maximumWidth: root.columns.checkbox
+            Layout.preferredWidth: root.columns.checkbox
             Layout.alignment: Qt.AlignVCenter
 
             ToolTip.text: qsTr("Not implemented yet")
             ToolTip.visible: hovered
             ToolTip.delay: 500
+        }
+
+        Item {
+            Layout.preferredWidth: root.columns.icon
         }
 
         HnLabel {
@@ -46,28 +48,37 @@ Item {
             role: HnTypographyRole.Caption
             rawText: qsTr("Origin")
             color: HoloniightPalette.textMuted
-            Layout.preferredWidth: root.originColumnWidth
+            Layout.minimumWidth: root.columns.origin
+            Layout.maximumWidth: root.columns.origin
+            Layout.preferredWidth: root.columns.origin
         }
 
         HnLabel {
             role: HnTypographyRole.Caption
-            rawText: qsTr("Installed Version")
+            rawText: qsTr("Version")
             color: HoloniightPalette.textMuted
-            Layout.preferredWidth: root.versionColumnWidth
+            Layout.minimumWidth: root.columns.version
+            Layout.maximumWidth: root.columns.version
+            Layout.preferredWidth: root.columns.version
         }
 
         HnLabel {
             role: HnTypographyRole.Caption
             rawText: qsTr("Size")
             color: HoloniightPalette.textMuted
-            Layout.preferredWidth: root.sizeColumnWidth
+            Layout.minimumWidth: root.columns.size
+            Layout.maximumWidth: root.columns.size
+            horizontalAlignment: Text.AlignRight
+            Layout.preferredWidth: root.columns.size
         }
 
         HnLabel {
             role: HnTypographyRole.Caption
             rawText: qsTr("Reason")
             color: HoloniightPalette.textMuted
-            Layout.preferredWidth: root.reasonColumnWidth
+            Layout.minimumWidth: root.columns.reason
+            Layout.maximumWidth: root.columns.reason
+            Layout.preferredWidth: root.columns.reason
         }
     }
 

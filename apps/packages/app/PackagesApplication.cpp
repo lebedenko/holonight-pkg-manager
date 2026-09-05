@@ -7,6 +7,7 @@
 #include <QDebug>
 #include <QQmlError>
 #include <QQuickView>
+#include <QScreen>
 #include <QVariant>
 
 PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplication(argc, argv) {
@@ -21,7 +22,11 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
 
   view_ = std::make_unique<QQuickView>();
   view_->setMinimumSize(QSize(720, 480));
-  view_->resize(1100, 720);
+  QSize initial_size(1360, 890);
+  if (const auto* screen = view_->screen()) {
+    initial_size.scale(initial_size.boundedTo(screen->availableGeometry().size()), Qt::KeepAspectRatio);
+  }
+  view_->resize(initial_size.expandedTo(view_->minimumSize()));
   view_->setResizeMode(QQuickView::SizeRootObjectToView);
   view_->setInitialProperties(
       {{QStringLiteral("installedPackagesModel"), QVariant::fromValue(installed_packages_model_.get())}});

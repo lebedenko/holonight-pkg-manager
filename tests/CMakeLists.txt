@@ -15,6 +15,11 @@ add_executable(test_holonight_packages
   ${PROJECT_SOURCE_DIR}/apps/packages/app/InstalledPackagesModel.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/InstalledPackagesFilterModel.cpp
 )
+qt_add_resources(test_holonight_packages workspace_assets
+  PREFIX "/HolonightPackages"
+  BASE "${PROJECT_SOURCE_DIR}"
+  FILES "${PROJECT_SOURCE_DIR}/assets/holonight-pkg-manager.svg")
+
 target_include_directories(test_holonight_packages PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/application
   ${PROJECT_SOURCE_DIR}/apps/packages/app

@@ -31,9 +31,11 @@ using holonight_packages_domain::PackageSourceError;
 using holonight_packages_domain::PackageSourceErrorCode;
 using ::testing::Return;
 
-std::unique_ptr<QObject> createView(QQmlEngine& engine, InstalledPackagesModel& model) {
-  QQmlComponent component(&engine, QUrl::fromLocalFile(QStringLiteral(HOLONIGHT_QML_SOURCE_DIR) +
-                                                       QStringLiteral("/packages/InstalledPackagesView.qml")));
+std::unique_ptr<QObject> createView(QQmlEngine& engine, InstalledPackagesModel& model, bool workspace = false) {
+  QQmlComponent component(&engine,
+                          QUrl::fromLocalFile(QStringLiteral(HOLONIGHT_QML_SOURCE_DIR) +
+                                              (workspace ? QStringLiteral("/workspace/WorkspaceWindow.qml")
+                                                         : QStringLiteral("/packages/InstalledPackagesView.qml"))));
   EXPECT_EQ(component.status(), QQmlComponent::Ready) << component.errorString().toStdString();
   return std::unique_ptr<QObject>(
       component.createWithInitialProperties({{QStringLiteral("installedPackagesModel"), QVariant::fromValue(&model)}}));
@@ -181,36 +183,54 @@ TEST_F(InstalledPackagesViewTest, DetailPanelFollowsReplacementAtSameRowAndMetad
 }
 
 TEST_F(InstalledPackagesViewTest, TableKeepsReadableColumnsAtDefaultAndMinimumWindowWidths) {
+  const QString long_name = QStringLiteral("package-with-an-extremely-long-name-") + QString(60, QLatin1Char('x'));
+  const QString long_version(100, QLatin1Char('9'));
   auto source = std::make_shared<MockPackageSource>();
-  EXPECT_CALL(*source, enumerateInstalledPackages()).WillOnce(Return(std::vector<Package>{Package{.name = "apple"}}));
+  EXPECT_CALL(*source, enumerateInstalledPackages())
+      .WillOnce(Return(std::vector<Package>{
+          Package{.name = long_name.toStdString(),
+                  .installedVersion = long_version.toStdString(),
+                  .sourceType = holonight_packages_domain::SourceType::Official,
+                  .repository = "extra",
+                  .description = "A package description with a long unbroken word " + std::string(100, 'd'),
+                  .requiredBy = {std::string(100, 'r')},
+                  .optionalDependencies = {std::string(100, 'o')}}}));
   InstalledPackagesModel model(std::make_shared<PackageListUseCase>(source));
   QSignalSpy loaded(&model, &InstalledPackagesModel::statusChanged);
   ASSERT_TRUE(loaded.wait(2000));
   QQmlEngine engine;
   QQuickWindow window;
-  auto view = createView(engine, model);
+  auto view = createView(engine, model, true);
   ASSERT_NE(view, nullptr);
   auto* item = qobject_cast<QQuickItem*>(view.get());
   ASSERT_NE(item, nullptr);
   item->setParentItem(window.contentItem());
   window.show();
 
-  for (const QSize window_size : {QSize(1100, 720), QSize(720, 480)}) {
+  for (const QSize window_size :
+       {QSize(1360, 890), QSize(1280, 840), QSize(1100, 720), QSize(720, 480), QSize(1343, 890), QSize(1344, 890)}) {
     window.resize(window_size);
-    item->setSize(QSizeF(window_size.width() - 252, window_size.height()));
+    item->setSize(QSizeF(window_size.width(), window_size.height()));
     ASSERT_TRUE(QTest::qWaitFor([&] {
-      auto* label = findLabel(*item, QStringLiteral("apple"));
+      auto* label = findLabel(*item, long_name);
       return label != nullptr && label->width() > 40;
     }));
+    QSignalSpy frame_ready(&window, &QQuickWindow::frameSwapped);
+    window.update();
+    ASSERT_TRUE(frame_ready.wait(2000));
     auto* list = qobject_cast<QQuickItem*>(stateObject(*view, "packageList"));
     ASSERT_NE(list, nullptr);
     auto* row = list->property("currentItem").value<QQuickItem*>();
     ASSERT_NE(row, nullptr);
-    auto* name = findLabel(*row, QStringLiteral("apple"));
+    auto* name = findLabel(*row, long_name);
     auto* reason = findLabel(*row, QStringLiteral("Explicit"));
     ASSERT_NE(name, nullptr);
     ASSERT_NE(reason, nullptr);
     EXPECT_GT(name->width(), 40);
+    EXPECT_TRUE(name->property("truncated").toBool());
+    auto* version = findLabel(*row, long_version);
+    ASSERT_NE(version, nullptr);
+    EXPECT_TRUE(version->property("truncated").toBool());
     EXPECT_LE(reason->mapToItem(row, QPointF(reason->width(), 0)).x(), row->width());
 
     auto* table = qobject_cast<QQuickItem*>(stateObject(*view, "installedPackageTable"));
@@ -219,7 +239,19 @@ TEST_F(InstalledPackagesViewTest, TableKeepsReadableColumnsAtDefaultAndMinimumWi
     auto* flickable = table->property("contentItem").value<QQuickItem*>();
     ASSERT_NE(flickable, nullptr);
     const qreal maximum_x = table->property("contentWidth").toReal() - table->property("availableWidth").toReal();
-    ASSERT_GT(maximum_x, 0);
+    if (window_size.width() == 720) {
+      EXPECT_GT(maximum_x, 0);
+    } else {
+      EXPECT_LE(maximum_x, 0);
+    }
+    auto* detail = qobject_cast<QQuickItem*>(stateObject(*view, "packageDetailPanel"));
+    ASSERT_NE(detail, nullptr);
+    if (window_size.width() >= 1344) {
+      EXPECT_NEAR(table->y(), detail->y(), 1);
+      EXPECT_NEAR(detail->width(), 300, 1);
+    } else {
+      EXPECT_GT(detail->y(), table->y());
+    }
     flickable->setProperty("contentX", maximum_x);
     auto* header_reason = findLabel(*table, QStringLiteral("Reason"));
     ASSERT_NE(header_reason, nullptr);
@@ -227,6 +259,96 @@ TEST_F(InstalledPackagesViewTest, TableKeepsReadableColumnsAtDefaultAndMinimumWi
     EXPECT_GE(reason->mapToItem(table, QPointF()).x(), 0);
     EXPECT_LE(reason->mapToItem(table, QPointF(reason->width(), 0)).x(), table->width());
     flickable->setProperty("contentX", 0);
+    for (const auto& labels :
+         {std::pair{QStringLiteral("Package"), long_name}, std::pair{QStringLiteral("Origin"), QStringLiteral("extra")},
+          std::pair{QStringLiteral("Version"), long_version}}) {
+      auto* header = findLabel(*table, labels.first);
+      auto* value = findLabel(*row, labels.second);
+      ASSERT_NE(header, nullptr);
+      ASSERT_NE(value, nullptr);
+      const qreal padding = labels.first == QStringLiteral("Origin") ? 6 : 0;
+      EXPECT_NEAR(header->mapToItem(table, QPointF()).x() + padding, value->mapToItem(table, QPointF()).x(), 1);
+    }
+    auto* detail_scroll = qobject_cast<QQuickItem*>(stateObject(*view, "packageDetailScrollView"));
+    ASSERT_NE(detail_scroll, nullptr);
+    EXPECT_LE(detail_scroll->property("contentWidth").toReal(), detail_scroll->width());
+    for (const auto& label :
+         {long_name, long_version, QString(100, QLatin1Char('r')), QString(100, QLatin1Char('o'))}) {
+      auto* text = findLabel(*detail, label);
+      ASSERT_NE(text, nullptr);
+      const QRectF bounds = text->mapRectToItem(detail, QRectF(QPointF(), text->size()));
+      EXPECT_GE(bounds.left(), 0);
+      EXPECT_LE(bounds.right(), detail->width());
+    }
+    auto* detail_flickable = detail_scroll->property("contentItem").value<QQuickItem*>();
+    ASSERT_NE(detail_flickable, nullptr);
+    const qreal detail_maximum_y =
+        detail_scroll->property("contentHeight").toReal() - detail_scroll->property("availableHeight").toReal();
+    EXPECT_GT(detail_maximum_y, 0);
+    detail_flickable->setProperty("contentY", detail_maximum_y);
+    auto* website = qobject_cast<QQuickItem*>(stateObject(*view, "packageDetailWebsiteLink"));
+    ASSERT_NE(website, nullptr);
+    EXPECT_TRUE(QRectF(QPointF(), detail_scroll->size())
+                    .contains(website->mapRectToItem(detail_scroll, QRectF(QPointF(), website->size()))));
+    detail_flickable->setProperty("contentY", 0);
+    if (const QString directory = qEnvironmentVariable("HOLONIGHT_TEST_SCREENSHOT_DIR"); !directory.isEmpty()) {
+      EXPECT_TRUE(window.grabWindow().save(
+          directory + QStringLiteral("/workspace-%1x%2.png").arg(window_size.width()).arg(window_size.height())));
+    }
+  }
+}
+
+TEST_F(InstalledPackagesViewTest, OriginBadgesFitTheirLabelsAndPreserveFullRepositoryNames) {
+  using holonight_packages_domain::SourceType;
+  const QString long_repository(80, QLatin1Char('r'));
+  for (const auto& repository : {QStringLiteral("core"), QStringLiteral("extra"), QStringLiteral("g14"), QString(),
+                                 long_repository, QStringLiteral("foreign")}) {
+    const bool foreign = repository == QStringLiteral("foreign");
+    const QString label =
+        foreign ? QStringLiteral("Foreign") : (repository.isEmpty() ? QStringLiteral("Official") : repository);
+    auto source = std::make_shared<MockPackageSource>();
+    EXPECT_CALL(*source, enumerateInstalledPackages())
+        .WillOnce(
+            Return(std::vector<Package>{Package{.name = "apple",
+                                                .sourceType = foreign ? SourceType::Foreign : SourceType::Official,
+                                                .repository = repository.toStdString()}}));
+    InstalledPackagesModel model(std::make_shared<PackageListUseCase>(source));
+    QSignalSpy loaded(&model, &InstalledPackagesModel::statusChanged);
+    ASSERT_TRUE(loaded.wait(2000));
+    QQmlEngine engine;
+    QQuickWindow window;
+    auto view = createView(engine, model, true);
+    ASSERT_NE(view, nullptr);
+    auto* item = qobject_cast<QQuickItem*>(view.get());
+    item->setParentItem(window.contentItem());
+    item->setSize(QSizeF(1360, 890));
+    window.resize(1360, 890);
+    window.show();
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    auto* list = stateObject(*view, "packageList");
+    ASSERT_TRUE(QTest::qWaitFor([&] { return list->property("currentItem").value<QQuickItem*>() != nullptr; }));
+    auto* row = list->property("currentItem").value<QQuickItem*>();
+    for (auto* badge : {qobject_cast<QQuickItem*>(stateObject(*row, "packageRowOriginBadge")),
+                        qobject_cast<QQuickItem*>(stateObject(*view, "packageDetailOriginBadge"))}) {
+      ASSERT_NE(badge, nullptr);
+      EXPECT_EQ(badge->property("text").toString(), label);
+      EXPECT_EQ(badge->property("toolTipText").toString(),
+                !foreign && !repository.isEmpty() ? QStringLiteral("Repository: ") + repository : label);
+      auto* accessible = QAccessible::queryAccessibleInterface(badge);
+      ASSERT_NE(accessible, nullptr);
+      EXPECT_EQ(accessible->text(QAccessible::Name), label);
+      auto* text = findLabel(*badge, label);
+      ASSERT_NE(text, nullptr);
+      if (repository == long_repository) {
+        EXPECT_LT(badge->width(), badge->implicitWidth());
+        EXPECT_TRUE(text->property("truncated").toBool());
+      } else {
+        EXPECT_NEAR(badge->width(), badge->implicitWidth(), 1);
+        EXPECT_NEAR(badge->width(), text->implicitWidth() + 12, 1);
+        EXPECT_FALSE(text->property("truncated").toBool());
+      }
+      EXPECT_LE(badge->width(), badge->parentItem()->width());
+    }
   }
 }
 
@@ -262,22 +384,25 @@ TEST_F(InstalledPackagesViewTest, ToolbarAndCategoryTabsRemainReachableAtMinimum
   ASSERT_TRUE(loaded.wait(2000));
   QQmlEngine engine;
   QQuickWindow window;
-  auto view = createView(engine, model);
+  auto view = createView(engine, model, true);
   ASSERT_NE(view, nullptr);
   auto* item = qobject_cast<QQuickItem*>(view.get());
   ASSERT_NE(item, nullptr);
   item->setParentItem(window.contentItem());
   window.show();
 
-  for (const QSize window_size : {QSize(720, 480), QSize(1100, 720)}) {
+  for (const QSize window_size : {QSize(720, 480), QSize(1100, 720), QSize(1280, 840), QSize(1360, 890)}) {
     window.resize(window_size);
-    item->setSize(QSizeF(window_size.width() - 252, window_size.height()));
+    item->setSize(QSizeF(window_size.width(), window_size.height()));
     ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
     ASSERT_TRUE(QTest::qWaitFor([&] { return findLabel(*item, QStringLiteral("Orphans")) != nullptr; }));
     QSignalSpy frame(&window, &QQuickWindow::frameSwapped);
     window.update();
     ASSERT_TRUE(frame.wait(2000));
     const QRectF page_bounds(QPointF(), item->size());
+    QSignalSpy frame_ready(&window, &QQuickWindow::frameSwapped);
+    window.update();
+    ASSERT_TRUE(frame_ready.wait(2000));
     auto* list = qobject_cast<QQuickItem*>(stateObject(*view, "packageList"));
     ASSERT_NE(list, nullptr);
     EXPECT_GE(list->height(), 64);
@@ -287,6 +412,11 @@ TEST_F(InstalledPackagesViewTest, ToolbarAndCategoryTabsRemainReachableAtMinimum
       auto* control = qobject_cast<QQuickItem*>(stateObject(*view, name));
       ASSERT_NE(control, nullptr);
       EXPECT_TRUE(page_bounds.contains(control->mapRectToItem(item, QRectF(QPointF(), control->size())))) << name;
+    }
+    auto* search = qobject_cast<QQuickItem*>(stateObject(*view, "installedSearchField"));
+    ASSERT_NE(search, nullptr);
+    if (window_size.width() == 720) {
+      EXPECT_NEAR(search->width(), window_size.width() - 220 - 32, 1);
     }
     for (const char* label : {"Explicit", "Dependencies", "AUR / Foreign", "Orphans"}) {
       auto* control = buttonForLabel(*item, QString::fromUtf8(label));
@@ -327,7 +457,7 @@ TEST_F(InstalledPackagesViewTest, PageLayoutRemainsFreeOfBindingLoopsDuringLoadA
     }
   });
   QQuickWindow window;
-  auto view = createView(engine, model);
+  auto view = createView(engine, model, true);
   ASSERT_NE(view, nullptr);
   auto* item = qobject_cast<QQuickItem*>(view.get());
   ASSERT_NE(item, nullptr);
@@ -341,7 +471,7 @@ TEST_F(InstalledPackagesViewTest, PageLayoutRemainsFreeOfBindingLoopsDuringLoadA
 
   for (const QSize window_size : {QSize(1100, 720), QSize(720, 480), QSize(1050, 600), QSize(1100, 720)}) {
     window.resize(window_size);
-    item->setSize(QSizeF(window_size.width() - 252, window_size.height()));
+    item->setSize(QSizeF(window_size.width(), window_size.height()));
     QSignalSpy frame(&window, &QQuickWindow::frameSwapped);
     window.update();
     ASSERT_TRUE(frame.wait(2000));

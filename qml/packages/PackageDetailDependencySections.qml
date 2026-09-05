@@ -25,7 +25,7 @@ ColumnLayout {
         role: HnTypographyRole.Body
         rawText: root.description
         color: HoloniightPalette.textSecondary
-        wrapMode: Text.WordWrap
+        wrapMode: Text.Wrap
         visible: text.length > 0
         Layout.fillWidth: true
     }
@@ -48,10 +48,23 @@ ColumnLayout {
             }
         }
 
-        HnStatusIndicator {
-            status: HnStatusIndicator.Success
-            text: qsTr("Safe to remove; no installed packages depend on it")
+        RowLayout {
+            spacing: 6
             visible: root.requiredByCount === 0
+            Layout.fillWidth: true
+
+            HnStatusIndicator {
+                status: HnStatusIndicator.Success
+                Layout.alignment: Qt.AlignTop
+            }
+
+            HnLabel {
+                role: HnTypographyRole.Body
+                color: HoloniightPalette.success
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+                rawText: qsTr("Safe to remove; no installed packages depend on it")
+            }
         }
 
         ColumnLayout {
@@ -66,6 +79,7 @@ ColumnLayout {
                     required property string modelData
 
                     role: HnTypographyRole.Body
+                    wrapMode: Text.WrapAnywhere
                     rawText: modelData
                     color: HoloniightPalette.textSecondary
                     Layout.fillWidth: true
@@ -93,6 +107,8 @@ ColumnLayout {
         }
 
         Flow {
+            id: dependencies
+
             spacing: 8
             Layout.fillWidth: true
 
@@ -104,8 +120,9 @@ ColumnLayout {
                 Rectangle {
                     required property string modelData
 
+                    width: Math.min(implicitWidth, dependencies.width)
                     implicitWidth: chipLabel.implicitWidth + 16
-                    implicitHeight: chipLabel.implicitHeight + 8
+                    implicitHeight: chipLabel.height + 8
                     radius: height / 2
                     color: HoloniightPalette.surfaceElevated
 
@@ -113,6 +130,8 @@ ColumnLayout {
                         id: chipLabel
 
                         anchors.centerIn: parent
+                        width: Math.max(0, parent.width - 16)
+                        wrapMode: Text.WrapAnywhere
                         role: HnTypographyRole.Caption
                         rawText: parent.modelData
                         color: HoloniightPalette.textSecondary
