@@ -4,6 +4,9 @@ Used by `tests/backends/alpm_package_source_test.cpp` so backend tests never tou
 
 - `populated/` — 3 installed packages: `apple` (Official/core, Explicit), `zebra` (Official/core, Dependency),
   `foreign-tool` (Foreign — present in `local/` but absent from `sync/core.db`).
+  `apple` carries extended metadata (`%DESC%`, `%SIZE%`, `%INSTALLDATE%`, `%OPTDEPENDS%` in `desc`; a `%BACKUP%`
+  entry in `files`) and `%DEPENDS%` on `zebra`, so `zebra`'s computed `requiredBy` is `["apple"]`. `foreign-tool`
+  has none of these fields, exercising the safe-default (empty/zero) path.
 - `empty/` — valid local DB, zero installed packages, no sync DBs.
 
 `populated/sync/core.db` is the one binary artifact (gzip tar of per-package `desc` files, pacman's real sync DB

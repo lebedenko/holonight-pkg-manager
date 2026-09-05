@@ -7,9 +7,24 @@ apple
 %BASE%
 apple
 
+%DESC%
+A tasty fruit
+
+%SIZE%
+123456
+
+%INSTALLDATE%
+1700000000
+
 %REASON%
 0
 
 %VALIDATION%
 none
+
+%DEPENDS%
+zebra
+
+%OPTDEPENDS%
+juicer: for making juice
 

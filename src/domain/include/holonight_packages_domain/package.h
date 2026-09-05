@@ -1,7 +1,9 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace holonight_packages_domain {
 
@@ -16,6 +18,13 @@ struct Package {
   std::string repository;
   InstallReason installReason = InstallReason::Explicit;
   std::string backendSpecificId;
+
+  std::uint64_t sizeBytes = 0;
+  std::string description;
+  std::chrono::system_clock::time_point installDate;
+  std::vector<std::string> requiredBy;
+  std::vector<std::string> optionalDependencies;
+  std::size_t configFileCount = 0;
 
   bool operator==(const Package&) const = default;
 };

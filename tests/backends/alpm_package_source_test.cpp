@@ -5,9 +5,11 @@
 #include <QTemporaryDir>
 
 #include <algorithm>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
+#include <string>
 #include <unistd.h>
 #include <vector>
 
@@ -128,6 +130,55 @@ TEST(AlpmPackageSource, OfficialPackagesAreMarkedOfficialWithRepository) {
   EXPECT_EQ(zebra->sourceType, SourceType::Official);
   EXPECT_EQ(zebra->repository, "core");
   EXPECT_EQ(zebra->installReason, InstallReason::Dependency);
+}
+
+TEST(AlpmPackageSource, ExtendedFieldsArePopulatedFromLibalpmMetadata) {
+  const auto root = fixturePath("populated");
+  AlpmPackageSource source(root, root);
+
+  const auto result = source.enumerateInstalledPackages();
+  ASSERT_TRUE(result.has_value());
+
+  const Package* apple = findByName(*result, "apple");
+  ASSERT_NE(apple, nullptr);
+  EXPECT_EQ(apple->sizeBytes, 123456U);
+  EXPECT_EQ(apple->description, "A tasty fruit");
+  EXPECT_EQ(apple->installDate, std::chrono::system_clock::from_time_t(1700000000));
+  EXPECT_EQ(apple->configFileCount, 1U);
+  ASSERT_EQ(apple->optionalDependencies.size(), 1U);
+  EXPECT_EQ(apple->optionalDependencies.front(), "juicer: for making juice");
+}
+
+TEST(AlpmPackageSource, RequiredByIsComputedFromReverseDependencies) {
+  const auto root = fixturePath("populated");
+  AlpmPackageSource source(root, root);
+
+  const auto result = source.enumerateInstalledPackages();
+  ASSERT_TRUE(result.has_value());
+
+  const Package* zebra = findByName(*result, "zebra");
+  ASSERT_NE(zebra, nullptr);
+  EXPECT_EQ(zebra->requiredBy, (std::vector<std::string>{"apple"}));
+
+  const Package* apple = findByName(*result, "apple");
+  ASSERT_NE(apple, nullptr);
+  EXPECT_TRUE(apple->requiredBy.empty());
+}
+
+TEST(AlpmPackageSource, PackageWithNoExtendedMetadataGetsSafeDefaults) {
+  const auto root = fixturePath("populated");
+  AlpmPackageSource source(root, root);
+
+  const auto result = source.enumerateInstalledPackages();
+  ASSERT_TRUE(result.has_value());
+
+  const Package* foreign_tool = findByName(*result, "foreign-tool");
+  ASSERT_NE(foreign_tool, nullptr);
+  EXPECT_EQ(foreign_tool->sizeBytes, 0U);
+  EXPECT_TRUE(foreign_tool->description.empty());
+  EXPECT_EQ(foreign_tool->configFileCount, 0U);
+  EXPECT_TRUE(foreign_tool->requiredBy.empty());
+  EXPECT_TRUE(foreign_tool->optionalDependencies.empty());
 }
 
 TEST(AlpmPackageSource, ForeignPackageIsMarkedForeignWithNoRepository) {

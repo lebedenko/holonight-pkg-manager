@@ -2,9 +2,12 @@
 
 A standalone C++23/Qt 6 package-management application for the HoloNight desktop.
 
-The application currently shows a read-only, live list of installed Arch Linux packages (name, version, and
-official/foreign source), loaded asynchronously via libalpm. Package transactions, update checking, the per-user
-service, the privileged helper, and desktop/D-Bus integration are not implemented yet.
+The application currently shows a read-only, filterable Installed page for Arch Linux packages, loaded
+asynchronously via libalpm: a data table (package, origin, installed version, size, install reason) with
+per-category tabs (Explicit / Dependencies / AUR-Foreign / Orphans), search, sort, a repository filter, and a
+detail panel with metadata, dependency, and orphan-reclaim information. It is transactionally inert — no install,
+remove, or update action is implemented. Package transactions, update checking, the per-user service, the
+privileged helper, and desktop/D-Bus integration are not implemented yet.
 
 ## Requirements
 

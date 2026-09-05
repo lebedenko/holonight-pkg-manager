@@ -66,6 +66,75 @@ TEST(InstalledPackagesModel, SuccessfulLoadTransitionsToLoadedWithRoleData) {
   EXPECT_EQ(model.data(index, InstalledPackagesModel::RepositoryRole).toString(), QStringLiteral("core"));
 }
 
+TEST(InstalledPackagesModel, ExtendedRolesAndAggregatesReflectFixturePackages) {
+  auto mock_source = std::make_shared<MockPackageSource>();
+  const std::vector<Package> packages{
+      Package{.name = "apple",
+              .installedVersion = "2.3-4",
+              .sourceType = SourceType::Official,
+              .repository = "core",
+              .installReason = InstallReason::Explicit,
+              .sizeBytes = 1024,
+              .description = "a tasty fruit",
+              .requiredBy = {},
+              .optionalDependencies = {"juicer"},
+              .configFileCount = 1},
+      Package{.name = "zebra",
+              .installedVersion = "1.0-1",
+              .sourceType = SourceType::Official,
+              .repository = "core",
+              .installReason = InstallReason::Dependency,
+              .sizeBytes = 2048,
+              .requiredBy = {"apple"}},
+      Package{.name = "orphaned-lib",
+              .installedVersion = "0.1-1",
+              .sourceType = SourceType::Official,
+              .repository = "core",
+              .installReason = InstallReason::Dependency,
+              .sizeBytes = 4096,
+              .requiredBy = {}},
+      Package{.name = "foreign-tool",
+              .installedVersion = "9.9-1",
+              .sourceType = SourceType::Foreign,
+              .installReason = InstallReason::Explicit,
+              .sizeBytes = 512},
+  };
+  EXPECT_CALL(*mock_source, enumerateInstalledPackages()).WillOnce(Return(packages));
+
+  InstalledPackagesModel model(makeUseCase(mock_source));
+  QSignalSpy status_changed(&model, &InstalledPackagesModel::statusChanged);
+  ASSERT_TRUE(status_changed.wait(2000));
+  ASSERT_EQ(model.status(), InstalledPackagesModel::Status::Loaded);
+
+  const QModelIndex apple_index = model.index(0, 0);
+  EXPECT_EQ(model.data(apple_index, InstalledPackagesModel::SizeRole).toULongLong(), 1024ULL);
+  EXPECT_EQ(model.data(apple_index, InstalledPackagesModel::SizeLabelRole).toString(), QStringLiteral("1 KiB"));
+  EXPECT_EQ(model.data(apple_index, InstalledPackagesModel::DescriptionRole).toString(),
+            QStringLiteral("a tasty fruit"));
+  EXPECT_EQ(model.data(apple_index, InstalledPackagesModel::RequiredByCountRole).toInt(), 0);
+  EXPECT_EQ(model.data(apple_index, InstalledPackagesModel::OptionalDependenciesRole).toStringList(),
+            QStringList{QStringLiteral("juicer")});
+  EXPECT_EQ(model.data(apple_index, InstalledPackagesModel::ConfigFileCountRole).toInt(), 1);
+  EXPECT_FALSE(model.data(apple_index, InstalledPackagesModel::IsOrphanRole).toBool());
+
+  // Rows are sorted alphabetically by PackageListUseCase: apple, foreign-tool, orphaned-lib, zebra.
+  const QModelIndex zebra_index = model.index(3, 0);
+  EXPECT_FALSE(model.data(zebra_index, InstalledPackagesModel::IsOrphanRole).toBool());
+  EXPECT_EQ(model.data(zebra_index, InstalledPackagesModel::RequiredByListRole).toStringList(),
+            QStringList{QStringLiteral("apple")});
+
+  const QModelIndex orphan_index = model.index(2, 0);
+  EXPECT_TRUE(model.data(orphan_index, InstalledPackagesModel::IsOrphanRole).toBool());
+
+  EXPECT_EQ(model.totalPackageCount(), 4);
+  EXPECT_EQ(model.totalInstalledSizeBytes(), 1024ULL + 2048ULL + 4096ULL + 512ULL);
+  EXPECT_EQ(model.explicitPackageCount(), 2);
+  EXPECT_EQ(model.dependencyPackageCount(), 2);
+  EXPECT_EQ(model.foreignPackageCount(), 1);
+  EXPECT_EQ(model.orphanPackageCount(), 1);
+  EXPECT_EQ(model.reclaimableSizeBytes(), 4096ULL);
+}
+
 TEST(InstalledPackagesModel, BackendErrorTransitionsToErrorStateWithMessage) {
   auto mock_source = std::make_shared<MockPackageSource>();
   const PackageSourceError error{.code = PackageSourceErrorCode::DatabaseOpenFailed, .message = "boom"};
@@ -132,6 +201,24 @@ TEST(InstalledPackagesModel, RoleNamesExposesFourRoles) {
   EXPECT_EQ(roles.value(InstalledPackagesModel::InstalledVersionRole), QByteArrayLiteral("installedVersion"));
   EXPECT_EQ(roles.value(InstalledPackagesModel::SourceLabelRole), QByteArrayLiteral("sourceLabel"));
   EXPECT_EQ(roles.value(InstalledPackagesModel::RepositoryRole), QByteArrayLiteral("repository"));
+}
+
+TEST(InstalledPackagesModel, RoleNamesExposesExtendedRoles) {
+  auto mock_source = std::make_shared<MockPackageSource>();
+  EXPECT_CALL(*mock_source, enumerateInstalledPackages()).WillOnce(Return(std::vector<Package>{}));
+  const InstalledPackagesModel model(makeUseCase(mock_source));
+
+  const QHash<int, QByteArray> roles = model.roleNames();
+
+  EXPECT_EQ(roles.value(InstalledPackagesModel::SizeRole), QByteArrayLiteral("size"));
+  EXPECT_EQ(roles.value(InstalledPackagesModel::SizeLabelRole), QByteArrayLiteral("sizeLabel"));
+  EXPECT_EQ(roles.value(InstalledPackagesModel::DescriptionRole), QByteArrayLiteral("description"));
+  EXPECT_EQ(roles.value(InstalledPackagesModel::InstallDateRole), QByteArrayLiteral("installDate"));
+  EXPECT_EQ(roles.value(InstalledPackagesModel::RequiredByCountRole), QByteArrayLiteral("requiredByCount"));
+  EXPECT_EQ(roles.value(InstalledPackagesModel::RequiredByListRole), QByteArrayLiteral("requiredByList"));
+  EXPECT_EQ(roles.value(InstalledPackagesModel::OptionalDependenciesRole), QByteArrayLiteral("optionalDependencies"));
+  EXPECT_EQ(roles.value(InstalledPackagesModel::ConfigFileCountRole), QByteArrayLiteral("configFileCount"));
+  EXPECT_EQ(roles.value(InstalledPackagesModel::IsOrphanRole), QByteArrayLiteral("isOrphan"));
 }
 
 TEST(InstalledPackagesModel, RefreshWhileRunningIsANoOp) {

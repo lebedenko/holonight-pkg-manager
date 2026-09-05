@@ -4,6 +4,9 @@
 #include "holonight_packages_persistence/alpm_connection_cache.h"
 
 #include <alpm.h>
+#include <chrono>
+#include <cstdint>
+#include <cstdlib>
 #include <expected>
 #include <filesystem>
 #include <memory>
@@ -25,16 +28,56 @@ InstallReason toInstallReason(alpm_pkgreason_t reason) {
   return reason == ALPM_PKG_REASON_EXPLICIT ? InstallReason::Explicit : InstallReason::Dependency;
 }
 
-std::expected<Package, PackageSourceError> toPackage(alpm_pkg_t* pkg, const std::vector<alpm_db_t*>& sync_dbs) {
-  const char* name = alpm_pkg_get_name(pkg);
-  for (alpm_db_t* sync_db : sync_dbs) {
-    if (name != nullptr && alpm_db_get_pkg(sync_db, name) != nullptr) {
-      return detail::convertPackageFields(name, alpm_pkg_get_version(pkg), alpm_db_get_name(sync_db),
-                                          SourceType::Official, toInstallReason(alpm_pkg_get_reason(pkg)));
+// Fills the 6 fields libalpm's toPackage() base conversion doesn't cover, from the same alpm_pkg_t*
+// (one enumeration pass, no extra libalpm round-trips per REQ-F-102).
+void populateExtendedFields(Package& package, alpm_pkg_t* pkg) {
+  const off_t installed_size = alpm_pkg_get_isize(pkg);
+  package.sizeBytes = installed_size > 0 ? static_cast<std::uint64_t>(installed_size) : 0;
+
+  const char* description = alpm_pkg_get_desc(pkg);
+  package.description = description != nullptr ? description : "";
+
+  package.installDate = std::chrono::system_clock::from_time_t(static_cast<std::time_t>(alpm_pkg_get_installdate(pkg)));
+
+  // alpm_pkg_compute_requiredby ALLOCATES a new list of newly-strdup'd strings; unlike the borrowed
+  // accessors below, caller must free both the strings and the list.
+  alpm_list_t* required_by = alpm_pkg_compute_requiredby(pkg);
+  for (alpm_list_t* node = required_by; node != nullptr; node = alpm_list_next(node)) {
+    package.requiredBy.emplace_back(static_cast<const char*>(node->data));
+  }
+  alpm_list_free_inner(required_by, free);
+  alpm_list_free(required_by);
+
+  // alpm_pkg_get_optdepends returns the package's own cached list; do not free the list or its
+  // alpm_depend_t* entries, only the string alpm_dep_compute_string() allocates needs freeing.
+  for (alpm_list_t* node = alpm_pkg_get_optdepends(pkg); node != nullptr; node = alpm_list_next(node)) {
+    auto* dependency = static_cast<alpm_depend_t*>(node->data);
+    std::unique_ptr<char, decltype(&free)> dependency_string(alpm_dep_compute_string(dependency), &free);
+    if (dependency_string != nullptr) {
+      package.optionalDependencies.emplace_back(dependency_string.get());
     }
   }
-  return detail::convertPackageFields(name, alpm_pkg_get_version(pkg), "", SourceType::Foreign,
-                                      toInstallReason(alpm_pkg_get_reason(pkg)));
+
+  // alpm_pkg_get_backup is also a borrowed cached list; just count it.
+  package.configFileCount = static_cast<std::size_t>(alpm_list_count(alpm_pkg_get_backup(pkg)));
+}
+
+std::expected<Package, PackageSourceError> toPackage(alpm_pkg_t* pkg, const std::vector<alpm_db_t*>& sync_dbs) {
+  const char* name = alpm_pkg_get_name(pkg);
+  auto package = [&]() -> std::expected<Package, PackageSourceError> {
+    for (alpm_db_t* sync_db : sync_dbs) {
+      if (name != nullptr && alpm_db_get_pkg(sync_db, name) != nullptr) {
+        return detail::convertPackageFields(name, alpm_pkg_get_version(pkg), alpm_db_get_name(sync_db),
+                                            SourceType::Official, toInstallReason(alpm_pkg_get_reason(pkg)));
+      }
+    }
+    return detail::convertPackageFields(name, alpm_pkg_get_version(pkg), "", SourceType::Foreign,
+                                        toInstallReason(alpm_pkg_get_reason(pkg)));
+  }();
+  if (package.has_value()) {
+    populateExtendedFields(*package, pkg);
+  }
+  return package;
 }
 
 }  // namespace

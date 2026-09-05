@@ -7,9 +7,13 @@ add_executable(test_holonight_packages
   backends/alpm_package_source_test.cpp
   persistence/alpm_connection_cache_test.cpp
   application/package_list_use_case_test.cpp
+  application/orphan_package_filter_test.cpp
+  application/package_size_formatter_test.cpp
   apps/installed_packages_model_test.cpp
+  apps/installed_packages_filter_model_test.cpp
   apps/installed_packages_view_test.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/InstalledPackagesModel.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/InstalledPackagesFilterModel.cpp
 )
 target_include_directories(test_holonight_packages PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/application
