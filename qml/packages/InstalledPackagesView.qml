@@ -25,51 +25,82 @@ Item {
         sourceModel: root.installedPackagesModel
     }
 
-    ColumnLayout {
-        id: content
+    ScrollView {
+        id: pageScroll
 
+        objectName: "installedPageScrollView"
         anchors.fill: parent
         anchors.margins: 24
-        spacing: 16
+        contentWidth: availableWidth
+        contentHeight: content.implicitHeight
         visible: root.hasPackages
+        clip: true
+        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+        ScrollBar.vertical: H.ScrollBar {}
 
-        InstalledToolbar {
-            installedPackagesModel: root.installedPackagesModel
-            filterModel: filterModel
-            Layout.fillWidth: true
-        }
+        Column {
+            id: content
 
-        InstalledFilterTabs {
-            installedPackagesModel: root.installedPackagesModel
-            filterModel: filterModel
-        }
+            width: pageScroll.availableWidth
+            spacing: 16
 
-        GridLayout {
-            id: packageLayout
+            InstalledToolbar {
+                id: toolbar
 
-            columns: content.width >= 780 ? 2 : 1
-            columnSpacing: 16
-            rowSpacing: 16
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-
-            PackageTable {
+                width: content.width
+                installedPackagesModel: root.installedPackagesModel
                 filterModel: filterModel
-                Layout.fillWidth: true
-                Layout.fillHeight: true
             }
 
-            PackageDetailPanel {
-                filterModel: filterModel
-                Layout.preferredWidth: 380
-                Layout.fillWidth: packageLayout.columns === 1
-                Layout.fillHeight: true
-            }
-        }
+            InstalledFilterTabs {
+                id: filterTabs
 
-        OrphanFooterBar {
-            installedPackagesModel: root.installedPackagesModel
-            Layout.fillWidth: true
+                width: content.width
+                installedPackagesModel: root.installedPackagesModel
+                filterModel: filterModel
+            }
+
+            GridLayout {
+                id: packageLayout
+
+                readonly property real minimumContentHeight: columns === 1
+                    ? packageTable.Layout.minimumHeight + packageDetail.Layout.minimumHeight + rowSpacing
+                    : Math.max(packageTable.Layout.minimumHeight, packageDetail.Layout.minimumHeight)
+
+                width: content.width
+                // Allocate the remaining viewport space without reading this layout's own size hints.
+                height: Math.max(minimumContentHeight, pageScroll.availableHeight
+                    - toolbar.height - filterTabs.height - footer.height - 3 * content.spacing)
+                columns: content.width >= 780 ? 2 : 1
+                columnSpacing: 16
+                rowSpacing: 16
+
+                PackageTable {
+                    id: packageTable
+
+                    filterModel: filterModel
+                    Layout.minimumHeight: 160
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                }
+
+                PackageDetailPanel {
+                    id: packageDetail
+
+                    filterModel: filterModel
+                    Layout.minimumHeight: 200
+                    Layout.preferredWidth: 380
+                    Layout.fillWidth: packageLayout.columns === 1
+                    Layout.fillHeight: true
+                }
+            }
+
+            OrphanFooterBar {
+                id: footer
+
+                width: content.width
+                installedPackagesModel: root.installedPackagesModel
+            }
         }
     }
 

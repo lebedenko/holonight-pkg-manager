@@ -6,7 +6,7 @@ import Holonight.Core
 import Holonight.Controls
 import HolonightPackages
 
-Row {
+Flow {
     id: root
 
     required property InstalledPackagesModel installedPackagesModel
@@ -50,6 +50,7 @@ Row {
             required property var modelData
 
             selectionStyle: HnListDelegate.Fill
+            title: tabDelegate.modelData.label
             checked: root.filterModel.tabFilter === tabDelegate.modelData.tab
 
             contentItem: RowLayout {

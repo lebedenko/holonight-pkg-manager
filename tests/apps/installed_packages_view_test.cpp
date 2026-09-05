@@ -2,10 +2,12 @@
 #include "InstalledPackagesModel.h"
 #include "mock_package_source.h"
 
+#include <QAccessible>
 #include <QCoreApplication>
 #include <QJSValue>
 #include <QQmlComponent>
 #include <QQmlEngine>
+#include <QQmlError>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QSignalSpy>
@@ -13,6 +15,7 @@
 #include <QtQml/qqml.h>
 
 #include <chrono>
+#include <future>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <memory>
@@ -50,6 +53,15 @@ QQuickItem* findLabel(QQuickItem& item, const QString& text) {
   }
   for (auto* child : item.childItems()) {
     if (auto* label = findLabel(*child, text)) {
+      return label;
+    }
+  }
+  return nullptr;
+}
+
+QQuickItem* buttonForLabel(QQuickItem& item, const QString& text) {
+  for (auto* label = findLabel(item, text); label != nullptr; label = label->parentItem()) {
+    if (label->metaObject()->indexOfSignal("clicked()") >= 0) {
       return label;
     }
   }
@@ -240,6 +252,201 @@ TEST_F(InstalledPackagesViewTest, ListAndGridChoicesRemainExclusiveAndDoNotChang
   EXPECT_TRUE(list_button->property("checked").toBool());
   EXPECT_FALSE(grid_button->property("checked").toBool());
   EXPECT_EQ(stateObject(*view, "packageList")->property("count").toInt(), 1);
+}
+
+TEST_F(InstalledPackagesViewTest, ToolbarAndCategoryTabsRemainReachableAtMinimumWindowSize) {
+  auto source = std::make_shared<MockPackageSource>();
+  EXPECT_CALL(*source, enumerateInstalledPackages()).WillOnce(Return(std::vector<Package>{Package{.name = "apple"}}));
+  InstalledPackagesModel model(std::make_shared<PackageListUseCase>(source));
+  QSignalSpy loaded(&model, &InstalledPackagesModel::statusChanged);
+  ASSERT_TRUE(loaded.wait(2000));
+  QQmlEngine engine;
+  QQuickWindow window;
+  auto view = createView(engine, model);
+  ASSERT_NE(view, nullptr);
+  auto* item = qobject_cast<QQuickItem*>(view.get());
+  ASSERT_NE(item, nullptr);
+  item->setParentItem(window.contentItem());
+  window.show();
+
+  for (const QSize window_size : {QSize(720, 480), QSize(1100, 720)}) {
+    window.resize(window_size);
+    item->setSize(QSizeF(window_size.width() - 252, window_size.height()));
+    ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+    ASSERT_TRUE(QTest::qWaitFor([&] { return findLabel(*item, QStringLiteral("Orphans")) != nullptr; }));
+    QSignalSpy frame(&window, &QQuickWindow::frameSwapped);
+    window.update();
+    ASSERT_TRUE(frame.wait(2000));
+    const QRectF page_bounds(QPointF(), item->size());
+    auto* list = qobject_cast<QQuickItem*>(stateObject(*view, "packageList"));
+    ASSERT_NE(list, nullptr);
+    EXPECT_GE(list->height(), 64);
+    for (const char* name :
+         {"installedSearchField", "installedSortComboBox", "installedListViewButton", "installedGridViewButton",
+          "installedOverflowButton", "installedRepositoryComboBox", "installedAllStatesComboBox"}) {
+      auto* control = qobject_cast<QQuickItem*>(stateObject(*view, name));
+      ASSERT_NE(control, nullptr);
+      EXPECT_TRUE(page_bounds.contains(control->mapRectToItem(item, QRectF(QPointF(), control->size())))) << name;
+    }
+    for (const char* label : {"Explicit", "Dependencies", "AUR / Foreign", "Orphans"}) {
+      auto* control = buttonForLabel(*item, QString::fromUtf8(label));
+      ASSERT_NE(control, nullptr) << label;
+      EXPECT_TRUE(page_bounds.contains(control->mapRectToItem(item, QRectF(QPointF(), control->size())))) << label;
+    }
+    auto* page_scroll = qobject_cast<QQuickItem*>(stateObject(*view, "installedPageScrollView"));
+    ASSERT_NE(page_scroll, nullptr);
+    auto* flickable = page_scroll->property("contentItem").value<QQuickItem*>();
+    ASSERT_NE(flickable, nullptr);
+    const qreal maximum_y =
+        page_scroll->property("contentHeight").toReal() - page_scroll->property("availableHeight").toReal();
+    if (window_size.height() == 480) {
+      EXPECT_GT(maximum_y, 0);
+    }
+    flickable->setProperty("contentY", maximum_y);
+    auto* review_button = qobject_cast<QQuickItem*>(stateObject(*view, "orphanFooterReviewButton"));
+    ASSERT_NE(review_button, nullptr);
+    EXPECT_TRUE(page_bounds.contains(review_button->mapRectToItem(item, QRectF(QPointF(), review_button->size()))));
+    flickable->setProperty("contentY", 0);
+  }
+}
+
+TEST_F(InstalledPackagesViewTest, PageLayoutRemainsFreeOfBindingLoopsDuringLoadAndResize) {
+  std::promise<std::vector<Package>> enumeration;
+  const auto result = enumeration.get_future().share();
+  auto source = std::make_shared<MockPackageSource>();
+  EXPECT_CALL(*source, enumerateInstalledPackages()).WillOnce([result] {
+    return MockPackageSource::Result(result.get());
+  });
+  InstalledPackagesModel model(std::make_shared<PackageListUseCase>(source));
+  QSignalSpy loaded(&model, &InstalledPackagesModel::statusChanged);
+  QStringList warnings;
+  QQmlEngine engine;
+  QObject::connect(&engine, &QQmlEngine::warnings, &engine, [&warnings](const QList<QQmlError>& errors) {
+    for (const auto& error : errors) {
+      warnings.append(error.toString());
+    }
+  });
+  QQuickWindow window;
+  auto view = createView(engine, model);
+  ASSERT_NE(view, nullptr);
+  auto* item = qobject_cast<QQuickItem*>(view.get());
+  ASSERT_NE(item, nullptr);
+  item->setParentItem(window.contentItem());
+  item->setSize(QSizeF(848, 720));
+  window.resize(1100, 720);
+  window.show();
+  ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+  enumeration.set_value({Package{.name = "apple"}});
+  ASSERT_TRUE(loaded.wait(2000));
+
+  for (const QSize window_size : {QSize(1100, 720), QSize(720, 480), QSize(1050, 600), QSize(1100, 720)}) {
+    window.resize(window_size);
+    item->setSize(QSizeF(window_size.width() - 252, window_size.height()));
+    QSignalSpy frame(&window, &QQuickWindow::frameSwapped);
+    window.update();
+    ASSERT_TRUE(frame.wait(2000));
+  }
+  EXPECT_TRUE(warnings.isEmpty()) << warnings.join(QLatin1Char('\n')).toStdString();
+}
+
+TEST_F(InstalledPackagesViewTest, ArrowKeysKeepHighlightedRowAndPackageDetailsInSync) {
+  auto source = std::make_shared<MockPackageSource>();
+  EXPECT_CALL(*source, enumerateInstalledPackages())
+      .WillOnce(Return(std::vector<Package>{Package{.name = "apple"}, Package{.name = "banana"}}));
+  InstalledPackagesModel model(std::make_shared<PackageListUseCase>(source));
+  QSignalSpy loaded(&model, &InstalledPackagesModel::statusChanged);
+  ASSERT_TRUE(loaded.wait(2000));
+  QQmlEngine engine;
+  QQuickWindow window;
+  auto view = createView(engine, model);
+  ASSERT_NE(view, nullptr);
+  auto* item = qobject_cast<QQuickItem*>(view.get());
+  ASSERT_NE(item, nullptr);
+  item->setParentItem(window.contentItem());
+  item->setSize(QSizeF(848, 720));
+  window.resize(1100, 720);
+  window.show();
+  ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+  auto* list = qobject_cast<QQuickItem*>(stateObject(*view, "packageList"));
+  ASSERT_NE(list, nullptr);
+  auto* filter = view->findChild<InstalledPackagesFilterModel*>();
+  ASSERT_NE(filter, nullptr);
+  ASSERT_TRUE(QTest::qWaitFor([&] { return list->property("currentItem").value<QQuickItem*>() != nullptr; }));
+  list->property("currentItem").value<QQuickItem*>()->forceActiveFocus();
+
+  QTest::keyClick(&window, Qt::Key_Down);
+  EXPECT_EQ(list->property("currentIndex").toInt(), 1);
+  EXPECT_EQ(filter->currentPackage().value(QStringLiteral("name")).toString(), QStringLiteral("banana"));
+  QTest::keyClick(&window, Qt::Key_Down);
+  EXPECT_EQ(filter->currentRow(), 1);
+  QTest::keyClick(&window, Qt::Key_Up);
+  EXPECT_EQ(list->property("currentIndex").toInt(), 0);
+  EXPECT_EQ(filter->currentPackage().value(QStringLiteral("name")).toString(), QStringLiteral("apple"));
+  QTest::keyClick(&window, Qt::Key_Up);
+  EXPECT_EQ(filter->currentRow(), 0);
+
+  filter->setSearchText(QStringLiteral("banana"));
+  EXPECT_EQ(list->property("currentIndex").toInt(), 0);
+  EXPECT_EQ(filter->currentPackage().value(QStringLiteral("name")).toString(), QStringLiteral("banana"));
+  filter->setSearchText(QStringLiteral("missing"));
+  QTest::keyClick(&window, Qt::Key_Down);
+  EXPECT_EQ(filter->currentRow(), -1);
+}
+
+TEST_F(InstalledPackagesViewTest, CategoryTabsExposeTheirVisibleAccessibleNames) {
+  auto source = std::make_shared<MockPackageSource>();
+  EXPECT_CALL(*source, enumerateInstalledPackages()).WillOnce(Return(std::vector<Package>{Package{.name = "apple"}}));
+  InstalledPackagesModel model(std::make_shared<PackageListUseCase>(source));
+  QSignalSpy loaded(&model, &InstalledPackagesModel::statusChanged);
+  ASSERT_TRUE(loaded.wait(2000));
+  QQmlEngine engine;
+  auto view = createView(engine, model);
+  ASSERT_NE(view, nullptr);
+  auto* item = qobject_cast<QQuickItem*>(view.get());
+  ASSERT_NE(item, nullptr);
+
+  for (const char* label : {"Explicit", "Dependencies", "AUR / Foreign", "Orphans"}) {
+    auto* control = buttonForLabel(*item, QString::fromUtf8(label));
+    ASSERT_NE(control, nullptr) << label;
+    auto* accessible = QAccessible::queryAccessibleInterface(control);
+    ASSERT_NE(accessible, nullptr);
+    EXPECT_EQ(accessible->text(QAccessible::Name), QString::fromUtf8(label));
+  }
+}
+
+TEST_F(InstalledPackagesViewTest, OptionalDependenciesCanBeExpandedFromTheKeyboard) {
+  QQmlEngine engine;
+  QQmlComponent component(&engine,
+                          QUrl::fromLocalFile(QStringLiteral(HOLONIGHT_QML_SOURCE_DIR) +
+                                              QStringLiteral("/packages/PackageDetailDependencySections.qml")));
+  std::unique_ptr<QObject> section(component.createWithInitialProperties(
+      {{QStringLiteral("description"), QString()},
+       {QStringLiteral("requiredByCount"), 0},
+       {QStringLiteral("requiredByList"), QStringList()},
+       {QStringLiteral("optionalDependencies"), QStringList{"one", "two", "three", "four", "five", "six"}},
+       {QStringLiteral("configFileCount"), 0}}));
+  ASSERT_NE(section, nullptr) << component.errorString().toStdString();
+  QQuickWindow window;
+  auto* item = qobject_cast<QQuickItem*>(section.get());
+  ASSERT_NE(item, nullptr);
+  item->setParentItem(window.contentItem());
+  item->setWidth(380);
+  window.resize(380, 600);
+  window.show();
+  ASSERT_TRUE(QTest::qWaitForWindowExposed(&window));
+  EXPECT_EQ(findLabel(*item, QStringLiteral("six")), nullptr);
+  auto* button = buttonForLabel(*item, QStringLiteral("+1 more"));
+  ASSERT_NE(button, nullptr);
+  EXPECT_TRUE(button->activeFocusOnTab());
+  auto* accessible = QAccessible::queryAccessibleInterface(button);
+  ASSERT_NE(accessible, nullptr);
+  EXPECT_EQ(accessible->text(QAccessible::Name), QStringLiteral("+1 more"));
+  item->forceActiveFocus();
+  QTest::keyClick(&window, Qt::Key_Tab);
+  EXPECT_TRUE(button->hasActiveFocus());
+  QTest::keyClick(&window, Qt::Key_Space);
+  EXPECT_NE(findLabel(*item, QStringLiteral("six")), nullptr);
+  EXPECT_FALSE(button->isVisible());
 }
 
 }  // namespace

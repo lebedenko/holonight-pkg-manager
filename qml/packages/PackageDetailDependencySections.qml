@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import Holonight.Core
 import Holonight.Controls
@@ -119,29 +120,32 @@ ColumnLayout {
                 }
             }
 
-            Rectangle {
+            Button {
+                id: moreButton
+
                 visible: !root.optionalDependenciesExpanded
                          && root.optionalDependencies.length > root.optionalDependenciesVisibleLimit
-                implicitWidth: moreLabel.implicitWidth + 16
-                implicitHeight: moreLabel.implicitHeight + 8
-                radius: height / 2
-                color: "transparent"
-                border.color: HoloniightPalette.borderPassive
-                border.width: HnMetrics.borderWidth
+                text: qsTr("+%1 more").arg(root.optionalDependencies.length - root.optionalDependenciesVisibleLimit)
+                focusPolicy: Qt.StrongFocus
+                padding: 4
+                leftPadding: 8
+                rightPadding: 8
+                Accessible.name: moreButton.text
 
-                HnLabel {
-                    id: moreLabel
-
-                    anchors.centerIn: parent
+                contentItem: HnLabel {
                     role: HnTypographyRole.Caption
-                    rawText: qsTr("+%1 more").arg(root.optionalDependencies.length
-                                                   - root.optionalDependenciesVisibleLimit)
+                    rawText: moreButton.text
                     color: HoloniightPalette.textSecondary
                 }
 
-                TapHandler {
-                    onTapped: root.optionalDependenciesExpanded = true
+                background: Rectangle {
+                    radius: height / 2
+                    color: moreButton.down ? HoloniightPalette.surfaceElevated : "transparent"
+                    border.color: moreButton.visualFocus ? HoloniightPalette.borderFocus : HoloniightPalette.borderPassive
+                    border.width: moreButton.visualFocus ? HnMetrics.focusBorderWidth : HnMetrics.borderWidth
                 }
+
+                onClicked: root.optionalDependenciesExpanded = true
             }
         }
     }

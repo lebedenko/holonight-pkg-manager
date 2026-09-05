@@ -42,9 +42,20 @@ ScrollView {
             visible: count > 0
             model: root.filterModel
             currentIndex: root.filterModel.currentRow
+            keyNavigationEnabled: false
             Layout.fillWidth: true
             Layout.fillHeight: true
             ScrollBar.vertical: H.ScrollBar {}
+
+            // Keep keyboard selection in the same model as clicks and filter reconciliation.
+            Keys.onDownPressed: {
+                if (packageList.count > 0)
+                    root.filterModel.currentRow = Math.min(packageList.count - 1, root.filterModel.currentRow + 1)
+            }
+            Keys.onUpPressed: {
+                if (packageList.count > 0)
+                    root.filterModel.currentRow = Math.max(0, root.filterModel.currentRow - 1)
+            }
 
             delegate: PackageTableRow {
                 id: delegate

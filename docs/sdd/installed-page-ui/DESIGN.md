@@ -3,7 +3,7 @@
 **Feature**: Redesign the Installed page from a bare single-column list into a filterable data table with a detail
 panel, backed by an extended `Package` domain model and computed orphan statistics — transactionally inert.
 
-**Status**: Implemented; review fixes verified, stakeholder acceptance pending
+**Status**: Implemented; stakeholder baseline acceptance recorded on 2026-09-05, follow-up review fixes verified
 
 **Date**: 2026-09-05
 
@@ -140,7 +140,9 @@ Narrative:
    convention.
 4. **Detail panel binds to `currentPackage`.** The proxy caches the selected package's role map and emits
    `currentPackageChanged` when its identity or metadata changes, including when the proxy row stays the same.
-   `currentRow` still drives the table highlight. Empty selections use the panel's fully keyed placeholder map.
+   `currentRow` still drives the table highlight. Up/Down key handlers update this same selection property;
+   the ListView's independent keyboard navigation is disabled. Empty selections use the panel's fully keyed
+   placeholder map.
 5. **Selection is reconciled once per completed filter change.** `beginFilterChange()` / `endFilterChange(Rows)`
    can emit many separate insertion/removal ranges. Reconciliation is suspended for those intermediate signals,
    then scans once for the retained package name and publishes the final selection. Sorting and source resets
@@ -467,13 +469,28 @@ see [the internal-type tooling gap](../../known-issues/qmllint-does-not-enforce-
 | **Size is exposed as two roles: `SizeRole` (raw `quint64`) and `SizeLabelRole` (formatted `QString`).** | The proxy model's `lessThan()` for size sort needs a numeric comparison; the table/detail panel need "31.8 MiB". Doing the MiB/GiB formatting once in tested C++ (`formatSizeBytes`) instead of duplicating rounding/unit-boundary logic in QML (table cell, detail panel, header subtitle, footer) means there is exactly one place the "234 KiB" vs. "1.2 MiB" boundary logic can be wrong, and it's covered by a focused GTest file (§6). |
 | **`InstallDateRole` is `QDateTime`, formatted in QML via `Qt.formatDateTime`, not a pre-formatted C++ string role.** | Unlike size, Qt's own `QDateTime`/`Qt.formatDateTime` already handles locale-aware "MMM DD, YYYY HH:MM" formatting natively and idiomatically from QML with no extra C++. Exposing the raw `QDateTime` also leaves room for a future date-based sort without adding another role. |
 | **Remove/more-options/Review buttons stay visually "live" (matching the mockup's red-outlined Remove button) but are wired no-op, with a tooltip.** | REQ-F-115 accepts disabled-appearance OR tooltip OR no-op (any one suffices), and the mockup's Appendix explicitly asks for visual fidelity. Graying out the Remove button would deviate from the mockup more than necessary; a no-op `onClicked` + `ToolTip.text: qsTr("Not implemented yet")` on hover satisfies the requirement's substance (no mutation, no false success message, clearly signposted) without sacrificing pixel fidelity. |
-| **Filter tabs are composed from the public `HnListDelegate` in a `Row`, not `HnSegmentedControl`.** | `HnSegmentedControl` renders plain text-only equal-width segments with no slot for a trailing count badge or the Orphans tab's status dot — see §5. `HnListDelegate` exposes the internal `HnSelectableDelegate` selection behavior through a public type and provides the selected-pill background/hover/focus styling the mockup's active "Explicit" tab shows, and its `contentItem` is fully overridable, so a badge `Rectangle`+`HnLabel` composes in naturally. |
+| **Filter tabs are composed from the public `HnListDelegate` in a wrapping `Flow`, not `HnSegmentedControl`.** | `HnSegmentedControl` renders plain text-only equal-width segments with no slot for a trailing count badge or the Orphans tab's status dot — see §5. `HnListDelegate` exposes the internal `HnSelectableDelegate` selection behavior through a public type and provides the selected-pill background/hover/focus styling the mockup's active "Explicit" tab shows, and its `contentItem` is fully overridable, so a badge `Rectangle`+`HnLabel` composes in naturally. |
 | **The data table (header + rows) is hand-composed from primitives, not a new `Hn*` control.** | No `Hn*` component in the design-system repo represents a multi-column table with independently-sized, header-aligned columns. `PackageTableRow` reuses `HnListDelegate` for the row-selection behavior (the one piece that *does* have a ready-made fit) and lays out the 5 columns itself with a `RowLayout`; `PackageTableHeader` mirrors the same column-width scheme so header and rows stay aligned. This is intentionally scoped as app-local (`qml/packages/`) composition, not a new shared `Hn*` name, since a real reusable "data table" control is a bigger design-system investment than this one page's SPEC calls for. |
 | **`HnSettingsRow` reused for the 4 detail-panel metadata rows; `HnSectionHeader` reused for "Required by"/"Optional dependencies"/"Local state"; `HnActionBar` reused for the footer bar; `HnPanelHeader` wraps the detail header's divider.** | All four already implement exactly the layout shape needed (label+trailing value; title+description+divider; leading/center/trailing with a divider; content+divider) — using them is strictly less code than re-deriving the same `RowLayout`+`Rectangle` divider pattern four more times. |
 | **Sort is one `HnIconComboBox` with 4 fixed entries ("Name A→Z", "Name Z→A", "Size Large→Small", "Size Small→Large"), not a field-picker plus a separate direction toggle.** | The mockup shows a single dropdown ("Name" with a chevron), not two controls. Encoding field+direction as one entry each keeps the toolbar visually identical to the mockup while still satisfying REQ-F-108's "supports both directions" requirement — the user reaches Z→A by picking the other entry, not by re-clicking the same one (see §5 for the alternative). |
 | **Repository dropdown's option list comes from `InstalledPackagesFilterModel::availableRepositories()`, computed from the *source* model, not the *filtered* proxy.** | REQ-F-109 says "one option per unique value in the `repository` field **across all packages**" — the option list itself must not shrink as other filters are applied, only the resulting rows do. |
 
 ---
+
+### Responsive layout and accessibility
+
+Below 780 px of page content width, the toolbar places its title above the search/sort/view controls and
+lets the search field shrink. Category tabs wrap to the available width. An outer vertical `ScrollView`
+keeps the full page reachable at the 720×480 minimum window size; table and detail panels retain minimum
+heights of 160 and 200 px respectively. At wider sizes the table and details remain side by side.
+The scroll content is a natural-height `Column`. Its table/detail grid takes the larger of its explicit
+minimum height and the viewport height remaining after the toolbar, tabs, footer, and spacing. This avoids
+the height/implicit-height binding loop that occurred when a `ColumnLayout` sized itself from its own
+implicit height during asynchronous loading.
+
+Category delegates bind their title to the visible label, preserving the design system's accessible name.
+The optional-dependency expansion chip is a styled button with an accessible name and visible focus border;
+Tab reaches it and Space expands the remaining entries.
 
 ## 5. Alternatives considered
 
@@ -573,3 +590,4 @@ see [the internal-type tooling gap](../../known-issues/qmllint-does-not-enforce-
 |---|---|---|---|
 | 1.0 | 2026-09-05 | SDD Process | Initial design derived from SPEC.md v1.0 |
 | 1.1 | 2026-09-05 | Review fixes | Selected-package notification, batched selection reconciliation, responsive table scrolling, public delegate types, exclusive List/Grid selection. |
+| 1.2 | 2026-09-05 | Follow-up review fixes | Reachable compact controls and page scrolling, synchronized arrow-key selection, accessible tabs and dependency expansion, reconciled acceptance status. |

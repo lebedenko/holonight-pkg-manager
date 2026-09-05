@@ -116,8 +116,8 @@
   - REQs: REQ-C-116
   - Check: `qml/workspace/WorkspaceWindow.qml` becomes a `RowLayout` of `Sidebar` + `InstalledPackagesView` instead of `Rectangle` with `InstalledPackagesView` filling entire window.
 
-- [ ] T-030: Full system acceptance verification
+- [x] T-030: Full system acceptance verification
   - REQs: REQ-NF-121
   - Check: All 19 acceptance checkpoints from REQ-NF-121 pass: (1) domain model; (2) backend population; (3) orphan logic correctness; (4) QML model roles/aggregates; (5) tab filter; (6) search composition; (7) sort functionality; (8) repository filter; (9) all-states dropdown; (10) list/grid toggle inert; (11) data table structure; (12) checkbox visual-only behavior; (13) detail panel display; (14) inert action buttons; (15) out-of-scope sections absent; (16) footer orphan stats; (17) test coverage; (18) in-memory responsiveness <100ms; (19) code style compliance via `task format-check`, `task tidy`, `task qml-lint` all passing.
 
-  - Evidence: See [ACCEPTANCE.md](ACCEPTANCE.md). Automated review regressions are verified; manual interaction checks and stakeholder visual/sign-off acceptance remain pending.
+  - Evidence: See [ACCEPTANCE.md](ACCEPTANCE.md). Stakeholder manual/visual acceptance was confirmed on 2026-09-05; follow-up review fixes have automated regression coverage. The separate 60 fps scrolling target remains unmeasured.
