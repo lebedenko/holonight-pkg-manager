@@ -97,3 +97,10 @@ configuration, preventing stale cache selection from bypassing the pinned depend
 After this correction, all 98 CTest entries and qmllint pass with both host providers hidden (13.89 seconds).
 The native mask adds `--ro-bind /dev/null /usr/lib/libholonight_config.so` to the bwrap commands above;
 only private mount namespaces are affected. The cache now resolves configuration below `build/dependencies/prefix`.
+
+## CI font dependency follow-up
+
+CI `34273801509` passed static checks and loaded the staged native dependencies, but four CTest entries
+failed existing text geometry assertions. The container had no fonts. Running the two affected source tests
+with an empty Fontconfig configuration reproduced both failures locally. CI jobs and the image recipe now
+install `noto-fonts`, matching the local sans-serif font. Geometry assertions and production layout are unchanged.

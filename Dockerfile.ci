@@ -9,6 +9,7 @@ RUN pacman -Syu --noconfirm && \
         git \
         gtest \
         ninja \
+        noto-fonts \
         pkgconf \
         qt6-base \
         qt6-declarative \
