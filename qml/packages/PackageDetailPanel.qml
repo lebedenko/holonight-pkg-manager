@@ -1,9 +1,8 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls as Controls
 import QtQuick.Layouts
-import Holonight as H
 import Holonight.Core
 import Holonight.Controls
 import HolonightPackages
@@ -35,14 +34,14 @@ HnSurfaceFrame {
         titleText: qsTr("Select a package to view details")
     }
 
-    ScrollView {
+    Controls.ScrollView {
         id: detailScroll
         objectName: "packageDetailScrollView"
         anchors.fill: parent
         visible: root.hasSelection
         contentWidth: availableWidth
-        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-        ScrollBar.vertical: H.ScrollBar {}
+        Controls.ScrollBar.horizontal.policy: Controls.ScrollBar.AlwaysOff
+        Controls.ScrollBar.vertical: Controls.ScrollBar {}
         clip: true
 
         Loader {

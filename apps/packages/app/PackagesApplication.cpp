@@ -5,6 +5,9 @@
 #include "holonight_packages_backends/alpm_package_source.h"
 
 #include <QDebug>
+#include <QDir>
+#include <QFileInfo>
+#include <QQmlEngine>
 #include <QQmlError>
 #include <QQuickView>
 #include <QScreen>
@@ -21,6 +24,13 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
   installed_packages_model_ = std::make_unique<InstalledPackagesModel>(std::move(use_case));
 
   view_ = std::make_unique<QQuickView>();
+  if (QFileInfo{applicationFilePath()}.canonicalFilePath() ==
+      QFileInfo{QStringLiteral(HOLONIGHT_BUILD_EXECUTABLE)}.canonicalFilePath()) {
+    view_->engine()->addImportPath(QStringLiteral(HOLONIGHT_QML_IMPORT_PATH));
+  } else {
+    view_->engine()->addImportPath(
+        QDir{applicationDirPath()}.absoluteFilePath(QStringLiteral(HOLONIGHT_INSTALL_QML_PATH)));
+  }
   view_->setMinimumSize(QSize(720, 480));
   QSize initial_size(1360, 890);
   if (const auto* screen = view_->screen()) {

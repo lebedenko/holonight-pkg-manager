@@ -1,7 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import Holonight.Core
 import Holonight.Controls
@@ -37,13 +37,13 @@ HnActionBar {
     }
 
     trailingContent: Component {
-        Button {
+        Controls.Button {
             objectName: "orphanFooterReviewButton"
             text: qsTr("Review")
 
-            ToolTip.text: qsTr("Not implemented yet")
-            ToolTip.visible: hovered
-            ToolTip.delay: 500
+            Controls.ToolTip.text: qsTr("Not implemented yet")
+            Controls.ToolTip.visible: hovered
+            Controls.ToolTip.delay: 500
         }
     }
 }

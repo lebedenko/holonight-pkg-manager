@@ -1,7 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import Holonight.Core
 import Holonight.Controls
@@ -75,15 +75,15 @@ ColumnLayout {
         spacing: 8
         Layout.fillWidth: true
 
-        Button {
+        Controls.Button {
             id: removeButton
 
             objectName: "packageDetailRemoveButton"
             Layout.fillWidth: true
 
-            ToolTip.text: qsTr("Not implemented yet")
-            ToolTip.visible: hovered
-            ToolTip.delay: 500
+            Controls.ToolTip.text: qsTr("Not implemented yet")
+            Controls.ToolTip.visible: hovered
+            Controls.ToolTip.delay: 500
 
             background: Rectangle {
                 radius: 8
@@ -122,9 +122,9 @@ ColumnLayout {
 
             icon.source: "qrc:/qt/qml/Holonight/Controls/assets/more-vertical.svg"
 
-            ToolTip.text: qsTr("Not implemented yet")
-            ToolTip.visible: hovered
-            ToolTip.delay: 500
+            Controls.ToolTip.text: qsTr("Not implemented yet")
+            Controls.ToolTip.visible: hovered
+            Controls.ToolTip.delay: 500
         }
     }
 

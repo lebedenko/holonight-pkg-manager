@@ -1,9 +1,8 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls as Controls
 import QtQuick.Layouts
-import Holonight as H
 import Holonight.Controls
 import HolonightPackages
 
@@ -25,7 +24,7 @@ Item {
         sourceModel: root.installedPackagesModel
     }
 
-    ScrollView {
+    Controls.ScrollView {
         id: pageScroll
 
         objectName: "installedPageScrollView"
@@ -35,8 +34,8 @@ Item {
         contentHeight: content.implicitHeight
         visible: root.hasPackages
         clip: true
-        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-        ScrollBar.vertical: H.ScrollBar {}
+        Controls.ScrollBar.horizontal.policy: Controls.ScrollBar.AlwaysOff
+        Controls.ScrollBar.vertical: Controls.ScrollBar {}
 
         Column {
             id: content

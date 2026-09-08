@@ -2,8 +2,12 @@ version: "3"
 
 vars:
   BUILD_DIR: build
-  HOLONIGHT_QT_PREFIX: /tmp/holonight-qt-prefix
-  HOLONIGHT_QT_DIR: /tmp/holonight-qt-prefix/lib/cmake/HolonightQt
+  HOLONIGHT_QT_PREFIX: '{{.TASKFILE_DIR}}/{{.BUILD_DIR}}/dependencies/prefix'
+  HOLONIGHT_QT_DIR: '{{.HOLONIGHT_QT_PREFIX}}/lib/cmake/HolonightQt'
+  HOLONIGHT_QT_SOURCE: '{{default "../holonight-qt" .HOLONIGHT_QT_SOURCE}}'
+  HOLONIGHT_QT_REVISION: 478ef7c40a22c7c3f7ea6f45d9205411b5504834
+  HOLONIGHT_CONFIG_SOURCE: '{{default "../holonight-config" .HOLONIGHT_CONFIG_SOURCE}}'
+  HOLONIGHT_CONFIG_REVISION: fe69a59e6b73167fd5349223a4d265d75386c139
   NPROC:
     sh: nproc
 
@@ -12,11 +16,22 @@ tasks:
     desc: Validate REUSE licensing metadata
     cmds: [reuse lint]
 
-  build:qt-dependency:
-    desc: Build and install the sibling holonight-qt dependency
+  build:config-dependency:
+    desc: Build and stage the pinned configuration dependency
     cmds:
-      - cmake --build ../holonight-qt/build -j{{.NPROC}}
-      - cmake --install ../holonight-qt/build --prefix {{.HOLONIGHT_QT_PREFIX}}
+      - test "$(git -C {{.HOLONIGHT_CONFIG_SOURCE}} rev-parse HEAD)" = "{{.HOLONIGHT_CONFIG_REVISION}}"
+      - cmake -S {{.HOLONIGHT_CONFIG_SOURCE}} -B {{.BUILD_DIR}}/dependencies/config -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+      - cmake --build {{.BUILD_DIR}}/dependencies/config -j{{.NPROC}}
+      - cmake --install {{.BUILD_DIR}}/dependencies/config --prefix {{.HOLONIGHT_QT_PREFIX}}
+
+  build:qt-dependency:
+    desc: Build and stage the pinned provider without tests or examples
+    deps: [build:config-dependency]
+    cmds:
+      - test "$(git -C {{.HOLONIGHT_QT_SOURCE}} rev-parse HEAD)" = "{{.HOLONIGHT_QT_REVISION}}"
+      - cmake -S {{.HOLONIGHT_QT_SOURCE}} -B {{.BUILD_DIR}}/dependencies/qt -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH={{.HOLONIGHT_QT_PREFIX}} -DBUILD_TESTS=OFF -DBUILD_DEMO=OFF -DBUILD_CONTROLS_GALLERY=OFF -DBUILD_WAYLAND=ON
+      - cmake --build {{.BUILD_DIR}}/dependencies/qt -j{{.NPROC}}
+      - cmake --install {{.BUILD_DIR}}/dependencies/qt --prefix {{.HOLONIGHT_QT_PREFIX}}
 
   configure:
     desc: Configure a debug build
@@ -80,6 +95,7 @@ tasks:
     desc: Run clang-tidy
     deps: [configure-tests]
     cmds:
+      - cmake --build {{.BUILD_DIR}} -j{{.NPROC}}
       - cmake --build {{.BUILD_DIR}} --target tidy
 
   qml-lint:

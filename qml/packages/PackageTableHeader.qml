@@ -1,7 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import Holonight.Core
 import Holonight.Controls
@@ -21,16 +21,16 @@ Item {
         anchors.rightMargin: root.columns.padding
         spacing: root.columns.spacing
 
-        CheckBox {
+        Controls.CheckBox {
             objectName: "selectAllCheckBox"
             Layout.minimumWidth: root.columns.checkbox
             Layout.maximumWidth: root.columns.checkbox
             Layout.preferredWidth: root.columns.checkbox
             Layout.alignment: Qt.AlignVCenter
 
-            ToolTip.text: qsTr("Not implemented yet")
-            ToolTip.visible: hovered
-            ToolTip.delay: 500
+            Controls.ToolTip.text: qsTr("Not implemented yet")
+            Controls.ToolTip.visible: hovered
+            Controls.ToolTip.delay: 500
         }
 
         Item {

@@ -13,6 +13,7 @@ set_target_properties(holonight-packages PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${
 file(GLOB_RECURSE HOLONIGHT_PACKAGES_QML_FILES
   LIST_DIRECTORIES false CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/qml/*.qml")
 list(SORT HOLONIGHT_PACKAGES_QML_FILES)
+set(HOLONIGHT_PACKAGES_QML_FILES ${HOLONIGHT_PACKAGES_QML_FILES} PARENT_SCOPE)
 
 foreach(qml_file IN LISTS HOLONIGHT_PACKAGES_QML_FILES)
   cmake_path(RELATIVE_PATH qml_file BASE_DIRECTORY "${PROJECT_SOURCE_DIR}/qml" OUTPUT_VARIABLE qml_alias)
@@ -20,6 +21,7 @@ foreach(qml_file IN LISTS HOLONIGHT_PACKAGES_QML_FILES)
 endforeach()
 
 set(HOLONIGHT_PACKAGES_RESOURCES "${PROJECT_SOURCE_DIR}/assets/holonight-pkg-manager.svg")
+set(HOLONIGHT_PACKAGES_RESOURCES ${HOLONIGHT_PACKAGES_RESOURCES} PARENT_SCOPE)
 set_source_files_properties("${PROJECT_SOURCE_DIR}/assets/holonight-pkg-manager.svg"
   PROPERTIES QT_RESOURCE_ALIAS "assets/holonight-pkg-manager.svg")
 
@@ -44,7 +46,13 @@ target_link_libraries(holonight-packages PRIVATE
   Qt6::Core Qt6::Gui Qt6::Quick Qt6::Qml Qt6::Concurrent
 )
 
-target_compile_definitions(holonight-packages PRIVATE HOLONIGHT_PACKAGES_VERSION="${PROJECT_VERSION}")
+target_compile_definitions(holonight-packages PRIVATE
+  HOLONIGHT_PACKAGES_VERSION="${PROJECT_VERSION}"
+  HOLONIGHT_QML_IMPORT_PATH="${HOLONIGHT_QML_IMPORT_PATH}"
+  HOLONIGHT_BUILD_EXECUTABLE="$<TARGET_FILE:holonight-packages>"
+  HOLONIGHT_INSTALL_QML_PATH="../${CMAKE_INSTALL_LIBDIR}/qt6/qml")
+qt_add_resources(holonight-packages controls_style_config
+  PREFIX "/" FILES qtquickcontrols2.conf)
 target_include_directories(holonight-packages PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/app)
 target_compile_features(holonight-packages PRIVATE cxx_std_23)
 

@@ -1,13 +1,12 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls as Controls
 import QtQuick.Layouts
-import Holonight as H
 import Holonight.Controls
 import HolonightPackages
 
-ScrollView {
+Controls.ScrollView {
     id: root
 
     required property InstalledPackagesFilterModel filterModel
@@ -24,8 +23,8 @@ ScrollView {
     contentWidth: Math.max(availableWidth, root.minimumTableWidth)
     contentHeight: availableHeight
     clip: true
-    ScrollBar.horizontal: H.ScrollBar {}
-    ScrollBar.vertical.policy: ScrollBar.AlwaysOff
+    Controls.ScrollBar.horizontal: Controls.ScrollBar {}
+    Controls.ScrollBar.vertical.policy: Controls.ScrollBar.AlwaysOff
 
     ColumnLayout {
         width: root.contentWidth
@@ -48,7 +47,7 @@ ScrollView {
             keyNavigationEnabled: false
             Layout.fillWidth: true
             Layout.fillHeight: true
-            ScrollBar.vertical: H.ScrollBar {}
+            Controls.ScrollBar.vertical: Controls.ScrollBar {}
 
             // Keep keyboard selection in the same model as clicks and filter reconciliation.
             Keys.onDownPressed: {

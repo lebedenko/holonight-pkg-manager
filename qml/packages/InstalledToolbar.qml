@@ -1,9 +1,8 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls as Controls
 import QtQuick.Layouts
-import Holonight as H
 import Holonight.Core
 import Holonight.Controls
 import HolonightPackages
@@ -66,7 +65,7 @@ ColumnLayout {
             onTextChanged: root.filterModel.searchText = text
         }
 
-        H.ComboBox {
+        Controls.ComboBox {
             id: sortComboBox
 
             Layout.fillWidth: root.narrow
@@ -107,9 +106,9 @@ ColumnLayout {
                 checkable: true
                 autoExclusive: true
 
-                ToolTip.text: qsTr("Grid view is not implemented yet")
-                ToolTip.visible: hovered
-                ToolTip.delay: 500
+                Controls.ToolTip.text: qsTr("Grid view is not implemented yet")
+                Controls.ToolTip.visible: hovered
+                Controls.ToolTip.delay: 500
 
                 contentItem: HnLabel {
                     anchors.centerIn: parent
@@ -124,9 +123,9 @@ ColumnLayout {
             objectName: "installedOverflowButton"
             icon.source: "qrc:/qt/qml/Holonight/Controls/assets/more-vertical.svg"
 
-            ToolTip.text: qsTr("Not implemented yet")
-            ToolTip.visible: hovered
-            ToolTip.delay: 500
+            Controls.ToolTip.text: qsTr("Not implemented yet")
+            Controls.ToolTip.visible: hovered
+            Controls.ToolTip.delay: 500
         }
     }
 
@@ -138,7 +137,7 @@ ColumnLayout {
             Layout.fillWidth: true
         }
 
-        H.ComboBox {
+        Controls.ComboBox {
             objectName: "installedRepositoryComboBox"
             model: [qsTr("All repositories")].concat(root.filterModel.availableRepositories)
             currentIndex: root.filterModel.repositoryFilter.length === 0
@@ -150,7 +149,7 @@ ColumnLayout {
             }
         }
 
-        H.ComboBox {
+        Controls.ComboBox {
             objectName: "installedAllStatesComboBox"
             model: [qsTr("All states")]
             currentIndex: 0

@@ -1,7 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import Holonight.Core
 import Holonight.Controls
@@ -37,16 +37,16 @@ HnListDelegate {
     contentItem: RowLayout {
         spacing: root.columns.spacing
 
-        CheckBox {
+        Controls.CheckBox {
             objectName: "packageRowCheckBox"
             Layout.minimumWidth: root.columns.checkbox
             Layout.maximumWidth: root.columns.checkbox
             Layout.preferredWidth: root.columns.checkbox
             Layout.alignment: Qt.AlignVCenter
 
-            ToolTip.text: qsTr("Not implemented yet")
-            ToolTip.visible: hovered
-            ToolTip.delay: 500
+            Controls.ToolTip.text: qsTr("Not implemented yet")
+            Controls.ToolTip.visible: hovered
+            Controls.ToolTip.delay: 500
         }
 
         Rectangle {
@@ -73,9 +73,9 @@ HnListDelegate {
                 rawText: root.name
                 color: HoloniightPalette.textPrimary
                 elide: Text.ElideRight
-                ToolTip.text: text
-                ToolTip.visible: truncated && nameHover.hovered
-                ToolTip.delay: 500
+                Controls.ToolTip.text: text
+                Controls.ToolTip.visible: truncated && nameHover.hovered
+                Controls.ToolTip.delay: 500
                 HoverHandler { id: nameHover }
                 Layout.fillWidth: true
             }
@@ -83,9 +83,9 @@ HnListDelegate {
             HnLabel {
                 role: HnTypographyRole.Caption
                 rawText: root.description
-                ToolTip.text: text
-                ToolTip.visible: truncated && descriptionHover.hovered
-                ToolTip.delay: 500
+                Controls.ToolTip.text: text
+                Controls.ToolTip.visible: truncated && descriptionHover.hovered
+                Controls.ToolTip.delay: 500
                 HoverHandler { id: descriptionHover }
                 color: HoloniightPalette.textMuted
                 elide: Text.ElideRight
@@ -117,9 +117,9 @@ HnListDelegate {
         HnLabel {
             role: HnTypographyRole.Body
             rawText: root.installedVersion
-            ToolTip.text: text
-            ToolTip.visible: truncated && versionHover.hovered
-            ToolTip.delay: 500
+            Controls.ToolTip.text: text
+            Controls.ToolTip.visible: truncated && versionHover.hovered
+            Controls.ToolTip.delay: 500
             HoverHandler { id: versionHover }
             color: HoloniightPalette.textSecondary
             elide: Text.ElideRight
@@ -133,9 +133,9 @@ HnListDelegate {
             role: HnTypographyRole.Body
             elide: Text.ElideRight
             rawText: root.sizeLabel
-            ToolTip.text: text
-            ToolTip.visible: truncated && sizeHover.hovered
-            ToolTip.delay: 500
+            Controls.ToolTip.text: text
+            Controls.ToolTip.visible: truncated && sizeHover.hovered
+            Controls.ToolTip.delay: 500
             HoverHandler { id: sizeHover }
             color: HoloniightPalette.textSecondary
             Layout.minimumWidth: root.columns.size
@@ -149,9 +149,9 @@ HnListDelegate {
             role: HnTypographyRole.Body
             elide: Text.ElideRight
             rawText: root.reasonLabel
-            ToolTip.text: text
-            ToolTip.visible: truncated && reasonHover.hovered
-            ToolTip.delay: 500
+            Controls.ToolTip.text: text
+            Controls.ToolTip.visible: truncated && reasonHover.hovered
+            Controls.ToolTip.delay: 500
             HoverHandler { id: reasonHover }
             color: HoloniightPalette.textSecondary
             Layout.minimumWidth: root.columns.reason

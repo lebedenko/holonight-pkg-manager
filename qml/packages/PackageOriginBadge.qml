@@ -1,7 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls as Controls
 import Holonight.Core
 
 Rectangle {
@@ -19,9 +19,9 @@ Rectangle {
     width: Math.min(implicitWidth, maximumWidth)
     Accessible.role: Accessible.StaticText
     Accessible.name: root.text
-    ToolTip.text: root.toolTipText
-    ToolTip.visible: hover.hovered
-    ToolTip.delay: 500
+    Controls.ToolTip.text: root.toolTipText
+    Controls.ToolTip.visible: hover.hovered
+    Controls.ToolTip.delay: 500
     HoverHandler { id: hover }
 
     radius: height / 2

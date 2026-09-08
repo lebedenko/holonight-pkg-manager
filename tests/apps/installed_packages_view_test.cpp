@@ -31,11 +31,26 @@ using holonight_packages_domain::PackageSourceError;
 using holonight_packages_domain::PackageSourceErrorCode;
 using ::testing::Return;
 
+void rejectQmlWarnings(QQmlEngine& engine) {
+  QObject::connect(&engine, &QQmlEngine::warnings, &engine, [](const QList<QQmlError>& errors) {
+    for (const auto& error : errors) {
+      ADD_FAILURE() << qPrintable(error.toString());
+    }
+  });
+}
+
+QUrl qmlSource(const QString& path) {
+#ifdef HOLONIGHT_COMPILED_QML_ACCEPTANCE
+  return {QStringLiteral("qrc:/HolonightPackages") + path};
+#else
+  return QUrl::fromLocalFile(QStringLiteral(HOLONIGHT_QML_SOURCE_DIR) + path);
+#endif
+}
+
 std::unique_ptr<QObject> createView(QQmlEngine& engine, InstalledPackagesModel& model, bool workspace = false) {
-  QQmlComponent component(&engine,
-                          QUrl::fromLocalFile(QStringLiteral(HOLONIGHT_QML_SOURCE_DIR) +
-                                              (workspace ? QStringLiteral("/workspace/WorkspaceWindow.qml")
-                                                         : QStringLiteral("/packages/InstalledPackagesView.qml"))));
+  const QUrl source = qmlSource(workspace ? QStringLiteral("/workspace/WorkspaceWindow.qml")
+                                          : QStringLiteral("/packages/InstalledPackagesView.qml"));
+  QQmlComponent component(&engine, source);
   EXPECT_EQ(component.status(), QQmlComponent::Ready) << component.errorString().toStdString();
   return std::unique_ptr<QObject>(
       component.createWithInitialProperties({{QStringLiteral("installedPackagesModel"), QVariant::fromValue(&model)}}));
@@ -79,9 +94,11 @@ QVariantMap packageDetails(const QObject& panel) {
 class InstalledPackagesViewTest : public ::testing::Test {
  protected:
   static void SetUpTestSuite() {
+#ifndef HOLONIGHT_COMPILED_QML_ACCEPTANCE
     qmlRegisterUncreatableType<InstalledPackagesModel>("HolonightPackages", 1, 0, "InstalledPackagesModel",
                                                        QStringLiteral("Provided by the test"));
     qmlRegisterType<InstalledPackagesFilterModel>("HolonightPackages", 1, 0, "InstalledPackagesFilterModel");
+#endif
   }
 };
 
@@ -93,6 +110,7 @@ TEST_F(InstalledPackagesViewTest, ShowsLoadingState) {
   });
   InstalledPackagesModel model(std::make_shared<PackageListUseCase>(source));
   QQmlEngine engine;
+  rejectQmlWarnings(engine);
 
   auto view = createView(engine, model);
 
@@ -107,6 +125,7 @@ TEST_F(InstalledPackagesViewTest, ShowsLoadedEmptyStateAtNarrowWidth) {
   QSignalSpy loaded(&model, &InstalledPackagesModel::statusChanged);
   ASSERT_TRUE(loaded.wait(2000));
   QQmlEngine engine;
+  rejectQmlWarnings(engine);
 
   auto view = createView(engine, model);
   ASSERT_NE(view, nullptr);
@@ -124,6 +143,7 @@ TEST_F(InstalledPackagesViewTest, ShowsLoadedPackageList) {
   QSignalSpy loaded(&model, &InstalledPackagesModel::statusChanged);
   ASSERT_TRUE(loaded.wait(2000));
   QQmlEngine engine;
+  rejectQmlWarnings(engine);
 
   auto view = createView(engine, model);
   ASSERT_NE(view, nullptr);
@@ -142,6 +162,7 @@ TEST_F(InstalledPackagesViewTest, ShowsErrorState) {
   QSignalSpy failed(&model, &InstalledPackagesModel::statusChanged);
   ASSERT_TRUE(failed.wait(2000));
   QQmlEngine engine;
+  rejectQmlWarnings(engine);
 
   auto view = createView(engine, model);
   ASSERT_NE(view, nullptr);
@@ -162,8 +183,8 @@ TEST_F(InstalledPackagesViewTest, DetailPanelFollowsReplacementAtSameRowAndMetad
   InstalledPackagesFilterModel filter;
   filter.setSourceModel(&model);
   QQmlEngine engine;
-  QQmlComponent component(&engine, QUrl::fromLocalFile(QStringLiteral(HOLONIGHT_QML_SOURCE_DIR) +
-                                                       QStringLiteral("/packages/PackageDetailPanel.qml")));
+  rejectQmlWarnings(engine);
+  QQmlComponent component(&engine, qmlSource(QStringLiteral("/packages/PackageDetailPanel.qml")));
   std::unique_ptr<QObject> panel(
       component.createWithInitialProperties({{QStringLiteral("filterModel"), QVariant::fromValue(&filter)}}));
   ASSERT_NE(panel, nullptr) << component.errorString().toStdString();
@@ -199,6 +220,7 @@ TEST_F(InstalledPackagesViewTest, TableKeepsReadableColumnsAtDefaultAndMinimumWi
   QSignalSpy loaded(&model, &InstalledPackagesModel::statusChanged);
   ASSERT_TRUE(loaded.wait(2000));
   QQmlEngine engine;
+  rejectQmlWarnings(engine);
   QQuickWindow window;
   auto view = createView(engine, model, true);
   ASSERT_NE(view, nullptr);
@@ -304,8 +326,12 @@ TEST_F(InstalledPackagesViewTest, OriginBadgesFitTheirLabelsAndPreserveFullRepos
   for (const auto& repository : {QStringLiteral("core"), QStringLiteral("extra"), QStringLiteral("g14"), QString(),
                                  long_repository, QStringLiteral("foreign")}) {
     const bool foreign = repository == QStringLiteral("foreign");
-    const QString label =
-        foreign ? QStringLiteral("Foreign") : (repository.isEmpty() ? QStringLiteral("Official") : repository);
+    QString label = repository;
+    if (foreign) {
+      label = QStringLiteral("Foreign");
+    } else if (repository.isEmpty()) {
+      label = QStringLiteral("Official");
+    }
     auto source = std::make_shared<MockPackageSource>();
     EXPECT_CALL(*source, enumerateInstalledPackages())
         .WillOnce(
@@ -316,6 +342,11 @@ TEST_F(InstalledPackagesViewTest, OriginBadgesFitTheirLabelsAndPreserveFullRepos
     QSignalSpy loaded(&model, &InstalledPackagesModel::statusChanged);
     ASSERT_TRUE(loaded.wait(2000));
     QQmlEngine engine;
+    QObject::connect(&engine, &QQmlEngine::warnings, &engine, [](const QList<QQmlError>& errors) {
+      for (const auto& error : errors) {
+        ADD_FAILURE() << qPrintable(error.toString());
+      }
+    });
     QQuickWindow window;
     auto view = createView(engine, model, true);
     ASSERT_NE(view, nullptr);
@@ -359,6 +390,7 @@ TEST_F(InstalledPackagesViewTest, ListAndGridChoicesRemainExclusiveAndDoNotChang
   QSignalSpy loaded(&model, &InstalledPackagesModel::statusChanged);
   ASSERT_TRUE(loaded.wait(2000));
   QQmlEngine engine;
+  rejectQmlWarnings(engine);
   auto view = createView(engine, model);
   ASSERT_NE(view, nullptr);
   auto* list_button = stateObject(*view, "installedListViewButton");
@@ -383,6 +415,7 @@ TEST_F(InstalledPackagesViewTest, ToolbarAndCategoryTabsRemainReachableAtMinimum
   QSignalSpy loaded(&model, &InstalledPackagesModel::statusChanged);
   ASSERT_TRUE(loaded.wait(2000));
   QQmlEngine engine;
+  rejectQmlWarnings(engine);
   QQuickWindow window;
   auto view = createView(engine, model, true);
   ASSERT_NE(view, nullptr);
@@ -451,6 +484,7 @@ TEST_F(InstalledPackagesViewTest, PageLayoutRemainsFreeOfBindingLoopsDuringLoadA
   QSignalSpy loaded(&model, &InstalledPackagesModel::statusChanged);
   QStringList warnings;
   QQmlEngine engine;
+  rejectQmlWarnings(engine);
   QObject::connect(&engine, &QQmlEngine::warnings, &engine, [&warnings](const QList<QQmlError>& errors) {
     for (const auto& error : errors) {
       warnings.append(error.toString());
@@ -487,6 +521,7 @@ TEST_F(InstalledPackagesViewTest, ArrowKeysKeepHighlightedRowAndPackageDetailsIn
   QSignalSpy loaded(&model, &InstalledPackagesModel::statusChanged);
   ASSERT_TRUE(loaded.wait(2000));
   QQmlEngine engine;
+  rejectQmlWarnings(engine);
   QQuickWindow window;
   auto view = createView(engine, model);
   ASSERT_NE(view, nullptr);
@@ -530,6 +565,7 @@ TEST_F(InstalledPackagesViewTest, CategoryTabsExposeTheirVisibleAccessibleNames)
   QSignalSpy loaded(&model, &InstalledPackagesModel::statusChanged);
   ASSERT_TRUE(loaded.wait(2000));
   QQmlEngine engine;
+  rejectQmlWarnings(engine);
   auto view = createView(engine, model);
   ASSERT_NE(view, nullptr);
   auto* item = qobject_cast<QQuickItem*>(view.get());
@@ -546,9 +582,8 @@ TEST_F(InstalledPackagesViewTest, CategoryTabsExposeTheirVisibleAccessibleNames)
 
 TEST_F(InstalledPackagesViewTest, OptionalDependenciesCanBeExpandedFromTheKeyboard) {
   QQmlEngine engine;
-  QQmlComponent component(&engine,
-                          QUrl::fromLocalFile(QStringLiteral(HOLONIGHT_QML_SOURCE_DIR) +
-                                              QStringLiteral("/packages/PackageDetailDependencySections.qml")));
+  rejectQmlWarnings(engine);
+  QQmlComponent component(&engine, qmlSource(QStringLiteral("/packages/PackageDetailDependencySections.qml")));
   std::unique_ptr<QObject> section(component.createWithInitialProperties(
       {{QStringLiteral("description"), QString()},
        {QStringLiteral("requiredByCount"), 0},

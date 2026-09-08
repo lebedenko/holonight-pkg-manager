@@ -11,7 +11,13 @@ install(FILES LICENSE LICENSES/GPL-3.0-or-later.txt
   DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/${PROJECT_NAME}")
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick Qml Network Sql DBus Concurrent)
-find_package(HolonightQt REQUIRED)
+find_package(HolonightQt REQUIRED COMPONENTS Controls)
+unset(HOLONIGHT_QML_IMPORT_PATH CACHE)
+find_path(HOLONIGHT_QML_IMPORT_PATH
+  NAMES Holonight/qmldir
+  HINTS "${HolonightQt_DIR}/../../.."
+  PATH_SUFFIXES lib/qt6/qml lib64/qt6/qml
+  NO_DEFAULT_PATH REQUIRED)
 
 qt_policy(SET QTP0004 NEW)
 
@@ -68,11 +74,7 @@ if(CLANG_FORMAT)
 endif()
 
 if(CLANG_TIDY)
-  include(ProcessorCount)
-  ProcessorCount(TIDY_JOBS)
-  if(TIDY_JOBS EQUAL 0)
-    set(TIDY_JOBS 1)
-  endif()
+  set(TIDY_JOBS "4" CACHE STRING "Maximum parallel clang-tidy processes")
 
   set(TIDY_DB_DIR ${CMAKE_BINARY_DIR}/tidy)
   set(STRIP_TIDY_FLAGS_SCRIPT ${CMAKE_BINARY_DIR}/strip_tidy_flags.cmake)
@@ -100,8 +102,7 @@ if(QMLLINT)
     COMMAND ${QMLLINT} --unused-imports disable
       -I "${CMAKE_CURRENT_BINARY_DIR}/apps/packages"
       -I "${CMAKE_BINARY_DIR}"
-      -I "/tmp/holonight-qt-prefix/lib/qt6/qml"
-      -I "$ENV{HOME}/.local/lib/qt6/qml"
+      -I "${HOLONIGHT_QML_IMPORT_PATH}"
       ${ALL_QML_FILES}
     DEPENDS holonight-packages_qmltyperegistration
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"

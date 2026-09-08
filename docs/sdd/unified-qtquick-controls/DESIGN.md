@@ -6,7 +6,7 @@
 
 Replace Basic and direct H imports in the sixteen application QML files with file-local `Controls` imports where needed. Keep explicit Core/composite imports and application-owned delegates/painting. Preserve all layouts and independent scroll ownership; selected styles supply their control implementations.
 
-Embed the default through qt_add_resources. Configure a small private startup header with the exact build executable, selected provider QML root and install libdir. PackagesApplication compares its canonical executable path with the configured build executable before adding build discovery; it always supports executable-relative installed discovery. No new application API or imperative style selection.
+Embed the default through qt_add_resources. Configure private target compile definitions with the exact build executable, selected provider QML root and install libdir. PackagesApplication compares its canonical executable path with the configured build executable before adding build discovery; it always supports executable-relative installed discovery. No new application API or imperative style selection.
 
 Resolve the provider QML root from HolonightQt_DIR using NO_DEFAULT_PATH. Reuse it for tests and qmllint. Taskfile validates exact sibling dependency revisions and builds configuration/provider privately. Both CI jobs use identical pinned Release dependency staging with Wayland and without examples/tests. Static analysis follows the complete build and supports a configurable worker limit.
 

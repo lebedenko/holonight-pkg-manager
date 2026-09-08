@@ -1,7 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls.Basic
+import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import Holonight.Core
 import Holonight.Controls
@@ -139,7 +139,7 @@ ColumnLayout {
                 }
             }
 
-            Button {
+            Controls.Button {
                 id: moreButton
 
                 visible: !root.optionalDependenciesExpanded
