@@ -104,3 +104,20 @@ CI `34273801509` passed static checks and loaded the staged native dependencies,
 failed existing text geometry assertions. The container had no fonts. Running the two affected source tests
 with an empty Fontconfig configuration reproduced both failures locally. CI jobs and the image recipe now
 install `noto-fonts`, matching the local sans-serif font. Geometry assertions and production layout are unchanged.
+
+## Accepted publication — 2026-09-09
+
+Implementation and CI corrections are published at `50ee371f3807572806f466f23e7ef40080a8599b`; canonical
+`origin/main` availability was confirmed before handoff. [CI 34275422302](https://github.com/lebedenko/holonight-pkg-manager/actions/runs/34275422302)
+passes build/test, both source-QML styles, eight actual build/install launches, QML lint/types, formatting and tidy.
+[Licensing 34275422316](https://github.com/lebedenko/holonight-pkg-manager/actions/runs/34275422316)
+and CI image publication `34275422324` also pass.
+
+Final local verification uses Noto-only Fontconfig discovery with both system HoloNight QML and the native
+configuration library hidden: all 98 CTest entries pass (26.64 seconds). The focused four geometry/runtime entries
+pass first. Earlier dual-style source suites, isolated eight-launch acceptance and full static checks remain valid;
+this follow-up changes only CI dependencies and documentation. Documentation links, Python/shell syntax and
+whitespace pass. Both mockup hashes are unchanged. No package transaction or live desktop interaction occurred.
+
+This documentation handoff completes the repository work; the umbrella owns the final published gitlink and
+UQC-105 status. Greeter implementation and human-operated Hyprland/Sway integration are subsequent assignments.

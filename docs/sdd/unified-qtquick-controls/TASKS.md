@@ -9,4 +9,4 @@
 - [x] Verify implementation/plugin origins, Core/composites and diagnostics.
 - [x] Pass eight isolated actual executable launches, including installed discovery isolation.
 - [x] Pass full tests, both existing QML suites, format/tidy/lint/types/policies/syntax/links/whitespace.
-- [ ] Publish, confirm green remote CI/licensing, record results and hand off to umbrella.
+- [x] Publish, confirm green remote CI/licensing, record results and hand off to umbrella.
