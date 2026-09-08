@@ -4,6 +4,7 @@ vars:
   BUILD_DIR: build
   HOLONIGHT_QT_PREFIX: '{{.TASKFILE_DIR}}/{{.BUILD_DIR}}/dependencies/prefix'
   HOLONIGHT_QT_DIR: '{{.HOLONIGHT_QT_PREFIX}}/lib/cmake/HolonightQt'
+  HOLONIGHT_CONFIG_DIR: '{{.HOLONIGHT_QT_PREFIX}}/lib/cmake/HoloNightConfig'
   HOLONIGHT_QT_SOURCE: '{{default "../holonight-qt" .HOLONIGHT_QT_SOURCE}}'
   HOLONIGHT_QT_REVISION: 478ef7c40a22c7c3f7ea6f45d9205411b5504834
   HOLONIGHT_CONFIG_SOURCE: '{{default "../holonight-config" .HOLONIGHT_CONFIG_SOURCE}}'
@@ -29,7 +30,7 @@ tasks:
     deps: [build:config-dependency]
     cmds:
       - test "$(git -C {{.HOLONIGHT_QT_SOURCE}} rev-parse HEAD)" = "{{.HOLONIGHT_QT_REVISION}}"
-      - cmake -S {{.HOLONIGHT_QT_SOURCE}} -B {{.BUILD_DIR}}/dependencies/qt -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH={{.HOLONIGHT_QT_PREFIX}} -DBUILD_TESTS=OFF -DBUILD_DEMO=OFF -DBUILD_CONTROLS_GALLERY=OFF -DBUILD_WAYLAND=ON
+      - cmake -S {{.HOLONIGHT_QT_SOURCE}} -B {{.BUILD_DIR}}/dependencies/qt -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH={{.HOLONIGHT_QT_PREFIX}} -DHoloNightConfig_DIR={{.HOLONIGHT_CONFIG_DIR}} -DBUILD_TESTS=OFF -DBUILD_DEMO=OFF -DBUILD_CONTROLS_GALLERY=OFF -DBUILD_WAYLAND=ON
       - cmake --build {{.BUILD_DIR}}/dependencies/qt -j{{.NPROC}}
       - cmake --install {{.BUILD_DIR}}/dependencies/qt --prefix {{.HOLONIGHT_QT_PREFIX}}
 
@@ -37,21 +38,21 @@ tasks:
     desc: Configure a debug build
     deps: [build:qt-dependency]
     cmds:
-      - cmake -B {{.BUILD_DIR}} -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=OFF -DENABLE_COVERAGE=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_PREFIX_PATH={{.HOLONIGHT_QT_PREFIX}} -DHolonightQt_DIR={{.HOLONIGHT_QT_DIR}} -S .
+      - cmake -B {{.BUILD_DIR}} -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=OFF -DENABLE_COVERAGE=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_PREFIX_PATH={{.HOLONIGHT_QT_PREFIX}} -DHoloNightConfig_DIR={{.HOLONIGHT_CONFIG_DIR}} -DHolonightQt_DIR={{.HOLONIGHT_QT_DIR}} -S .
       - ln -sf {{.BUILD_DIR}}/compile_commands.json .
 
   configure-tests:
     desc: Configure a debug build with tests
     deps: [build:qt-dependency]
     cmds:
-      - cmake -B {{.BUILD_DIR}} -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DENABLE_COVERAGE=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_PREFIX_PATH={{.HOLONIGHT_QT_PREFIX}} -DHolonightQt_DIR={{.HOLONIGHT_QT_DIR}} -S .
+      - cmake -B {{.BUILD_DIR}} -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DENABLE_COVERAGE=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_PREFIX_PATH={{.HOLONIGHT_QT_PREFIX}} -DHoloNightConfig_DIR={{.HOLONIGHT_CONFIG_DIR}} -DHolonightQt_DIR={{.HOLONIGHT_QT_DIR}} -S .
       - ln -sf {{.BUILD_DIR}}/compile_commands.json .
 
   configure-coverage:
     desc: Configure tests with coverage instrumentation
     deps: [build:qt-dependency]
     cmds:
-      - cmake -B {{.BUILD_DIR}} -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DENABLE_COVERAGE=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_PREFIX_PATH={{.HOLONIGHT_QT_PREFIX}} -DHolonightQt_DIR={{.HOLONIGHT_QT_DIR}} -S .
+      - cmake -B {{.BUILD_DIR}} -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DENABLE_COVERAGE=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_PREFIX_PATH={{.HOLONIGHT_QT_PREFIX}} -DHoloNightConfig_DIR={{.HOLONIGHT_CONFIG_DIR}} -DHolonightQt_DIR={{.HOLONIGHT_QT_DIR}} -S .
 
   build:
     desc: Build the application
@@ -63,7 +64,7 @@ tasks:
     desc: Build and run HoloNight Packages
     deps: [build]
     cmds:
-      - ./{{.BUILD_DIR}}/holonight-packages
+      - env LD_LIBRARY_PATH={{.HOLONIGHT_QT_PREFIX}}/lib ./{{.BUILD_DIR}}/holonight-packages
 
   test:
     desc: Build and run tests

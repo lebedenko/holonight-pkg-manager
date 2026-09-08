@@ -81,3 +81,19 @@ Local transient logs are `/tmp/uqc105-*.log`; launch traces/maps are below `buil
 The two untracked mockups are preserved and their SHA-256 hashes were checked unchanged.
 Publication and remote CI acceptance must be confirmed in the umbrella handoff before UQC-105 becomes Done.
 Human-operated Hyprland/Sway and final ecosystem integration remain UQC-201.
+
+## Native dependency discovery follow-up
+
+CI `34272476545` compiled successfully, but QML tests could not load privately staged `libholonight_config.so`.
+Host QML masking alone had not hidden the system native configuration library. CTest and qmllint now derive
+LD_LIBRARY_PATH from the configured HoloNight::Config target; `task run` supplies its private staging library path.
+Actual build/install acceptance already supplied the explicit staged native loader path. No consumer linkage or
+public API workaround was added. Verification repeats with both the host QML module and native library hidden.
+
+The stronger masking also exposed an old local HoloNightConfig_DIR cache pointing at `/usr` despite the new
+prefix. Taskfile now passes the staged configuration package directory explicitly to provider/application
+configuration, preventing stale cache selection from bypassing the pinned dependency.
+
+After this correction, all 98 CTest entries and qmllint pass with both host providers hidden (13.89 seconds).
+The native mask adds `--ro-bind /dev/null /usr/lib/libholonight_config.so` to the bwrap commands above;
+only private mount namespaces are affected. The cache now resolves configuration below `build/dependencies/prefix`.

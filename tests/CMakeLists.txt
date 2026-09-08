@@ -39,7 +39,7 @@ target_link_libraries(test_holonight_packages PRIVATE
 )
 gtest_discover_tests(test_holonight_packages
   DISCOVERY_MODE PRE_TEST
-  PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+  PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;LD_LIBRARY_PATH=$<TARGET_FILE_DIR:HoloNight::Config>")
 
 if(ENABLE_COVERAGE)
   target_compile_options(test_holonight_packages PRIVATE --coverage)
@@ -96,5 +96,5 @@ target_compile_definitions(test_runtime_controls PRIVATE
 foreach(style IN ITEMS Holonight Fusion)
   add_test(NAME runtime_controls_${style} COMMAND test_runtime_controls)
   set_tests_properties(runtime_controls_${style} PROPERTIES TIMEOUT 90
-    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_CONTROLS_STYLE=${style}")
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_CONTROLS_STYLE=${style};LD_LIBRARY_PATH=$<TARGET_FILE_DIR:HoloNight::Config>")
 endforeach()

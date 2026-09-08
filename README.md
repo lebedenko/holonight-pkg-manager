@@ -35,7 +35,8 @@ task qml-lint
 Most commands validate the pinned sibling revisions, build configuration and provider in
 `build/dependencies`, and stage them into `build/dependencies/prefix`. Provider examples/tests are disabled;
 Wayland support remains enabled. Set `BUILD_DIR`, `HOLONIGHT_QT_SOURCE`, `HOLONIGHT_CONFIG_SOURCE`, or `NPROC`
-as Task variables when needed. Configure `-DTIDY_JOBS=2` (default 4) to limit analysis workers.
+as Task variables when needed. `task run` supplies the staged native configuration-library path; CTest and
+qmllint derive it from the configured dependency target. Configure `-DTIDY_JOBS=2` (default 4) to limit analysis workers.
 
 Application standard controls use `import QtQuick.Controls as Controls`; Core and composites retain their
 explicit HoloNight appearance. The executable embeds a Holonight default. Set `QT_QUICK_CONTROLS_STYLE=Fusion`,

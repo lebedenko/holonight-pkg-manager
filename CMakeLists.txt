@@ -99,7 +99,8 @@ endif()
 
 if(QMLLINT)
   add_custom_target(qml-lint
-    COMMAND ${QMLLINT} --unused-imports disable
+    COMMAND ${CMAKE_COMMAND} -E env "LD_LIBRARY_PATH=$<TARGET_FILE_DIR:HoloNight::Config>"
+      ${QMLLINT} --unused-imports disable
       -I "${CMAKE_CURRENT_BINARY_DIR}/apps/packages"
       -I "${CMAKE_BINARY_DIR}"
       -I "${HOLONIGHT_QML_IMPORT_PATH}"
