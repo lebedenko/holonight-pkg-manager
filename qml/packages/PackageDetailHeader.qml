@@ -129,6 +129,7 @@ ColumnLayout {
     }
 
     HnSeparator {
+        crossAxisAlignment: HnSeparator.Trailing
         Layout.fillWidth: true
     }
 }

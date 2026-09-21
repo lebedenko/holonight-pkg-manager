@@ -98,12 +98,15 @@ if(CLANG_TIDY)
 endif()
 
 if(QMLLINT)
+  cmake_path(ABSOLUTE_PATH QT6_INSTALL_QML BASE_DIRECTORY "${QT6_INSTALL_PREFIX}"
+             OUTPUT_VARIABLE HOLONIGHT_QT_QML_DIR)
   add_custom_target(qml-lint
     COMMAND ${CMAKE_COMMAND} -E env "LD_LIBRARY_PATH=$<TARGET_FILE_DIR:HoloNight::Config>"
-      ${QMLLINT} --unused-imports disable
+      ${QMLLINT} --bare --unused-imports disable
       -I "${CMAKE_CURRENT_BINARY_DIR}/apps/packages"
       -I "${CMAKE_BINARY_DIR}"
       -I "${HOLONIGHT_QML_IMPORT_PATH}"
+      -I "${HOLONIGHT_QT_QML_DIR}"
       ${ALL_QML_FILES}
     DEPENDS holonight-packages_qmltyperegistration
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
