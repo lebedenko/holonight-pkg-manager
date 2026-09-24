@@ -6,6 +6,7 @@
 
 class QQuickView;
 class InstalledPackagesModel;
+class UpdatesModel;
 
 class PackagesApplication : public QGuiApplication {
   Q_OBJECT
@@ -22,10 +23,11 @@ class PackagesApplication : public QGuiApplication {
   [[nodiscard]] bool isReady() const;
 
  private:
-  // view_ holds a QML-facing reference to installed_packages_model_ (see setInitialProperties in
-  // the constructor), so it must be destroyed first; the destructor enforces this explicitly
+  // view_ holds QML-facing references to both models (see setInitialProperties in the
+  // constructor), so it must be destroyed first; the destructor enforces this explicitly
   // rather than relying on reverse declaration order.
   std::unique_ptr<InstalledPackagesModel> installed_packages_model_;
+  std::unique_ptr<UpdatesModel> updates_model_;
   std::unique_ptr<QQuickView> view_;
   bool ready_ = false;
 };

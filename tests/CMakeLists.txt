@@ -5,15 +5,22 @@ add_executable(test_holonight_packages
   test_placeholder.cpp
   domain/package_test.cpp
   backends/alpm_package_source_test.cpp
+  backends/alpm_update_source_test.cpp
+  backends/pacman_config_test.cpp
+  backends/update_matching_test.cpp
   persistence/alpm_connection_cache_test.cpp
   application/package_list_use_case_test.cpp
   application/orphan_package_filter_test.cpp
   application/package_size_formatter_test.cpp
+  application/update_summary_test.cpp
   apps/installed_packages_model_test.cpp
   apps/installed_packages_filter_model_test.cpp
   apps/installed_packages_view_test.cpp
+  apps/updates_model_test.cpp
+  apps/updates_view_test.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/InstalledPackagesModel.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/InstalledPackagesFilterModel.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdatesModel.cpp
 )
 qt_add_resources(test_holonight_packages workspace_assets
   PREFIX "/HolonightPackages"
@@ -22,6 +29,7 @@ qt_add_resources(test_holonight_packages workspace_assets
 
 target_include_directories(test_holonight_packages PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/application
+  ${CMAKE_CURRENT_SOURCE_DIR}/apps
   ${PROJECT_SOURCE_DIR}/apps/packages/app
   ${PROJECT_SOURCE_DIR}/src/backends/src)
 set_target_properties(test_holonight_packages PROPERTIES AUTOMOC ON)
@@ -68,7 +76,9 @@ qt_add_executable(test_runtime_controls
   ${PROJECT_SOURCE_DIR}/apps/packages/app/InstalledPackagesModel.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/InstalledPackagesModel.h
   ${PROJECT_SOURCE_DIR}/apps/packages/app/InstalledPackagesFilterModel.cpp
-  ${PROJECT_SOURCE_DIR}/apps/packages/app/InstalledPackagesFilterModel.h)
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/InstalledPackagesFilterModel.h
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdatesModel.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdatesModel.h)
 set_target_properties(test_runtime_controls PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/runtime")
 foreach(qml_file IN LISTS HOLONIGHT_PACKAGES_QML_FILES)
@@ -86,7 +96,8 @@ qt_add_resources(test_runtime_controls runtime_style_config
   PREFIX "/" BASE "${PROJECT_SOURCE_DIR}/apps/packages"
   FILES "${PROJECT_SOURCE_DIR}/apps/packages/qtquickcontrols2.conf")
 target_include_directories(test_runtime_controls PRIVATE
-  "${CMAKE_CURRENT_SOURCE_DIR}/application" "${PROJECT_SOURCE_DIR}/apps/packages/app")
+  "${CMAKE_CURRENT_SOURCE_DIR}/application" "${CMAKE_CURRENT_SOURCE_DIR}/apps"
+  "${PROJECT_SOURCE_DIR}/apps/packages/app")
 target_link_libraries(test_runtime_controls PRIVATE
   GTest::gtest GTest::gmock Qt6::Quick Qt6::Qml Qt6::QmlPrivate Qt6::Test Qt6::Concurrent
   holonight_packages_application holonight_packages_domain)

@@ -1,5 +1,7 @@
 #include "InstalledPackagesFilterModel.h"
 #include "InstalledPackagesModel.h"
+#include "UpdatesModel.h"
+#include "fake_update_source.h"
 #include "mock_package_source.h"
 
 #include <QAccessible>
@@ -47,10 +49,8 @@ QUrl qmlSource(const QString& path) {
 #endif
 }
 
-std::unique_ptr<QObject> createView(QQmlEngine& engine, InstalledPackagesModel& model, bool workspace = false) {
-  const QUrl source = qmlSource(workspace ? QStringLiteral("/workspace/WorkspaceWindow.qml")
-                                          : QStringLiteral("/packages/InstalledPackagesView.qml"));
-  QQmlComponent component(&engine, source);
+std::unique_ptr<QObject> createView(QQmlEngine& engine, InstalledPackagesModel& model) {
+  QQmlComponent component(&engine, qmlSource(QStringLiteral("/packages/InstalledPackagesView.qml")));
   EXPECT_EQ(component.status(), QQmlComponent::Ready) << component.errorString().toStdString();
   return std::unique_ptr<QObject>(
       component.createWithInitialProperties({{QStringLiteral("installedPackagesModel"), QVariant::fromValue(&model)}}));
@@ -98,8 +98,26 @@ class InstalledPackagesViewTest : public ::testing::Test {
     qmlRegisterUncreatableType<InstalledPackagesModel>("HolonightPackages", 1, 0, "InstalledPackagesModel",
                                                        QStringLiteral("Provided by the test"));
     qmlRegisterType<InstalledPackagesFilterModel>("HolonightPackages", 1, 0, "InstalledPackagesFilterModel");
+    qmlRegisterUncreatableType<UpdatesModel>("HolonightPackages", 1, 0, "UpdatesModel",
+                                             QStringLiteral("Provided by the test"));
 #endif
   }
+
+  // The workspace also hosts the Updates page; it gets an idle fake-source model that outlives the view.
+  std::unique_ptr<QObject> createWorkspace(QQmlEngine& engine, InstalledPackagesModel& model) {
+    if (!updates_model_) {
+      updates_model_ = std::make_unique<UpdatesModel>(std::make_shared<holonight_packages_testing::FakeUpdateSource>());
+      EXPECT_TRUE(QTest::qWaitFor([this] { return !updates_model_->loading(); }, 2000));
+    }
+    QQmlComponent component(&engine, qmlSource(QStringLiteral("/workspace/WorkspaceWindow.qml")));
+    EXPECT_EQ(component.status(), QQmlComponent::Ready) << component.errorString().toStdString();
+    return std::unique_ptr<QObject>(component.createWithInitialProperties(
+        {{QStringLiteral("installedPackagesModel"), QVariant::fromValue(&model)},
+         {QStringLiteral("updatesModel"), QVariant::fromValue(updates_model_.get())}}));
+  }
+
+ private:
+  std::unique_ptr<UpdatesModel> updates_model_;
 };
 
 TEST_F(InstalledPackagesViewTest, ShowsLoadingState) {
@@ -222,7 +240,7 @@ TEST_F(InstalledPackagesViewTest, TableKeepsReadableColumnsAtDefaultAndMinimumWi
   QQmlEngine engine;
   rejectQmlWarnings(engine);
   QQuickWindow window;
-  auto view = createView(engine, model, true);
+  auto view = createWorkspace(engine, model);
   ASSERT_NE(view, nullptr);
   auto* item = qobject_cast<QQuickItem*>(view.get());
   ASSERT_NE(item, nullptr);
@@ -348,7 +366,7 @@ TEST_F(InstalledPackagesViewTest, OriginBadgesFitTheirLabelsAndPreserveFullRepos
       }
     });
     QQuickWindow window;
-    auto view = createView(engine, model, true);
+    auto view = createWorkspace(engine, model);
     ASSERT_NE(view, nullptr);
     auto* item = qobject_cast<QQuickItem*>(view.get());
     item->setParentItem(window.contentItem());
@@ -417,7 +435,7 @@ TEST_F(InstalledPackagesViewTest, ToolbarAndCategoryTabsRemainReachableAtMinimum
   QQmlEngine engine;
   rejectQmlWarnings(engine);
   QQuickWindow window;
-  auto view = createView(engine, model, true);
+  auto view = createWorkspace(engine, model);
   ASSERT_NE(view, nullptr);
   auto* item = qobject_cast<QQuickItem*>(view.get());
   ASSERT_NE(item, nullptr);
@@ -491,7 +509,7 @@ TEST_F(InstalledPackagesViewTest, PageLayoutRemainsFreeOfBindingLoopsDuringLoadA
     }
   });
   QQuickWindow window;
-  auto view = createView(engine, model, true);
+  auto view = createWorkspace(engine, model);
   ASSERT_NE(view, nullptr);
   auto* item = qobject_cast<QQuickItem*>(view.get());
   ASSERT_NE(item, nullptr);

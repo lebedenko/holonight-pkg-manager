@@ -15,6 +15,7 @@ qmltypes_file="${packages_module_dir}/holonight-packages.qmltypes"
 required_types=(
   "InstalledPackagesModel"
   "InstalledPackagesFilterModel"
+  "UpdatesModel"
 )
 
 if [[ ! -s "${qmltypes_file}" ]]; then

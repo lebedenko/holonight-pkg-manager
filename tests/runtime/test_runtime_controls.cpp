@@ -1,5 +1,7 @@
 #include "InstalledPackagesFilterModel.h"
 #include "InstalledPackagesModel.h"
+#include "UpdatesModel.h"
+#include "fake_update_source.h"
 #include "mock_package_source.h"
 
 #include <QColor>
@@ -114,7 +116,10 @@ class RuntimeControls : public testing::Test {
     view_.setMinimumSize(QSize(720, 480));
     view_.resize(1360, 890);
     view_.setResizeMode(QQuickView::SizeRootObjectToView);
-    view_.setInitialProperties({{QStringLiteral("installedPackagesModel"), QVariant::fromValue(model_.get())}});
+    updates_model_ = std::make_unique<UpdatesModel>(std::make_shared<holonight_packages_testing::FakeUpdateSource>());
+    ASSERT_TRUE(QTest::qWaitFor([this] { return !updates_model_->loading(); }, 2000));
+    view_.setInitialProperties({{QStringLiteral("installedPackagesModel"), QVariant::fromValue(model_.get())},
+                                {QStringLiteral("updatesModel"), QVariant::fromValue(updates_model_.get())}});
     view_.setSource(QUrl(QStringLiteral("qrc:/HolonightPackages/workspace/WorkspaceWindow.qml")));
     ASSERT_EQ(view_.status(), QQuickView::Ready);
     view_.show();
@@ -150,6 +155,7 @@ class RuntimeControls : public testing::Test {
   // The view must be destroyed before its model and diagnostics callback storage.
   std::shared_ptr<MockPackageSource> source_;
   std::unique_ptr<InstalledPackagesModel> model_;
+  std::unique_ptr<UpdatesModel> updates_model_;
   QStringList diagnostics_;
   QQuickView view_;
   InstalledPackagesFilterModel* filter_ = nullptr;

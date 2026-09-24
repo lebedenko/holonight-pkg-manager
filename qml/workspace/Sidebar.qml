@@ -13,6 +13,10 @@ import Holonight.Controls
 Item {
     id: root
 
+    property string currentPage: "installed"
+
+    signal pageRequested(string page)
+
     ColumnLayout {
         anchors.fill: parent
         spacing: 24
@@ -44,8 +48,10 @@ Item {
             HnNavigationDelegate {
                 objectName: "sidebarUpdatesNav"
                 title: qsTr("Updates")
-                enabled: false
+                checked: root.currentPage === "updates"
                 Layout.fillWidth: true
+
+                onClicked: root.pageRequested("updates")
 
                 leadingContent: HnLabel {
                     role: HnTypographyRole.Body
@@ -68,8 +74,10 @@ Item {
             HnNavigationDelegate {
                 objectName: "sidebarInstalledNav"
                 title: qsTr("Installed")
-                checked: true
+                checked: root.currentPage === "installed"
                 Layout.fillWidth: true
+
+                onClicked: root.pageRequested("installed")
 
                 leadingContent: HnLabel {
                     role: HnTypographyRole.Body

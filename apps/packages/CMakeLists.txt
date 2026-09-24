@@ -6,6 +6,8 @@ qt_add_executable(holonight-packages
   app/InstalledPackagesModel.cpp
   app/InstalledPackagesFilterModel.h
   app/InstalledPackagesFilterModel.cpp
+  app/UpdatesModel.h
+  app/UpdatesModel.cpp
 )
 
 set_target_properties(holonight-packages PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
@@ -31,7 +33,7 @@ qt_add_qml_module(holonight-packages
   RESOURCE_PREFIX "/"
   NO_IMPORT_SCAN
   QML_FILES ${HOLONIGHT_PACKAGES_QML_FILES}
-  SOURCES app/InstalledPackagesModel.h app/InstalledPackagesFilterModel.h
+  SOURCES app/InstalledPackagesModel.h app/InstalledPackagesFilterModel.h app/UpdatesModel.h
   RESOURCES ${HOLONIGHT_PACKAGES_RESOURCES}
 )
 

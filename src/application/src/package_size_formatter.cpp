@@ -33,4 +33,14 @@ std::string formatSizeBytes(std::uint64_t bytes) {
   return formatted + " " + kUnits.at(unit_index);
 }
 
+std::string formatSignedSizeBytes(std::int64_t bytes) {
+  if (bytes == 0) {
+    return formatSizeBytes(0);
+  }
+  // Negate in unsigned arithmetic so INT64_MIN does not overflow.
+  const auto magnitude =
+      bytes < 0 ? std::uint64_t{0} - static_cast<std::uint64_t>(bytes) : static_cast<std::uint64_t>(bytes);
+  return (bytes < 0 ? "-" : "+") + formatSizeBytes(magnitude);
+}
+
 }  // namespace holonight_packages_application

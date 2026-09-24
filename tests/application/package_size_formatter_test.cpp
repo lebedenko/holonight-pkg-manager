@@ -1,6 +1,8 @@
 #include "holonight_packages_application/package_size_formatter.h"
 
+#include <cstdint>
 #include <gtest/gtest.h>
+#include <limits>
 
 namespace holonight_packages_application {
 namespace {
@@ -20,6 +22,18 @@ TEST(PackageSizeFormatter, OneAndAHalfMebibytes) { EXPECT_EQ(formatSizeBytes(102
 TEST(PackageSizeFormatter, ExactMultipleTrimsTrailingZeroDecimal) { EXPECT_EQ(formatSizeBytes(195035136), "186 MiB"); }
 
 TEST(PackageSizeFormatter, GibibyteRange) { EXPECT_EQ(formatSizeBytes(1024ULL * 1024 * 1024 * 5 / 2), "2.5 GiB"); }
+
+TEST(PackageSizeFormatter, SignedPositiveDelta) {
+  EXPECT_EQ(formatSignedSizeBytes(12897485), "+12.3 MiB");  // 12.3 MiB
+}
+
+TEST(PackageSizeFormatter, SignedNegativeDelta) { EXPECT_EQ(formatSignedSizeBytes(-340LL * 1024), "-340 KiB"); }
+
+TEST(PackageSizeFormatter, SignedZeroHasNoSign) { EXPECT_EQ(formatSignedSizeBytes(0), "0 B"); }
+
+TEST(PackageSizeFormatter, SignedMinimumDoesNotOverflow) {
+  EXPECT_EQ(formatSignedSizeBytes(std::numeric_limits<std::int64_t>::min()), "-8388608 TiB");
+}
 
 }  // namespace
 }  // namespace holonight_packages_application

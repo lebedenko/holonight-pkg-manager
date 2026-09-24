@@ -5,9 +5,11 @@ A standalone C++23/Qt 6 package-management application for the HoloNight desktop
 The application currently shows a read-only, filterable Installed page for Arch Linux packages, loaded
 asynchronously via libalpm: a data table (package, origin, installed version, size, install reason) with
 per-category tabs (Explicit / Dependencies / AUR-Foreign / Orphans), search, sort, a repository filter, and a
-detail panel with metadata, dependency, and orphan-reclaim information. It is transactionally inert — no install,
-remove, or update action is implemented. Package transactions, update checking, the per-user service, the
-privileged helper, and desktop/D-Bus integration are not implemented yet.
+detail panel with metadata, dependency, and orphan-reclaim information. An Updates page lists pending
+official-repository updates by comparing installed packages with the sync databases already on disk; its Reload
+button only re-reads them, so databases must be synced with your package manager outside the application. It is
+transactionally inert — no install, remove, update, or database-sync action is implemented. Package transactions,
+the per-user service, the privileged helper, and desktop/D-Bus integration are not implemented yet.
 
 ## Requirements
 
@@ -55,7 +57,7 @@ python3 scripts/check-runtime-launches.py build/holonight-packages build/depende
 ```
 
 Launch acceptance isolates HOME/XDG and desktop activation, observes only existing read-only ALPM enumeration,
-and terminates/reaps each process. Tests use MockPackageSource and real models; they never perform package
+and terminates/reaps each process. Tests use MockPackageSource/FakeUpdateSource and real models; they never perform package
 transactions, synchronize repositories or invoke external links.
 
 ## Architecture
@@ -64,9 +66,9 @@ The code is a modular monolith with dependency direction toward the domain:
 
 | Target | Responsibility |
 | --- | --- |
-| `holonight_packages_domain` | `Package` model, `PackageSource` port, source/trust/install-reason concepts |
-| `holonight_packages_application` | Use cases (e.g. `PackageListUseCase`) — no Qt/QML types |
-| `holonight_packages_backends` | Native package-manager adapters (`AlpmPackageSource`, via libalpm) |
+| `holonight_packages_domain` | `Package`/`PendingUpdate` models, `PackageSource`/`UpdateSource` ports, source/trust/install-reason concepts |
+| `holonight_packages_application` | Use cases and pure helpers (e.g. `PackageListUseCase`, `summarizeUpdates`) — no Qt/QML types |
+| `holonight_packages_backends` | Native package-manager adapters (`AlpmPackageSource`, `AlpmUpdateSource`, via libalpm) |
 | `holonight_packages_advisor` | Deterministic update assessment and evidence collection |
 | `holonight_packages_persistence` | Cache (e.g. `AlpmConnectionCache`), settings, and transaction history |
 | `holonight_packages_platform` | D-Bus, notifications, systemd, and desktop integration |
