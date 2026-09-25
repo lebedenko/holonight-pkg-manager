@@ -75,7 +75,7 @@ Item {
             objectName: "updatesStaleHint"
             visible: root.hasResult && root.updatesModel.databasesStale
             status: HnStatusIndicator.Warning
-            text: qsTr("Your package databases are out of date. Sync them with your package manager, then press Reload.")
+            text: root.updatesModel.staleHintText
             Layout.fillWidth: true
         }
 

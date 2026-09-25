@@ -1,7 +1,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import Holonight.Core
 import Holonight.Controls
@@ -14,19 +13,13 @@ ColumnLayout {
     required property var requiredByList
     required property var optionalDependencies
     required property int configFileCount
-
-    readonly property int optionalDependenciesVisibleLimit: 5
-
-    property bool optionalDependenciesExpanded: false
+    property bool showDescription: true
 
     spacing: 16
 
-    HnLabel {
-        role: HnTypographyRole.Body
-        rawText: root.description
-        color: HoloniightPalette.textSecondary
-        wrapMode: Text.Wrap
-        visible: text.length > 0
+    PackageDetailDescription {
+        description: root.description
+        visible: root.showDescription
         Layout.fillWidth: true
     }
 
@@ -88,85 +81,10 @@ ColumnLayout {
         }
     }
 
-    ColumnLayout {
-        spacing: 8
+    PackageChipList {
+        titleText: qsTr("Optional dependencies")
+        items: root.optionalDependencies
         Layout.fillWidth: true
-
-        HnSectionHeader {
-            titleText: qsTr("Optional dependencies")
-            dividerVisible: false
-            Layout.fillWidth: true
-
-            trailingContent: Component {
-                HnLabel {
-                    role: HnTypographyRole.Caption
-                    rawText: String(root.optionalDependencies.length)
-                    color: HoloniightPalette.textSecondary
-                }
-            }
-        }
-
-        Flow {
-            id: dependencies
-
-            spacing: 8
-            Layout.fillWidth: true
-
-            Repeater {
-                model: root.optionalDependenciesExpanded
-                       ? root.optionalDependencies
-                       : root.optionalDependencies.slice(0, root.optionalDependenciesVisibleLimit)
-
-                Rectangle {
-                    required property string modelData
-
-                    width: Math.min(implicitWidth, dependencies.width)
-                    implicitWidth: chipLabel.implicitWidth + 16
-                    implicitHeight: chipLabel.height + 8
-                    radius: height / 2
-                    color: HoloniightPalette.surfaceElevated
-
-                    HnLabel {
-                        id: chipLabel
-
-                        anchors.centerIn: parent
-                        width: Math.max(0, parent.width - 16)
-                        wrapMode: Text.WrapAnywhere
-                        role: HnTypographyRole.Caption
-                        rawText: parent.modelData
-                        color: HoloniightPalette.textSecondary
-                    }
-                }
-            }
-
-            Controls.Button {
-                id: moreButton
-
-                visible: !root.optionalDependenciesExpanded
-                         && root.optionalDependencies.length > root.optionalDependenciesVisibleLimit
-                text: qsTr("+%1 more").arg(root.optionalDependencies.length - root.optionalDependenciesVisibleLimit)
-                focusPolicy: Qt.StrongFocus
-                padding: 4
-                leftPadding: 8
-                rightPadding: 8
-                Accessible.name: moreButton.text
-
-                contentItem: HnLabel {
-                    role: HnTypographyRole.Caption
-                    rawText: moreButton.text
-                    color: HoloniightPalette.textSecondary
-                }
-
-                background: Rectangle {
-                    radius: height / 2
-                    color: moreButton.down ? HoloniightPalette.surfaceElevated : "transparent"
-                    border.color: moreButton.visualFocus ? HoloniightPalette.borderFocus : HoloniightPalette.borderPassive
-                    border.width: moreButton.visualFocus ? HnMetrics.focusBorderWidth : HnMetrics.borderWidth
-                }
-
-                onClicked: root.optionalDependenciesExpanded = true
-            }
-        }
     }
 
     ColumnLayout {

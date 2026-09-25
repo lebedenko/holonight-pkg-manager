@@ -1,8 +1,10 @@
 #include "PackagesApplication.h"
 
+#include "ExploreModel.h"
 #include "InstalledPackagesModel.h"
 #include "UpdatesModel.h"
 #include "holonight_packages_application/package_list_use_case.h"
+#include "holonight_packages_backends/alpm_explore_source.h"
 #include "holonight_packages_backends/alpm_package_source.h"
 #include "holonight_packages_backends/alpm_update_source.h"
 
@@ -30,6 +32,10 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
           .databaseRoot = "/", .databasePath = "/var/lib/pacman", .pacmanConfPath = "/etc/pacman.conf"});
   updates_model_ = std::make_unique<UpdatesModel>(std::move(update_source));
 
+  auto explore_source = std::make_shared<holonight_packages_backends::AlpmExploreSource>(
+      holonight_packages_backends::AlpmExploreSourceOptions{.databaseRoot = "/", .databasePath = "/var/lib/pacman"});
+  explore_model_ = std::make_unique<ExploreModel>(std::move(explore_source));
+
   view_ = std::make_unique<QQuickView>();
   if (QFileInfo{applicationFilePath()}.canonicalFilePath() ==
       QFileInfo{QStringLiteral(HOLONIGHT_BUILD_EXECUTABLE)}.canonicalFilePath()) {
@@ -47,7 +53,8 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
   view_->setResizeMode(QQuickView::SizeRootObjectToView);
   view_->setInitialProperties(
       {{QStringLiteral("installedPackagesModel"), QVariant::fromValue(installed_packages_model_.get())},
-       {QStringLiteral("updatesModel"), QVariant::fromValue(updates_model_.get())}});
+       {QStringLiteral("updatesModel"), QVariant::fromValue(updates_model_.get())},
+       {QStringLiteral("exploreModel"), QVariant::fromValue(explore_model_.get())}});
   view_->setSource(QUrl(QStringLiteral("qrc:/HolonightPackages/workspace/WorkspaceWindow.qml")));
   if (view_->status() == QQuickView::Error) {
     for (const QQmlError& error : view_->errors()) {
@@ -62,6 +69,7 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
 
 PackagesApplication::~PackagesApplication() {
   view_.reset();
+  explore_model_.reset();
   updates_model_.reset();
   installed_packages_model_.reset();
 }

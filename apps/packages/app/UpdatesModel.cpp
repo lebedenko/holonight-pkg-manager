@@ -1,9 +1,10 @@
 #include "UpdatesModel.h"
 
+#include "DataFreshness.h"
+#include "holonight_packages_application/data_freshness.h"
 #include "holonight_packages_application/package_size_formatter.h"
 #include "holonight_packages_domain/require_non_null.h"
 
-#include <QLocale>
 #include <QtConcurrentRun>
 
 #include <chrono>
@@ -16,11 +17,6 @@ using holonight_packages_domain::PendingUpdate;
 using holonight_packages_domain::UpdateSnapshot;
 using holonight_packages_domain::UpdateSourceError;
 using holonight_packages_domain::UpdateSourceErrorCode;
-
-QDateTime toQDateTime(const std::chrono::system_clock::time_point& time_point) {
-  return QDateTime::fromMSecsSinceEpoch(
-      std::chrono::duration_cast<std::chrono::milliseconds>(time_point.time_since_epoch()).count());
-}
 
 QString sizeLabel(std::uint64_t bytes) {
   return QString::fromStdString(holonight_packages_application::formatSizeBytes(bytes));
@@ -105,16 +101,13 @@ QString UpdatesModel::totalDownloadLabel() const { return sizeLabel(summary_.tot
 
 QDateTime UpdatesModel::dataAsOf() const { return data_as_of_; }
 
-QString UpdatesModel::dataAsOfLabel() const {
-  if (!data_as_of_.isValid()) {
-    return {};
-  }
-  return tr("Data as of %1").arg(QLocale().toString(data_as_of_.toLocalTime(), QLocale::ShortFormat));
-}
+QString UpdatesModel::dataAsOfLabel() const { return data_freshness::dataAsOfLabel(data_as_of_); }
 
 bool UpdatesModel::databasesStale() const { return databases_stale_; }
 
 QString UpdatesModel::reloadErrorMessage() const { return reload_error_message_; }
+
+QString UpdatesModel::staleHintText() { return data_freshness::staleHintText(); }
 
 QString UpdatesModel::officialOnlyNote() { return tr("AUR and foreign packages are not covered."); }
 
@@ -173,8 +166,8 @@ void UpdatesModel::applySnapshot(UpdateSnapshot snapshot) {
     databases_stale_ = false;
   } else {
     state_ = updates_.empty() ? ViewState::UpToDate : ViewState::Updates;
-    data_as_of_ = toQDateTime(snapshot.dataAsOf);
-    databases_stale_ = now_() - snapshot.dataAsOf > kStaleAfter;
+    data_as_of_ = data_freshness::toQDateTime(snapshot.dataAsOf);
+    databases_stale_ = holonight_packages_application::isStale(snapshot.dataAsOf, now_());
   }
   error_message_.clear();
   reload_error_message_.clear();

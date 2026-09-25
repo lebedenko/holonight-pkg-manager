@@ -1,6 +1,8 @@
+#include "ExploreModel.h"
 #include "InstalledPackagesFilterModel.h"
 #include "InstalledPackagesModel.h"
 #include "UpdatesModel.h"
+#include "fake_explore_source.h"
 #include "fake_update_source.h"
 #include "mock_package_source.h"
 
@@ -118,8 +120,11 @@ class RuntimeControls : public testing::Test {
     view_.setResizeMode(QQuickView::SizeRootObjectToView);
     updates_model_ = std::make_unique<UpdatesModel>(std::make_shared<holonight_packages_testing::FakeUpdateSource>());
     ASSERT_TRUE(QTest::qWaitFor([this] { return !updates_model_->loading(); }, 2000));
+    explore_model_ = std::make_unique<ExploreModel>(std::make_shared<holonight_packages_testing::FakeExploreSource>());
+    ASSERT_TRUE(QTest::qWaitFor([this] { return !explore_model_->loading(); }, 2000));
     view_.setInitialProperties({{QStringLiteral("installedPackagesModel"), QVariant::fromValue(model_.get())},
-                                {QStringLiteral("updatesModel"), QVariant::fromValue(updates_model_.get())}});
+                                {QStringLiteral("updatesModel"), QVariant::fromValue(updates_model_.get())},
+                                {QStringLiteral("exploreModel"), QVariant::fromValue(explore_model_.get())}});
     view_.setSource(QUrl(QStringLiteral("qrc:/HolonightPackages/workspace/WorkspaceWindow.qml")));
     ASSERT_EQ(view_.status(), QQuickView::Ready);
     view_.show();
@@ -156,6 +161,7 @@ class RuntimeControls : public testing::Test {
   std::shared_ptr<MockPackageSource> source_;
   std::unique_ptr<InstalledPackagesModel> model_;
   std::unique_ptr<UpdatesModel> updates_model_;
+  std::unique_ptr<ExploreModel> explore_model_;
   QStringList diagnostics_;
   QQuickView view_;
   InstalledPackagesFilterModel* filter_ = nullptr;

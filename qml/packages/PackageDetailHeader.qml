@@ -12,6 +12,8 @@ ColumnLayout {
     required property string name
     required property string sourceLabel
     required property string repository
+    property bool showActions: true
+    property bool showInstalledIndicator: true
 
     spacing: 12
 
@@ -55,15 +57,16 @@ ColumnLayout {
 
                 PackageOriginBadge {
                     objectName: "packageDetailOriginBadge"
-                    text: root.sourceLabel === "official"
-                        ? (root.repository.length > 0 ? root.repository : qsTr("Official")) : qsTr("Foreign")
-                    emphasized: root.sourceLabel === "official"
+                    text: root.sourceLabel === "foreign" ? qsTr("Foreign")
+                        : (root.repository.length > 0 ? root.repository : qsTr("Official"))
+                    emphasized: root.sourceLabel !== "foreign"
                     maximumWidth: badges.width
-                    toolTipText: root.sourceLabel === "official" && root.repository.length > 0
+                    toolTipText: root.sourceLabel !== "foreign" && root.repository.length > 0
                         ? qsTr("Repository: %1").arg(root.repository) : text
                 }
 
                 HnStatusIndicator {
+                    visible: root.showInstalledIndicator
                     status: HnStatusIndicator.Success
                     text: qsTr("Installed")
                 }
@@ -71,60 +74,70 @@ ColumnLayout {
         }
     }
 
-    RowLayout {
-        spacing: 8
+    Loader {
+        active: root.showActions
+        visible: root.showActions
+        sourceComponent: actionsComponent
         Layout.fillWidth: true
+    }
 
-        Controls.Button {
-            id: removeButton
+    Component {
+        id: actionsComponent
 
-            objectName: "packageDetailRemoveButton"
-            Layout.fillWidth: true
+        RowLayout {
+            spacing: 8
 
-            Controls.ToolTip.text: qsTr("Not implemented yet")
-            Controls.ToolTip.visible: hovered
-            Controls.ToolTip.delay: 500
+            Controls.Button {
+                id: removeButton
 
-            background: Rectangle {
-                radius: 8
-                color: "transparent"
-                border.color: HoloniightPalette.error
-                border.width: HnMetrics.borderWidth
+                objectName: "packageDetailRemoveButton"
+                Layout.fillWidth: true
+
+                Controls.ToolTip.text: qsTr("Not implemented yet")
+                Controls.ToolTip.visible: hovered
+                Controls.ToolTip.delay: 500
+
+                background: Rectangle {
+                    radius: 8
+                    color: "transparent"
+                    border.color: HoloniightPalette.error
+                    border.width: HnMetrics.borderWidth
+                }
+
+                contentItem: RowLayout {
+                    spacing: 6
+
+                    Item {
+                        Layout.fillWidth: true
+                    }
+
+                    HnIcon {
+                        source: "qrc:/qt/qml/Holonight/Controls/assets/delete.svg"
+                        size: 16
+                        normalColor: HoloniightPalette.error
+                    }
+
+                    HnLabel {
+                        role: HnTypographyRole.Body
+                        rawText: qsTr("Remove")
+                        color: HoloniightPalette.error
+                    }
+
+                    Item {
+                        Layout.fillWidth: true
+                    }
+                }
             }
 
-            contentItem: RowLayout {
-                spacing: 6
+            HnIconButton {
+                objectName: "packageDetailMoreOptionsButton"
 
-                Item {
-                    Layout.fillWidth: true
-                }
+                icon.source: "qrc:/qt/qml/Holonight/Controls/assets/more-vertical.svg"
 
-                HnIcon {
-                    source: "qrc:/qt/qml/Holonight/Controls/assets/delete.svg"
-                    size: 16
-                    normalColor: HoloniightPalette.error
-                }
-
-                HnLabel {
-                    role: HnTypographyRole.Body
-                    rawText: qsTr("Remove")
-                    color: HoloniightPalette.error
-                }
-
-                Item {
-                    Layout.fillWidth: true
-                }
+                Controls.ToolTip.text: qsTr("Not implemented yet")
+                Controls.ToolTip.visible: hovered
+                Controls.ToolTip.delay: 500
             }
-        }
-
-        HnIconButton {
-            objectName: "packageDetailMoreOptionsButton"
-
-            icon.source: "qrc:/qt/qml/Holonight/Controls/assets/more-vertical.svg"
-
-            Controls.ToolTip.text: qsTr("Not implemented yet")
-            Controls.ToolTip.visible: hovered
-            Controls.ToolTip.delay: 500
         }
     }
 

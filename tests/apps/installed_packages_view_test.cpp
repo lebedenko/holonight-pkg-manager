@@ -1,6 +1,8 @@
+#include "ExploreModel.h"
 #include "InstalledPackagesFilterModel.h"
 #include "InstalledPackagesModel.h"
 #include "UpdatesModel.h"
+#include "fake_explore_source.h"
 #include "fake_update_source.h"
 #include "mock_package_source.h"
 
@@ -100,24 +102,33 @@ class InstalledPackagesViewTest : public ::testing::Test {
     qmlRegisterType<InstalledPackagesFilterModel>("HolonightPackages", 1, 0, "InstalledPackagesFilterModel");
     qmlRegisterUncreatableType<UpdatesModel>("HolonightPackages", 1, 0, "UpdatesModel",
                                              QStringLiteral("Provided by the test"));
+    qmlRegisterUncreatableType<ExploreModel>("HolonightPackages", 1, 0, "ExploreModel",
+                                             QStringLiteral("Provided by the test"));
 #endif
   }
 
-  // The workspace also hosts the Updates page; it gets an idle fake-source model that outlives the view.
+  // The workspace also hosts the Updates and Explore pages; they get idle fake-source models that outlive the view.
   std::unique_ptr<QObject> createWorkspace(QQmlEngine& engine, InstalledPackagesModel& model) {
     if (!updates_model_) {
       updates_model_ = std::make_unique<UpdatesModel>(std::make_shared<holonight_packages_testing::FakeUpdateSource>());
       EXPECT_TRUE(QTest::qWaitFor([this] { return !updates_model_->loading(); }, 2000));
     }
+    if (!explore_model_) {
+      explore_model_ =
+          std::make_unique<ExploreModel>(std::make_shared<holonight_packages_testing::FakeExploreSource>());
+      EXPECT_TRUE(QTest::qWaitFor([this] { return !explore_model_->loading(); }, 2000));
+    }
     QQmlComponent component(&engine, qmlSource(QStringLiteral("/workspace/WorkspaceWindow.qml")));
     EXPECT_EQ(component.status(), QQmlComponent::Ready) << component.errorString().toStdString();
     return std::unique_ptr<QObject>(component.createWithInitialProperties(
         {{QStringLiteral("installedPackagesModel"), QVariant::fromValue(&model)},
-         {QStringLiteral("updatesModel"), QVariant::fromValue(updates_model_.get())}}));
+         {QStringLiteral("updatesModel"), QVariant::fromValue(updates_model_.get())},
+         {QStringLiteral("exploreModel"), QVariant::fromValue(explore_model_.get())}}));
   }
 
  private:
   std::unique_ptr<UpdatesModel> updates_model_;
+  std::unique_ptr<ExploreModel> explore_model_;
 };
 
 TEST_F(InstalledPackagesViewTest, ShowsLoadingState) {

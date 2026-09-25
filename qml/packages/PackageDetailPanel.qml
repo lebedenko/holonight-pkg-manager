@@ -1,20 +1,16 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls as Controls
-import QtQuick.Layouts
-import Holonight.Core
 import Holonight.Controls
 import HolonightPackages
 
-HnSurfaceFrame {
+PackageDetailFrame {
     id: root
 
     required property InstalledPackagesFilterModel filterModel
 
-    surfaceRole: HnSurfaceRole.Panel
-
-    readonly property bool hasSelection: root.filterModel.currentRow >= 0
+    hasSelection: root.filterModel.currentRow >= 0
+    detailContent: detailContentComponent
     // A fully-keyed fallback (not just `{}`) so that PackageDetailHeader/MetadataRows/DependencySections'
     // bindings never see `undefined` for a role -- including during the Loader's activate/deactivate
     // transition, where these bindings can still evaluate once more against the just-cleared value.
@@ -25,74 +21,36 @@ HnSurfaceFrame {
     })
     readonly property var currentPackage: root.hasSelection ? root.filterModel.currentPackage
                                                              : root.emptyPackage
-
-    HnEmptyState {
-        objectName: "packageDetailEmptyState"
-        anchors.centerIn: parent
-        width: Math.min(parent.width - 32, 280)
-        visible: !root.hasSelection
-        titleText: qsTr("Select a package to view details")
-    }
-
-    Controls.ScrollView {
-        id: detailScroll
-        objectName: "packageDetailScrollView"
-        anchors.fill: parent
-        visible: root.hasSelection
-        contentWidth: availableWidth
-        Controls.ScrollBar.horizontal.policy: Controls.ScrollBar.AlwaysOff
-        Controls.ScrollBar.vertical: Controls.ScrollBar {}
-        clip: true
-
-        Loader {
-            width: detailScroll.availableWidth
-            active: root.hasSelection
-            sourceComponent: detailContent
-        }
-    }
+    readonly property var metadataRows: [
+        { label: qsTr("Installed"), value: Qt.formatDateTime(root.currentPackage.installDate, "MMM d, yyyy HH:mm") },
+        { label: qsTr("Version"), value: root.currentPackage.installedVersion },
+        { label: qsTr("Size"), value: root.currentPackage.sizeLabel },
+        { label: qsTr("Reason"), value: root.currentPackage.installReason === "explicit" ? qsTr("Explicit")
+                                                                                         : qsTr("Dependency") }
+    ]
 
     Component {
-        id: detailContent
+        id: detailContentComponent
 
-        ColumnLayout {
-            spacing: 16
-
-            PackageDetailHeader {
-                name: root.currentPackage.name
-                sourceLabel: root.currentPackage.sourceLabel
-                repository: root.currentPackage.repository
-                Layout.fillWidth: true
-                Layout.leftMargin: 16
-                Layout.rightMargin: 16
-                Layout.topMargin: 16
+        PackageDetailContent {
+            name: root.currentPackage.name
+            sourceLabel: root.currentPackage.sourceLabel
+            repository: root.currentPackage.repository
+            metadataRows: root.metadataRows
+            description: root.currentPackage.description
+            extraSections: Component {
+                PackageDetailDependencySections {
+                    description: root.currentPackage.description
+                    showDescription: false
+                    requiredByCount: root.currentPackage.requiredByCount
+                    requiredByList: root.currentPackage.requiredByList
+                    optionalDependencies: root.currentPackage.optionalDependencies
+                    configFileCount: root.currentPackage.configFileCount
+                }
             }
 
-            PackageDetailMetadataRows {
-                installDate: root.currentPackage.installDate
-                installedVersion: root.currentPackage.installedVersion
-                sizeLabel: root.currentPackage.sizeLabel
-                installReason: root.currentPackage.installReason
-                Layout.fillWidth: true
-                Layout.leftMargin: 16
-                Layout.rightMargin: 16
-            }
-
-            PackageDetailDependencySections {
-                description: root.currentPackage.description
-                requiredByCount: root.currentPackage.requiredByCount
-                requiredByList: root.currentPackage.requiredByList
-                optionalDependencies: root.currentPackage.optionalDependencies
-                configFileCount: root.currentPackage.configFileCount
-                Layout.fillWidth: true
-                Layout.leftMargin: 16
-                Layout.rightMargin: 16
-            }
-
-            PackageDetailFooterLinks {
-                Layout.fillWidth: true
-                Layout.leftMargin: 16
-                Layout.rightMargin: 16
-                Layout.bottomMargin: 16
+            footerContent: Component {
+                PackageDetailFooterLinks {}
             }
         }
     }

@@ -4,23 +4,31 @@ add_executable(test_holonight_packages
   main.cpp
   test_placeholder.cpp
   domain/package_test.cpp
+  backends/alpm_explore_source_test.cpp
   backends/alpm_package_source_test.cpp
   backends/alpm_update_source_test.cpp
   backends/pacman_config_test.cpp
+  backends/sync_database_files_test.cpp
   backends/update_matching_test.cpp
   persistence/alpm_connection_cache_test.cpp
+  application/explore_search_test.cpp
   application/package_list_use_case_test.cpp
   application/orphan_package_filter_test.cpp
   application/package_size_formatter_test.cpp
   application/update_summary_test.cpp
+  application/data_freshness_test.cpp
   apps/installed_packages_model_test.cpp
   apps/installed_packages_filter_model_test.cpp
   apps/installed_packages_view_test.cpp
+  apps/explore_model_test.cpp
+  apps/explore_view_test.cpp
   apps/updates_model_test.cpp
   apps/updates_view_test.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/InstalledPackagesModel.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/InstalledPackagesFilterModel.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdatesModel.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/ExploreModel.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/DataFreshness.cpp
 )
 qt_add_resources(test_holonight_packages workspace_assets
   PREFIX "/HolonightPackages"
@@ -78,7 +86,11 @@ qt_add_executable(test_runtime_controls
   ${PROJECT_SOURCE_DIR}/apps/packages/app/InstalledPackagesFilterModel.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/InstalledPackagesFilterModel.h
   ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdatesModel.cpp
-  ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdatesModel.h)
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdatesModel.h
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/ExploreModel.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/ExploreModel.h
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/DataFreshness.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/DataFreshness.h)
 set_target_properties(test_runtime_controls PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/runtime")
 foreach(qml_file IN LISTS HOLONIGHT_PACKAGES_QML_FILES)

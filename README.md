@@ -6,8 +6,10 @@ The application currently shows a read-only, filterable Installed page for Arch 
 asynchronously via libalpm: a data table (package, origin, installed version, size, install reason) with
 per-category tabs (Explicit / Dependencies / AUR-Foreign / Orphans), search, sort, a repository filter, and a
 detail panel with metadata, dependency, and orphan-reclaim information. An Updates page lists pending
-official-repository updates by comparing installed packages with the sync databases already on disk; its Reload
-button only re-reads them, so databases must be synced with your package manager outside the application. It is
+official-repository updates by comparing installed packages with the sync databases already on disk, and an Explore
+page searches every package in configured sync repositories, including third-party repositories (with an installed badge and a read-only details panel).
+Both pages' Reload buttons only re-read the databases, so they must be synced with your package manager outside the
+application. It is
 transactionally inert — no install, remove, update, or database-sync action is implemented. Package transactions,
 the per-user service, the privileged helper, and desktop/D-Bus integration are not implemented yet.
 
@@ -15,6 +17,7 @@ the per-user service, the privileged helper, and desktop/D-Bus integration are n
 
 - Qt 6 (`Core`, `Gui`, `Quick`, `Qml`, `Network`, `Sql`, `DBus`, `Concurrent`, and `QuickControls2`)
 - libalpm (ships with `pacman` on Arch Linux; no separate `-dev` package needed)
+- ICU (`uc`, for Unicode case-insensitive Explore search)
 - CMake 3.25+
 - Ninja
 - [Task](https://taskfile.dev/)
@@ -57,7 +60,7 @@ python3 scripts/check-runtime-launches.py build/holonight-packages build/depende
 ```
 
 Launch acceptance isolates HOME/XDG and desktop activation, observes only existing read-only ALPM enumeration,
-and terminates/reaps each process. Tests use MockPackageSource/FakeUpdateSource and real models; they never perform package
+and terminates/reaps each process. Tests use MockPackageSource/FakeUpdateSource/FakeExploreSource and real models; they never perform package
 transactions, synchronize repositories or invoke external links.
 
 ## Architecture
@@ -66,9 +69,9 @@ The code is a modular monolith with dependency direction toward the domain:
 
 | Target | Responsibility |
 | --- | --- |
-| `holonight_packages_domain` | `Package`/`PendingUpdate` models, `PackageSource`/`UpdateSource` ports, source/trust/install-reason concepts |
-| `holonight_packages_application` | Use cases and pure helpers (e.g. `PackageListUseCase`, `summarizeUpdates`) — no Qt/QML types |
-| `holonight_packages_backends` | Native package-manager adapters (`AlpmPackageSource`, `AlpmUpdateSource`, via libalpm) |
+| `holonight_packages_domain` | `Package`/`PendingUpdate`/`SyncPackage` models, `PackageSource`/`UpdateSource`/`ExploreSource` ports, source/trust/install-reason concepts |
+| `holonight_packages_application` | Use cases and pure helpers (e.g. `PackageListUseCase`, `summarizeUpdates`, `ExploreIndex`/`searchPackages`) — no Qt/QML types |
+| `holonight_packages_backends` | Native package-manager adapters (`AlpmPackageSource`, `AlpmUpdateSource`, `AlpmExploreSource`, via libalpm) |
 | `holonight_packages_advisor` | Deterministic update assessment and evidence collection |
 | `holonight_packages_persistence` | Cache (e.g. `AlpmConnectionCache`), settings, and transaction history |
 | `holonight_packages_platform` | D-Bus, notifications, systemd, and desktop integration |

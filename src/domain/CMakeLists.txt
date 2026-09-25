@@ -1,4 +1,5 @@
 add_library(holonight_packages_domain STATIC
+  src/explore_source.cpp
   src/package_source.cpp
   src/update_source.cpp
 )

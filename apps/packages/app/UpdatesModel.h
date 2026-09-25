@@ -43,6 +43,7 @@ class UpdatesModel : public QAbstractListModel {
   Q_PROPERTY(bool databasesStale READ databasesStale NOTIFY stateChanged)
   // Empty unless the latest reload failed while a previous list is still shown.
   Q_PROPERTY(QString reloadErrorMessage READ reloadErrorMessage NOTIFY stateChanged)
+  Q_PROPERTY(QString staleHintText READ staleHintText CONSTANT)
   Q_PROPERTY(QString officialOnlyNote READ officialOnlyNote CONSTANT)
 
  public:
@@ -63,9 +64,6 @@ class UpdatesModel : public QAbstractListModel {
   };
 
   using Clock = std::function<std::chrono::system_clock::time_point()>;
-
-  // Data older than this (strictly) shows the stale-database hint.
-  static constexpr std::chrono::days kStaleAfter{7};
 
   // `now` is injectable for deterministic staleness tests.
   explicit UpdatesModel(std::shared_ptr<holonight_packages_domain::UpdateSource> source, QObject* parent = nullptr,
@@ -92,6 +90,7 @@ class UpdatesModel : public QAbstractListModel {
   [[nodiscard]] QString dataAsOfLabel() const;
   [[nodiscard]] bool databasesStale() const;
   [[nodiscard]] QString reloadErrorMessage() const;
+  [[nodiscard]] static QString staleHintText();
   [[nodiscard]] static QString officialOnlyNote();
 
   // Single-flight: ignored while a load or reload is in progress. Never retried automatically.

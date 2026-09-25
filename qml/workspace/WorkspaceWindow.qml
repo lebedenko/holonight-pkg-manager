@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Holonight.Core
 import HolonightPackages
+import "../explore"
 import "../packages"
 import "../updates"
 
@@ -10,9 +11,11 @@ Rectangle {
 
     required property InstalledPackagesModel installedPackagesModel
     required property UpdatesModel updatesModel
+    required property ExploreModel exploreModel
 
     // Installed stays the landing page until the Updates page gains an advisor and update actions.
     property string currentPage: "installed"
+    readonly property var pageIndex: ({ installed: 0, updates: 1, explore: 2 })
 
     width: 1360
     height: 890
@@ -35,7 +38,7 @@ Rectangle {
 
         StackLayout {
             objectName: "workspacePages"
-            currentIndex: root.currentPage === "updates" ? 1 : 0
+            currentIndex: root.pageIndex[root.currentPage] ?? 0
             Layout.fillWidth: true
             Layout.fillHeight: true
 
@@ -47,6 +50,11 @@ Rectangle {
             UpdatesView {
                 objectName: "updatesPage"
                 updatesModel: root.updatesModel
+            }
+
+            ExploreView {
+                objectName: "explorePage"
+                exploreModel: root.exploreModel
             }
         }
     }

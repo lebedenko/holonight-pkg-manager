@@ -8,23 +8,13 @@ import Holonight.Controls
 ColumnLayout {
     id: root
 
-    required property var installDate
-    required property string installedVersion
-    required property string sizeLabel
-    required property string installReason
-
-    readonly property string installedDateText: Qt.formatDateTime(root.installDate, "MMM d, yyyy HH:mm")
-    readonly property string reasonLabel: root.installReason === "explicit" ? qsTr("Explicit") : qsTr("Dependency")
+    // List of {label, value}.
+    required property var rows
 
     spacing: 0
 
     Repeater {
-        model: [
-            { label: qsTr("Installed"), value: root.installedDateText },
-            { label: qsTr("Version"), value: root.installedVersion },
-            { label: qsTr("Size"), value: root.sizeLabel },
-            { label: qsTr("Reason"), value: root.reasonLabel }
-        ]
+        model: root.rows
 
         RowLayout {
             required property var modelData

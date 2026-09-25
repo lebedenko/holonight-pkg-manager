@@ -1,6 +1,8 @@
+#include "ExploreModel.h"
 #include "InstalledPackagesFilterModel.h"
 #include "InstalledPackagesModel.h"
 #include "UpdatesModel.h"
+#include "fake_explore_source.h"
 #include "fake_update_source.h"
 #include "mock_package_source.h"
 
@@ -67,6 +69,8 @@ class UpdatesViewTest : public ::testing::Test {
     qmlRegisterType<InstalledPackagesFilterModel>("HolonightPackages", 1, 0, "InstalledPackagesFilterModel");
     qmlRegisterUncreatableType<UpdatesModel>("HolonightPackages", 1, 0, "UpdatesModel",
                                              QStringLiteral("Provided by the test"));
+    qmlRegisterUncreatableType<ExploreModel>("HolonightPackages", 1, 0, "ExploreModel",
+                                             QStringLiteral("Provided by the test"));
   }
 
   void SetUp() override { rejectQmlWarnings(engine_); }
@@ -125,9 +129,12 @@ class UpdatesViewTest : public ::testing::Test {
   void createWorkspace(InstalledPackagesModel& installed) {
     QQmlComponent component(&engine_, qmlSource(QStringLiteral("/workspace/WorkspaceWindow.qml")));
     ASSERT_EQ(component.status(), QQmlComponent::Ready) << component.errorString().toStdString();
+    explore_model_ = std::make_unique<ExploreModel>(std::make_shared<holonight_packages_testing::FakeExploreSource>());
+    ASSERT_TRUE(QTest::qWaitFor([this] { return !explore_model_->loading(); }, 2000));
     view_.reset(qobject_cast<QQuickItem*>(component.createWithInitialProperties(
         {{QStringLiteral("installedPackagesModel"), QVariant::fromValue(&installed)},
-         {QStringLiteral("updatesModel"), QVariant::fromValue(model_.get())}})));
+         {QStringLiteral("updatesModel"), QVariant::fromValue(model_.get())},
+         {QStringLiteral("exploreModel"), QVariant::fromValue(explore_model_.get())}})));
     ASSERT_NE(view_, nullptr);
   }
 
@@ -139,6 +146,7 @@ class UpdatesViewTest : public ::testing::Test {
  private:
   std::shared_ptr<FakeUpdateSource> source_ = std::make_shared<FakeUpdateSource>();
   std::unique_ptr<UpdatesModel> model_;
+  std::unique_ptr<ExploreModel> explore_model_;
   QQmlEngine engine_;
   QQuickWindow window_;
   // Declared last so the view is destroyed before the window, engine and model it uses.
@@ -288,7 +296,7 @@ TEST_F(UpdatesViewTest, FreshDataShowsNoStaleHint) {
   EXPECT_FALSE(isVisible("updatesStaleHint"));
 }
 
-TEST_F(UpdatesViewTest, SidebarSwitchesBetweenInstalledAndUpdatesPages) {
+TEST_F(UpdatesViewTest, SidebarSwitchesBetweenInstalledUpdatesAndExplorePages) {
   auto package_source = std::make_shared<MockPackageSource>();
   EXPECT_CALL(*package_source, enumerateInstalledPackages()).WillOnce(Return(std::vector<Package>{}));
   InstalledPackagesModel installed(std::make_shared<PackageListUseCase>(package_source));
@@ -305,6 +313,11 @@ TEST_F(UpdatesViewTest, SidebarSwitchesBetweenInstalledAndUpdatesPages) {
   EXPECT_EQ(pages->property("currentIndex").toInt(), 1);
   EXPECT_TRUE(child("sidebarUpdatesNav")->property("checked").toBool());
   EXPECT_FALSE(child("sidebarInstalledNav")->property("checked").toBool());
+
+  ASSERT_TRUE(QMetaObject::invokeMethod(child("sidebarExploreNav"), "clicked"));
+  EXPECT_EQ(pages->property("currentIndex").toInt(), 2);
+  EXPECT_TRUE(child("sidebarExploreNav")->property("checked").toBool());
+  EXPECT_FALSE(child("sidebarUpdatesNav")->property("checked").toBool());
 
   ASSERT_TRUE(QMetaObject::invokeMethod(child("sidebarInstalledNav"), "clicked"));
   EXPECT_EQ(pages->property("currentIndex").toInt(), 0);

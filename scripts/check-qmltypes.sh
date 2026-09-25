@@ -16,6 +16,7 @@ required_types=(
   "InstalledPackagesModel"
   "InstalledPackagesFilterModel"
   "UpdatesModel"
+  "ExploreModel"
 )
 
 if [[ ! -s "${qmltypes_file}" ]]; then

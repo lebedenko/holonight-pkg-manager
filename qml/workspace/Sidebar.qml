@@ -62,8 +62,10 @@ Item {
             HnNavigationDelegate {
                 objectName: "sidebarExploreNav"
                 title: qsTr("Explore")
-                enabled: false
+                checked: root.currentPage === "explore"
                 Layout.fillWidth: true
+
+                onClicked: root.pageRequested("explore")
 
                 leadingContent: HnLabel {
                     role: HnTypographyRole.Body
