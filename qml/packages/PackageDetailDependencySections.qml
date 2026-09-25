@@ -98,6 +98,7 @@ ColumnLayout {
 
             leadingContent: HnIcon {
                 source: "qrc:/qt/qml/Holonight/Controls/assets/folder.svg"
+                rendering: HnIcon.Semantic
                 size: 16
             }
         }

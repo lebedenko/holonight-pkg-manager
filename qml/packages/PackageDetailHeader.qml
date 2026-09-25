@@ -113,6 +113,7 @@ ColumnLayout {
 
                     HnIcon {
                         source: "qrc:/qt/qml/Holonight/Controls/assets/delete.svg"
+                        rendering: HnIcon.Semantic
                         size: 16
                         normalColor: HoloniightPalette.error
                     }
