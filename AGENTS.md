@@ -12,7 +12,7 @@ C++ targets live in `src/domain/`, `src/application/`, `src/backends/`, `src/adv
 ## Commands
 
 Use `task` as the primary workflow: `task configure`, `task build`, `task run`, `task test`, `task format-check`,
-`task tidy`, and `task qml-lint`. These commands validate and stage pinned sibling configuration/provider dependencies in `build/dependencies` first.
+`task tidy`, and `task qml-lint`. These commands validate and stage pinned sibling configuration/provider dependencies in `build/deps` first.
 
 ## Style and tests
 
@@ -33,3 +33,6 @@ acceptance module under `tests/runtime` separate from source-based tests. Its so
 with real presentation/filter models. Preserve table horizontal and independent list/detail/page vertical scrolling.
 Production launch checks may only enumerate ALPM read-only with isolated HOME/XDG and desktop activation.
 No pointer/focus automation or package transactions. See `docs/sdd/unified-qtquick-controls/SPEC.md`.
+
+Developer tooling uses `build/debug`, `build/test`, `build/release` and module-owned `build/deps`.
+See tooling/README.md; run task tooling:refresh explicitly after configuring/building for editor metadata.

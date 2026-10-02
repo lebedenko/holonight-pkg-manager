@@ -10,6 +10,7 @@ include(GNUInstallDirs)
 install(FILES LICENSE LICENSES/GPL-3.0-or-later.txt
   DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/${PROJECT_NAME}")
 
+include("${CMAKE_CURRENT_SOURCE_DIR}/tooling/dependencies.cmake")
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick Qml Network Sql DBus Concurrent)
 find_package(HolonightQt REQUIRED COMPONENTS Controls)
 unset(HOLONIGHT_QML_IMPORT_PATH CACHE)
@@ -58,7 +59,9 @@ endif()
 find_program(CLANG_FORMAT clang-format)
 find_program(CLANG_TIDY clang-tidy)
 find_program(RUN_CLANG_TIDY run-clang-tidy)
-find_program(QMLLINT qmllint HINTS "${Qt6_DIR}/../../../lib/qt6/bin" "/usr/lib/qt6/bin")
+if(NOT QMLLINT)
+  get_target_property(QMLLINT Qt6::qmllint IMPORTED_LOCATION)
+endif()
 
 file(GLOB_RECURSE ALL_SOURCE_FILES LIST_DIRECTORIES false CONFIGURE_DEPENDS
   apps/*.cpp apps/*.h src/*.cpp src/*.h tests/*.cpp tests/*.h)

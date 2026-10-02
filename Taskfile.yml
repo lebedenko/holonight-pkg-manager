@@ -1,112 +1,145 @@
-version: "3"
-
+version: '3'
 vars:
-  BUILD_DIR: build
-  HOLONIGHT_QT_PREFIX: '{{.TASKFILE_DIR}}/{{.BUILD_DIR}}/dependencies/prefix'
-  HOLONIGHT_QT_DIR: '{{.HOLONIGHT_QT_PREFIX}}/lib/cmake/HolonightQt'
-  HOLONIGHT_CONFIG_DIR: '{{.HOLONIGHT_QT_PREFIX}}/lib/cmake/HoloNightConfig'
+  BUILD_DIR: build/debug
+  HOLONIGHT_QT_PREFIX: '{{default (printf "%s/build/deps/prefix" .TASKFILE_DIR) .HOLONIGHT_DEPENDENCY_PREFIX}}'
+  HOLONIGHT_QT_DIR: '{{.TASKFILE_DIR}}/build/deps/prefix/lib/cmake/HolonightQt'
+  HOLONIGHT_CONFIG_DIR: '{{.TASKFILE_DIR}}/build/deps/prefix/lib/cmake/HoloNightConfig'
   HOLONIGHT_QT_SOURCE: '{{default "../holonight-qt" .HOLONIGHT_QT_SOURCE}}'
   HOLONIGHT_QT_REVISION: 0d5bdf094e6e759210531c4babdd2023e5d56485
   HOLONIGHT_CONFIG_SOURCE: '{{default "../holonight-config" .HOLONIGHT_CONFIG_SOURCE}}'
   HOLONIGHT_CONFIG_REVISION: 03fa635cedc506e101a148fc54f7eb46d17c6de5
   NPROC:
     sh: nproc
-
+  PRESET: '{{default "debug" .PRESET}}'
 tasks:
   license-check:
     desc: Validate REUSE licensing metadata
-    cmds: [reuse lint]
-
+    cmds:
+    - reuse lint
   build:config-dependency:
-    desc: Build and stage the pinned configuration dependency
+    desc: deps using standalone tooling
     cmds:
-      - test "$(git -C {{.HOLONIGHT_CONFIG_SOURCE}} rev-parse HEAD)" = "{{.HOLONIGHT_CONFIG_REVISION}}"
-      - cmake -S {{.HOLONIGHT_CONFIG_SOURCE}} -B {{.BUILD_DIR}}/dependencies/config -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
-      - cmake --build {{.BUILD_DIR}}/dependencies/config -j{{.NPROC}}
-      - cmake --install {{.BUILD_DIR}}/dependencies/config --prefix {{.HOLONIGHT_QT_PREFIX}}
-
+    - python3 tooling/workflow.py deps
   build:qt-dependency:
-    desc: Build and stage the pinned provider without tests or examples
-    deps: [build:config-dependency]
+    desc: deps using standalone tooling
     cmds:
-      - test "$(git -C {{.HOLONIGHT_QT_SOURCE}} rev-parse HEAD)" = "{{.HOLONIGHT_QT_REVISION}}"
-      - cmake -S {{.HOLONIGHT_QT_SOURCE}} -B {{.BUILD_DIR}}/dependencies/qt -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH={{.HOLONIGHT_QT_PREFIX}} -DHoloNightConfig_DIR={{.HOLONIGHT_CONFIG_DIR}} -DBUILD_TESTS=OFF -DBUILD_DEMO=OFF -DBUILD_CONTROLS_GALLERY=OFF -DBUILD_WAYLAND=ON
-      - cmake --build {{.BUILD_DIR}}/dependencies/qt -j{{.NPROC}}
-      - cmake --install {{.BUILD_DIR}}/dependencies/qt --prefix {{.HOLONIGHT_QT_PREFIX}}
-
+    - python3 tooling/workflow.py deps
   configure:
-    desc: Configure a debug build
-    deps: [build:qt-dependency]
+    desc: configure using standalone tooling
     cmds:
-      - cmake -B {{.BUILD_DIR}} -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=OFF -DENABLE_COVERAGE=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_PREFIX_PATH={{.HOLONIGHT_QT_PREFIX}} -DHoloNightConfig_DIR={{.HOLONIGHT_CONFIG_DIR}} -DHolonightQt_DIR={{.HOLONIGHT_QT_DIR}} -S .
-      - ln -sf {{.BUILD_DIR}}/compile_commands.json .
-
+    - python3 tooling/workflow.py configure --preset {{.PRESET}}
   configure-tests:
-    desc: Configure a debug build with tests
-    deps: [build:qt-dependency]
+    desc: configure using standalone tooling
     cmds:
-      - cmake -B {{.BUILD_DIR}} -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DENABLE_COVERAGE=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_PREFIX_PATH={{.HOLONIGHT_QT_PREFIX}} -DHoloNightConfig_DIR={{.HOLONIGHT_CONFIG_DIR}} -DHolonightQt_DIR={{.HOLONIGHT_QT_DIR}} -S .
-      - ln -sf {{.BUILD_DIR}}/compile_commands.json .
-
+    - python3 tooling/workflow.py configure --preset test
   configure-coverage:
-    desc: Configure tests with coverage instrumentation
-    deps: [build:qt-dependency]
+    desc: Configure coverage preset
     cmds:
-      - cmake -B {{.BUILD_DIR}} -G Ninja -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DENABLE_COVERAGE=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_PREFIX_PATH={{.HOLONIGHT_QT_PREFIX}} -DHoloNightConfig_DIR={{.HOLONIGHT_CONFIG_DIR}} -DHolonightQt_DIR={{.HOLONIGHT_QT_DIR}} -S .
-
+    - python3 tooling/workflow.py configure --preset coverage
   build:
-    desc: Build the application
-    deps: [configure]
+    desc: build using standalone tooling
     cmds:
-      - cmake --build {{.BUILD_DIR}} -j{{.NPROC}}
-
+    - python3 tooling/workflow.py build --preset {{.PRESET}}
   run:
     desc: Build and run HoloNight Packages
-    deps: [build]
+    deps:
+    - build
     cmds:
-      - env LD_LIBRARY_PATH={{.HOLONIGHT_QT_PREFIX}}/lib ./{{.BUILD_DIR}}/holonight-packages
-
+    - env LD_LIBRARY_PATH={{.HOLONIGHT_QT_PREFIX}}/lib ./{{.BUILD_DIR}}/holonight-packages
   test:
-    desc: Build and run tests
-    deps: [configure-tests]
+    desc: test using standalone tooling
     cmds:
-      - cmake --build {{.BUILD_DIR}} -j{{.NPROC}}
-      - ctest --test-dir {{.BUILD_DIR}} --output-on-failure --no-tests=error
-
+    - python3 tooling/workflow.py test --preset {{.PRESET}}
   coverage:
-    desc: Generate an HTML coverage report
-    deps: [configure-coverage]
+    desc: Build coverage report
     cmds:
-      - cmake --build {{.BUILD_DIR}} --target coverage
-    generates: ["{{.BUILD_DIR}}/coverage/index.html"]
-
+    - task: configure-coverage
+    - cmake --build build/coverage --target coverage
   format:
-    desc: Format C++ sources
-    deps: [configure]
+    desc: format using standalone tooling
     cmds:
-      - cmake --build {{.BUILD_DIR}} --target format
-
+    - python3 tooling/workflow.py format
   format-check:
-    desc: Check C++ formatting
-    deps: [configure]
+    desc: format-check using standalone tooling
     cmds:
-      - cmake --build {{.BUILD_DIR}} --target format-check
-
+    - python3 tooling/workflow.py format-check
   tidy:
-    desc: Run clang-tidy
-    deps: [configure-tests]
+    desc: tidy using standalone tooling
     cmds:
-      - cmake --build {{.BUILD_DIR}} -j{{.NPROC}}
-      - cmake --build {{.BUILD_DIR}} --target tidy
-
+    - python3 tooling/workflow.py tidy --scope all
   qml-lint:
-    desc: Run qmllint
-    deps: [configure]
+    desc: Build and check QML with configured Qt installation
     cmds:
-      - cmake --build {{.BUILD_DIR}} --target qml-lint
-
+    - task: build
+      vars:
+        PRESET: test
+    - cmake --build build/test --target qml-lint
   clean:
     desc: Remove the build directory
     cmds:
-      - rm -rf {{.BUILD_DIR}}
+    - rm -rf {{.BUILD_DIR}}
     prompt: Remove {{.BUILD_DIR}}/ entirely?
+  tooling:doctor:
+    desc: doctor using standalone tooling
+    cmds:
+    - python3 tooling/workflow.py doctor
+  tooling:refresh:
+    desc: refresh using standalone tooling
+    cmds:
+    - python3 tooling/workflow.py refresh --preset {{default "test" .EDITOR_PRESET}}
+  serena:serve:
+    desc: Start independent Serena server in codex context
+    cmds:
+    - serena start-mcp-server --project "{{.TASKFILE_DIR}}" --context codex
+  serena:index:
+    desc: Explicitly index this module
+    cmds:
+    - serena project index "{{.TASKFILE_DIR}}"
+  deps:
+    desc: deps using standalone tooling
+    cmds:
+    - python3 tooling/workflow.py deps --preset {{.PRESET}}
+  configure:release:
+    desc: configure using standalone tooling
+    cmds:
+    - python3 tooling/workflow.py configure --preset release
+  build:release:
+    desc: build using standalone tooling
+    cmds:
+    - python3 tooling/workflow.py build --preset release
+  tidy-src:
+    desc: tidy using standalone tooling
+    cmds:
+    - python3 tooling/workflow.py tidy --scope src
+  tidy-tests:
+    desc: tidy using standalone tooling
+    cmds:
+    - python3 tooling/workflow.py tidy --scope tests
+  qml-import-check:
+    desc: Check QML runtime import contracts
+    cmds:
+    - python3 tooling/qml_policy.py
+  qmltypes-check:
+    desc: Build and verify generated QML metadata
+    cmds:
+    - bash scripts/check-qmltypes.sh build/{{.PRESET}}
+    deps:
+    - build
+  tooling:qmlls:
+    desc: Start configured Qt language server with resolved import paths
+    cmds:
+    - python3 tooling/workflow.py qmlls
+  lint:
+    desc: Run C++ and QML lint
+    cmds:
+    - task: tidy
+    - task: qml-lint
+  check:
+    desc: Run build, tests and static checks
+    cmds:
+    - task: build
+    - task: test
+    - task: format-check
+    - task: lint
+    - task: qml-import-check
+    - task: qmltypes-check

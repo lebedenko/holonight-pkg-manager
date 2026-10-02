@@ -38,7 +38,7 @@ task qml-lint
 ```
 
 Most commands validate the pinned sibling revisions, build configuration and provider in
-`build/dependencies`, and stage them into `build/dependencies/prefix`. Provider examples/tests are disabled;
+`build/dependencies`, and stage them into `build/deps/prefix`. Provider examples/tests are disabled;
 Wayland support remains enabled. Set `BUILD_DIR`, `HOLONIGHT_QT_SOURCE`, `HOLONIGHT_CONFIG_SOURCE`, or `NPROC`
 as Task variables when needed. `task run` supplies the staged native configuration-library path; CTest and
 qmllint derive it from the configured dependency target. Configure `-DTIDY_JOBS=2` (default 4) to limit analysis workers.
@@ -53,10 +53,10 @@ The [UQC-105 acceptance](docs/sdd/unified-qtquick-controls/SPEC.md) covers both 
 independent policy fixtures, and eight isolated executable launches. Useful focused commands after building:
 
 ```bash
-ctest --test-dir build -R 'runtime_controls|runtime_qml_import' --output-on-failure
-QT_QUICK_CONTROLS_STYLE=Fusion ctest --test-dir build -R InstalledPackagesViewTest --output-on-failure
+ctest --test-dir build/test -R 'runtime_controls|runtime_qml_import' --output-on-failure
+QT_QUICK_CONTROLS_STYLE=Fusion ctest --test-dir build/test -R InstalledPackagesViewTest --output-on-failure
 bash scripts/check-qmltypes.sh build
-python3 scripts/check-runtime-launches.py build/holonight-packages build/dependencies/prefix --logs build/uqc105/build-launch
+python3 scripts/check-runtime-launches.py build/debug/holonight-packages build/deps/prefix --logs build/uqc105/build-launch
 ```
 
 Launch acceptance isolates HOME/XDG and desktop activation, observes only existing read-only ALPM enumeration,
@@ -83,3 +83,8 @@ The code is a modular monolith with dependency direction toward the domain:
 interfaces should be designed before executable stubs are introduced.
 
 See [the high-level project idea](docs/ideas/01-high-level-project-idea.md) for the product and security model.
+
+## Standalone developer tooling
+
+See [tooling/README.md](tooling/README.md) for presets, local dependency overrides, editor refresh,
+`task tooling:doctor`, and the independent Serena project.

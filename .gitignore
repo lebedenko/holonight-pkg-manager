@@ -54,10 +54,19 @@ Testing/
 *.bak
 *.tmp
 .cache/
-.serena/
+
 .task/
 .claude.local.md
 .claude/
 .codex/
 AGENTS.md
 CLAUDE.md
+
+# Portable project configuration; machine state stays local.
+/.serena/*
+!/.serena/project.yml
+/.cache/
+/compile_commands.json
+/build/
+/__pycache__/
+/tooling/__pycache__/
