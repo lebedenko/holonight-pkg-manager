@@ -64,7 +64,7 @@ void populateExtendedFields(Package& package, alpm_pkg_t* pkg) {
 
 std::expected<Package, PackageSourceError> toPackage(alpm_pkg_t* pkg, const std::vector<alpm_db_t*>& sync_dbs) {
   const char* name = alpm_pkg_get_name(pkg);
-  auto package = [&]() -> std::expected<Package, PackageSourceError> {
+  auto package = [&] -> std::expected<Package, PackageSourceError> {
     for (alpm_db_t* sync_db : sync_dbs) {
       if (name != nullptr && alpm_db_get_pkg(sync_db, name) != nullptr) {
         return detail::convertPackageFields(name, alpm_pkg_get_version(pkg), alpm_db_get_name(sync_db),
@@ -86,8 +86,10 @@ std::expected<Package, PackageSourceError> detail::convertPackageFields(const ch
                                                                         const char* repository, SourceType source_type,
                                                                         InstallReason install_reason) {
   const auto missingField = [](const char* field) {
-    return std::unexpected(PackageSourceError{.code = PackageSourceErrorCode::Unknown,
-                                              .message = std::string("libalpm returned a null ") + field});
+    return std::unexpected(PackageSourceError{
+        .code = PackageSourceErrorCode::Unknown,
+        .message = std::string("libalpm returned a null ") + field,
+    });
   };
   if (name == nullptr) {
     return missingField("package name");
@@ -99,13 +101,15 @@ std::expected<Package, PackageSourceError> detail::convertPackageFields(const ch
     return missingField("repository name");
   }
 
-  return Package{.identity = name,
-                 .name = name,
-                 .installedVersion = version,
-                 .sourceType = source_type,
-                 .repository = repository,
-                 .installReason = install_reason,
-                 .backendSpecificId = name};
+  return Package{
+      .identity = name,
+      .name = name,
+      .installedVersion = version,
+      .sourceType = source_type,
+      .repository = repository,
+      .installReason = install_reason,
+      .backendSpecificId = name,
+  };
 }
 
 AlpmPackageSource::AlpmPackageSource(std::filesystem::path database_root, std::filesystem::path database_path)

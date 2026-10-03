@@ -24,12 +24,16 @@ struct SyncPackage {
   // Dependency string form, e.g. "glibc>=2.38".
   std::vector<std::string> dependencies;
   // "name: reason" form.
+  // NOLINTNEXTLINE(readability-identifier-naming): preserve the established public data contract.
   std::vector<std::string> optionalDependencies;
   // Compressed package size.
+  // NOLINTNEXTLINE(readability-identifier-naming): preserve the established public data contract.
   std::uint64_t downloadSizeBytes = 0;
+  // NOLINTNEXTLINE(readability-identifier-naming): preserve the established public data contract.
   std::uint64_t installedSizeBytes = 0;
   // Version of the same-named package in the local database; nullopt when not installed. Filled by the adapter from
   // the local database read in the same load, so it is as fresh as the load.
+  // NOLINTNEXTLINE(readability-identifier-naming): preserve the established public data contract.
   std::optional<std::string> installedVersion;
 
   bool operator==(const SyncPackage&) const = default;
@@ -39,8 +43,10 @@ struct ExploreSnapshot {
   // Every (repository, name) entry; order is unspecified.
   std::vector<SyncPackage> packages;
   // False when the sync directory is missing or holds no databases. Not an error.
+  // NOLINTNEXTLINE(readability-identifier-naming): preserve the established public data contract.
   bool databasesFound = true;
   // Modification time of the oldest sync database. Meaningless when databasesFound is false.
+  // NOLINTNEXTLINE(readability-identifier-naming): preserve the established public data contract.
   std::chrono::system_clock::time_point dataAsOf;
 
   bool operator==(const ExploreSnapshot&) const = default;

@@ -12,10 +12,12 @@ namespace {
 using holonight_packages_domain::SyncPackage;
 
 SyncPackage package(std::string name, std::string description = "", std::string repository = "extra") {
-  return SyncPackage{.name = std::move(name),
-                     .version = "1.0-1",
-                     .repository = std::move(repository),
-                     .description = std::move(description)};
+  return SyncPackage{
+      .name = std::move(name),
+      .version = "1.0-1",
+      .repository = std::move(repository),
+      .description = std::move(description),
+  };
 }
 
 std::vector<std::string> names(const ExploreIndex& index, const SearchResult& result) {
@@ -28,9 +30,14 @@ std::vector<std::string> names(const ExploreIndex& index, const SearchResult& re
 }
 
 ExploreIndex vimIndex() {
-  return ExploreIndex({package("nano", "Pico editor clone"), package("neovim", "Fork of Vim aiming to improve"),
-                       package("gvim", "Vi Improved, with GUI"), package("vimb", "Vim-like browser"),
-                       package("vim-runtime", "Runtime files for vim"), package("vim", "Vi Improved")});
+  return ExploreIndex({
+      package("nano", "Pico editor clone"),
+      package("neovim", "Fork of Vim aiming to improve"),
+      package("gvim", "Vi Improved, with GUI"),
+      package("vimb", "Vim-like browser"),
+      package("vim-runtime", "Runtime files for vim"),
+      package("vim", "Vi Improved"),
+  });
 }
 
 TEST(ExploreSearch, RanksExactPrefixContainsThenDescription) {

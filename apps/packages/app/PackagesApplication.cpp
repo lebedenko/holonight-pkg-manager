@@ -29,7 +29,10 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
 
   auto update_source = std::make_shared<holonight_packages_backends::AlpmUpdateSource>(
       holonight_packages_backends::AlpmUpdateSourceOptions{
-          .databaseRoot = "/", .databasePath = "/var/lib/pacman", .pacmanConfPath = "/etc/pacman.conf"});
+          .databaseRoot = "/",
+          .databasePath = "/var/lib/pacman",
+          .pacmanConfPath = "/etc/pacman.conf",
+      });
   updates_model_ = std::make_unique<UpdatesModel>(std::move(update_source));
 
   auto explore_source = std::make_shared<holonight_packages_backends::AlpmExploreSource>(
@@ -51,10 +54,11 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
   }
   view_->resize(initial_size.expandedTo(view_->minimumSize()));
   view_->setResizeMode(QQuickView::SizeRootObjectToView);
-  view_->setInitialProperties(
-      {{QStringLiteral("installedPackagesModel"), QVariant::fromValue(installed_packages_model_.get())},
-       {QStringLiteral("updatesModel"), QVariant::fromValue(updates_model_.get())},
-       {QStringLiteral("exploreModel"), QVariant::fromValue(explore_model_.get())}});
+  view_->setInitialProperties({
+      {QStringLiteral("installedPackagesModel"), QVariant::fromValue(installed_packages_model_.get())},
+      {QStringLiteral("updatesModel"), QVariant::fromValue(updates_model_.get())},
+      {QStringLiteral("exploreModel"), QVariant::fromValue(explore_model_.get())},
+  });
   view_->setSource(QUrl(QStringLiteral("qrc:/HolonightPackages/workspace/WorkspaceWindow.qml")));
   if (view_->status() == QQuickView::Error) {
     for (const QQmlError& error : view_->errors()) {

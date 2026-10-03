@@ -77,8 +77,10 @@ TEST(PackageListUseCase, CaseOnlyTiesUseDeterministicBytewiseOrder) {
 
 TEST(PackageListUseCase, PassesThroughBackendErrorUnchanged) {
   auto mock_source = std::make_shared<MockPackageSource>();
-  const PackageSourceError expected_error{.code = PackageSourceErrorCode::DatabaseOpenFailed,
-                                          .message = "fixture failure"};
+  const PackageSourceError expected_error{
+      .code = PackageSourceErrorCode::DatabaseOpenFailed,
+      .message = "fixture failure",
+  };
   EXPECT_CALL(*mock_source, enumerateInstalledPackages()).WillOnce(Return(std::unexpected(expected_error)));
 
   const PackageListUseCase use_case(mock_source);

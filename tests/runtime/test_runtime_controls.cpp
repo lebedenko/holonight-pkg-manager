@@ -122,9 +122,11 @@ class RuntimeControls : public testing::Test {
     ASSERT_TRUE(QTest::qWaitFor([this] { return !updates_model_->loading(); }, 2000));
     explore_model_ = std::make_unique<ExploreModel>(std::make_shared<holonight_packages_testing::FakeExploreSource>());
     ASSERT_TRUE(QTest::qWaitFor([this] { return !explore_model_->loading(); }, 2000));
-    view_.setInitialProperties({{QStringLiteral("installedPackagesModel"), QVariant::fromValue(model_.get())},
-                                {QStringLiteral("updatesModel"), QVariant::fromValue(updates_model_.get())},
-                                {QStringLiteral("exploreModel"), QVariant::fromValue(explore_model_.get())}});
+    view_.setInitialProperties({
+        {QStringLiteral("installedPackagesModel"), QVariant::fromValue(model_.get())},
+        {QStringLiteral("updatesModel"), QVariant::fromValue(updates_model_.get())},
+        {QStringLiteral("exploreModel"), QVariant::fromValue(explore_model_.get())},
+    });
     view_.setSource(QUrl(QStringLiteral("qrc:/HolonightPackages/workspace/WorkspaceWindow.qml")));
     ASSERT_EQ(view_.status(), QQuickView::Ready);
     view_.show();
@@ -171,9 +173,12 @@ TEST_F(RuntimeControls, ControlsUseSelectedImplementationsAndPreserveCoreComposi
   const auto style = qEnvironmentVariable("QT_QUICK_CONTROLS_STYLE");
   const auto prefix =
       style == QStringLiteral("Fusion") ? QStringLiteral("/QtQuick/Controls/Fusion/") : QStringLiteral("/Holonight/");
-  for (const auto& control :
-       {std::pair{"installedSortComboBox", "ComboBox"}, std::pair{"orphanFooterReviewButton", "Button"},
-        std::pair{"packageRowCheckBox", "CheckBox"}, std::pair{"installedPackageTable", "ScrollView"}}) {
+  for (const auto& control : {
+           std::pair{"installedSortComboBox", "ComboBox"},
+           std::pair{"orphanFooterReviewButton", "Button"},
+           std::pair{"packageRowCheckBox", "CheckBox"},
+           std::pair{"installedPackageTable", "ScrollView"},
+       }) {
     EXPECT_TRUE(hasOrigin(object(control.first), prefix + QString::fromLatin1(control.second) + ".qml"));
   }
   EXPECT_TRUE(hasOrigin(object("installedSearchField"), QStringLiteral("/Holonight/Controls/HnSearchField.qml")));

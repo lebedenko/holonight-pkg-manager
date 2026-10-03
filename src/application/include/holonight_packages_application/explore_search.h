@@ -16,6 +16,7 @@ struct SearchResult {
   // Indexes into ExploreIndex::packages(), ranked, at most `limit`.
   std::vector<std::uint32_t> rows;
   // Matches before the cap; drives the "showing first N of M" footer.
+  // NOLINTNEXTLINE(readability-identifier-naming): preserve the established public data contract.
   std::size_t totalMatches = 0;
 };
 

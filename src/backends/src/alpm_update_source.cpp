@@ -99,7 +99,10 @@ std::expected<UpdateSnapshot, UpdateSourceError> AlpmUpdateSource::loadUpdates()
   }
 
   UpdateSnapshot snapshot{
-      .updates = {}, .databasesFound = true, .dataAsOf = std::chrono::clock_cast<std::chrono::system_clock>(**oldest)};
+      .updates = {},
+      .databasesFound = true,
+      .dataAsOf = std::chrono::clock_cast<std::chrono::system_clock>(**oldest),
+  };
   for (alpm_list_t* node = pkgcache; node != nullptr; node = alpm_list_next(node)) {
     auto* installed = static_cast<alpm_pkg_t*>(node->data);
     const char* name = alpm_pkg_get_name(installed);
@@ -127,7 +130,7 @@ std::expected<UpdateSnapshot, UpdateSourceError> AlpmUpdateSource::loadUpdates()
         .downloadSizeBytes = download_size > 0 ? static_cast<std::uint64_t>(download_size) : 0,
         .installedSizeDeltaBytes = static_cast<std::int64_t>(alpm_pkg_get_isize(available)) -
                                    static_cast<std::int64_t>(alpm_pkg_get_isize(installed)),
-        .ignored = isIgnored(name, groups, config->ignorePkgs, config->ignoreGroups),
+        .ignored = isIgnored(name, groups, config->ignore_pkgs, config->ignore_groups),
     });
   }
   return snapshot;

@@ -213,11 +213,12 @@ void ExploreModel::startLoading() {
       if (!snapshot.has_value()) {
         return std::unexpected(std::move(snapshot.error()));
       }
-      return LoadedIndex{.index = snapshot->databasesFound
-                                      ? std::make_shared<const ExploreIndex>(std::move(snapshot->packages))
-                                      : nullptr,
-                         .databasesFound = snapshot->databasesFound,
-                         .dataAsOf = snapshot->dataAsOf};
+      return LoadedIndex{
+          .index =
+              snapshot->databasesFound ? std::make_shared<const ExploreIndex>(std::move(snapshot->packages)) : nullptr,
+          .databases_found = snapshot->databasesFound,
+          .data_as_of = snapshot->dataAsOf,
+      };
     } catch (const std::exception& exception) {
       return std::unexpected(ExploreSourceError{.code = ExploreSourceErrorCode::Unknown, .message = exception.what()});
     } catch (...) {
@@ -243,7 +244,7 @@ void ExploreModel::applyLoaded(LoadedIndex loaded) {
   error_message_.clear();
   reload_error_message_.clear();
   search_timer_.stop();
-  if (!loaded.databasesFound) {
+  if (!loaded.databases_found) {
     setResults(nullptr, {});
     match_count_ = 0;
     applied_query_.clear();
@@ -252,8 +253,8 @@ void ExploreModel::applyLoaded(LoadedIndex loaded) {
     databases_stale_ = false;
     return;
   }
-  data_as_of_ = data_freshness::toQDateTime(loaded.dataAsOf);
-  databases_stale_ = holonight_packages_application::isStale(loaded.dataAsOf, now_());
+  data_as_of_ = data_freshness::toQDateTime(loaded.data_as_of);
+  databases_stale_ = holonight_packages_application::isStale(loaded.data_as_of, now_());
   runQuery(std::move(loaded.index));
 }
 

@@ -129,7 +129,10 @@ std::expected<ExploreSnapshot, ExploreSourceError> AlpmExploreSource::loadPackag
   }
 
   ExploreSnapshot snapshot{
-      .packages = {}, .databasesFound = true, .dataAsOf = std::chrono::clock_cast<std::chrono::system_clock>(**oldest)};
+      .packages = {},
+      .databasesFound = true,
+      .dataAsOf = std::chrono::clock_cast<std::chrono::system_clock>(**oldest),
+  };
   for (alpm_db_t* sync_db : connection->syncDatabases()) {
     alpm_list_t* cache = alpm_db_get_pkgcache(sync_db);
     if (cache == nullptr && alpm_errno(connection->handle()) != ALPM_ERR_OK) {

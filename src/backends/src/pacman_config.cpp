@@ -74,9 +74,9 @@ std::expected<PacmanConfig, std::string> parsePacmanConfig(const std::filesystem
     const std::string_view key = trim(line.substr(0, equals));
     const std::string_view value = line.substr(equals + 1);
     if (key == "IgnorePkg") {
-      appendWords(value, config.ignorePkgs);
+      appendWords(value, config.ignore_pkgs);
     } else if (key == "IgnoreGroup") {
-      appendWords(value, config.ignoreGroups);
+      appendWords(value, config.ignore_groups);
     }
   }
   if (stream.bad()) {

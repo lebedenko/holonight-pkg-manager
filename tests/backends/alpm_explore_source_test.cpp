@@ -82,9 +82,11 @@ std::map<fs::path, FileState> syncFileStates(const fs::path& sync_dir) {
   for (const auto& entry : fs::directory_iterator(sync_dir)) {
     QFile file(QString::fromStdString(entry.path().string()));
     EXPECT_TRUE(file.open(QIODevice::ReadOnly));
-    states[entry.path()] = FileState{.sha256 = QCryptographicHash::hash(file.readAll(), QCryptographicHash::Sha256),
-                                     .size = fs::file_size(entry.path()),
-                                     .modified = fs::last_write_time(entry.path())};
+    states[entry.path()] = FileState{
+        .sha256 = QCryptographicHash::hash(file.readAll(), QCryptographicHash::Sha256),
+        .size = fs::file_size(entry.path()),
+        .modified = fs::last_write_time(entry.path()),
+    };
   }
   return states;
 }

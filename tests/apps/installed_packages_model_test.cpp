@@ -45,11 +45,13 @@ TEST(InstalledPackagesModel, ConstructorStartsInLoadingState) {
 TEST(InstalledPackagesModel, SuccessfulLoadTransitionsToLoadedWithRoleData) {
   auto mock_source = std::make_shared<MockPackageSource>();
   const std::vector<Package> packages{
-      Package{.name = "apple",
-              .installedVersion = "2.3-4",
-              .sourceType = SourceType::Official,
-              .repository = "core",
-              .installReason = InstallReason::Explicit},
+      Package{
+          .name = "apple",
+          .installedVersion = "2.3-4",
+          .sourceType = SourceType::Official,
+          .repository = "core",
+          .installReason = InstallReason::Explicit,
+      },
   };
   EXPECT_CALL(*mock_source, enumerateInstalledPackages()).WillOnce(Return(packages));
 
@@ -69,35 +71,43 @@ TEST(InstalledPackagesModel, SuccessfulLoadTransitionsToLoadedWithRoleData) {
 TEST(InstalledPackagesModel, ExtendedRolesAndAggregatesReflectFixturePackages) {
   auto mock_source = std::make_shared<MockPackageSource>();
   const std::vector<Package> packages{
-      Package{.name = "apple",
-              .installedVersion = "2.3-4",
-              .sourceType = SourceType::Official,
-              .repository = "core",
-              .installReason = InstallReason::Explicit,
-              .sizeBytes = 1024,
-              .description = "a tasty fruit",
-              .requiredBy = {},
-              .optionalDependencies = {"juicer"},
-              .configFileCount = 1},
-      Package{.name = "zebra",
-              .installedVersion = "1.0-1",
-              .sourceType = SourceType::Official,
-              .repository = "core",
-              .installReason = InstallReason::Dependency,
-              .sizeBytes = 2048,
-              .requiredBy = {"apple"}},
-      Package{.name = "orphaned-lib",
-              .installedVersion = "0.1-1",
-              .sourceType = SourceType::Official,
-              .repository = "core",
-              .installReason = InstallReason::Dependency,
-              .sizeBytes = 4096,
-              .requiredBy = {}},
-      Package{.name = "foreign-tool",
-              .installedVersion = "9.9-1",
-              .sourceType = SourceType::Foreign,
-              .installReason = InstallReason::Explicit,
-              .sizeBytes = 512},
+      Package{
+          .name = "apple",
+          .installedVersion = "2.3-4",
+          .sourceType = SourceType::Official,
+          .repository = "core",
+          .installReason = InstallReason::Explicit,
+          .sizeBytes = 1024,
+          .description = "a tasty fruit",
+          .requiredBy = {},
+          .optionalDependencies = {"juicer"},
+          .configFileCount = 1,
+      },
+      Package{
+          .name = "zebra",
+          .installedVersion = "1.0-1",
+          .sourceType = SourceType::Official,
+          .repository = "core",
+          .installReason = InstallReason::Dependency,
+          .sizeBytes = 2048,
+          .requiredBy = {"apple"},
+      },
+      Package{
+          .name = "orphaned-lib",
+          .installedVersion = "0.1-1",
+          .sourceType = SourceType::Official,
+          .repository = "core",
+          .installReason = InstallReason::Dependency,
+          .sizeBytes = 4096,
+          .requiredBy = {},
+      },
+      Package{
+          .name = "foreign-tool",
+          .installedVersion = "9.9-1",
+          .sourceType = SourceType::Foreign,
+          .installReason = InstallReason::Explicit,
+          .sizeBytes = 512,
+      },
   };
   EXPECT_CALL(*mock_source, enumerateInstalledPackages()).WillOnce(Return(packages));
 
@@ -151,7 +161,7 @@ TEST(InstalledPackagesModel, BackendErrorTransitionsToErrorStateWithMessage) {
 
 TEST(InstalledPackagesModel, SourceExceptionTransitionsToErrorState) {
   auto mock_source = std::make_shared<MockPackageSource>();
-  EXPECT_CALL(*mock_source, enumerateInstalledPackages()).WillOnce([]() -> LoadResult {
+  EXPECT_CALL(*mock_source, enumerateInstalledPackages()).WillOnce([] -> LoadResult {
     throw std::runtime_error("unexpected backend exception");
   });
 

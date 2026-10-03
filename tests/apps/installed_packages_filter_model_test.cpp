@@ -42,28 +42,36 @@ QStringList namesInOrder(const InstalledPackagesFilterModel& filter_model) {
 }
 
 const std::vector<Package> kFixturePackages{
-    Package{.name = "apple",
-            .sourceType = SourceType::Official,
-            .repository = "core",
-            .installReason = InstallReason::Explicit,
-            .sizeBytes = 300},
-    Package{.name = "libapple",
-            .sourceType = SourceType::Official,
-            .repository = "community",
-            .installReason = InstallReason::Explicit,
-            .sizeBytes = 100},
-    Package{.name = "zebra",
-            .sourceType = SourceType::Official,
-            .repository = "core",
-            .installReason = InstallReason::Dependency,
-            .sizeBytes = 200,
-            .requiredBy = {"apple"}},
-    Package{.name = "orphaned-lib",
-            .sourceType = SourceType::Official,
-            .repository = "community",
-            .installReason = InstallReason::Dependency,
-            .sizeBytes = 500,
-            .requiredBy = {}},
+    Package{
+        .name = "apple",
+        .sourceType = SourceType::Official,
+        .repository = "core",
+        .installReason = InstallReason::Explicit,
+        .sizeBytes = 300,
+    },
+    Package{
+        .name = "libapple",
+        .sourceType = SourceType::Official,
+        .repository = "community",
+        .installReason = InstallReason::Explicit,
+        .sizeBytes = 100,
+    },
+    Package{
+        .name = "zebra",
+        .sourceType = SourceType::Official,
+        .repository = "core",
+        .installReason = InstallReason::Dependency,
+        .sizeBytes = 200,
+        .requiredBy = {"apple"},
+    },
+    Package{
+        .name = "orphaned-lib",
+        .sourceType = SourceType::Official,
+        .repository = "community",
+        .installReason = InstallReason::Dependency,
+        .sizeBytes = 500,
+        .requiredBy = {},
+    },
     Package{.name = "foreign-tool", .sourceType = SourceType::Foreign, .installReason = InstallReason::Explicit},
 };
 
@@ -254,8 +262,10 @@ TEST(InstalledPackagesFilterModel, RepositoryFilteringPreservesLateSelectionWith
   std::vector<Package> packages;
   packages.reserve(5000);
   for (int i = 0; i < 5000; ++i) {
-    packages.push_back(Package{.name = QStringLiteral("package-%1").arg(i, 4, 10, QLatin1Char('0')).toStdString(),
-                               .repository = i % 2 == 0 ? "core" : "extra"});
+    packages.push_back(Package{
+        .name = QStringLiteral("package-%1").arg(i, 4, 10, QLatin1Char('0')).toStdString(),
+        .repository = i % 2 == 0 ? "core" : "extra",
+    });
   }
   auto model = makeLoadedModel(packages);
   InstalledPackagesFilterModel filter_model;

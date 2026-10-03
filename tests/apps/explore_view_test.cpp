@@ -46,26 +46,33 @@ QUrl qmlSource(const QString& path) { return QUrl::fromLocalFile(QStringLiteral(
 
 SyncPackage makePackage(std::string name, std::string description, std::string repository, std::string version,
                         std::optional<std::string> installed = std::nullopt) {
-  return SyncPackage{.name = std::move(name),
-                     .version = std::move(version),
-                     .repository = std::move(repository),
-                     .description = std::move(description),
-                     .url = "vim.example.org",
-                     .licenses = {"GPL", "MIT"},
-                     .dependencies = {"glibc>=2.38"},
-                     .optionalDependencies = {"python: Python support"},
-                     .downloadSizeBytes = 2048,
-                     .installedSizeBytes = 4096,
-                     .installedVersion = std::move(installed)};
+  return SyncPackage{
+      .name = std::move(name),
+      .version = std::move(version),
+      .repository = std::move(repository),
+      .description = std::move(description),
+      .url = "vim.example.org",
+      .licenses = {"GPL", "MIT"},
+      .dependencies = {"glibc>=2.38"},
+      .optionalDependencies = {"python: Python support"},
+      .downloadSizeBytes = 2048,
+      .installedSizeBytes = 4096,
+      .installedVersion = std::move(installed),
+  };
 }
 
 ExploreSnapshot vimSnapshot(TimePoint data_as_of = kNow - hours(2)) {
-  return ExploreSnapshot{.packages = {makePackage("vim", "Vi Improved", "core", "9.1-1", "9.0-1"),
-                                      makePackage("vim-runtime", "Runtime files", "core", "9.1-1", "9.1-1"),
-                                      makePackage("vimb", "Vim-like browser", "extra", "3.7-1"),
-                                      makePackage("nano", "Small editor", "core", "8.0-1")},
-                         .databasesFound = true,
-                         .dataAsOf = data_as_of};
+  return ExploreSnapshot{
+      .packages =
+          {
+              makePackage("vim", "Vi Improved", "core", "9.1-1", "9.0-1"),
+              makePackage("vim-runtime", "Runtime files", "core", "9.1-1", "9.1-1"),
+              makePackage("vimb", "Vim-like browser", "extra", "3.7-1"),
+              makePackage("nano", "Small editor", "core", "8.0-1"),
+          },
+      .databasesFound = true,
+      .dataAsOf = data_as_of,
+  };
 }
 
 class ExploreViewTest : public ::testing::Test {
@@ -317,9 +324,11 @@ TEST_F(ExploreViewTest, DetailsPanelHasNoActionsOrInstalledOnlyContent) {
 }
 
 TEST_F(ExploreViewTest, ThirdPartySyncRepositoryUsesItsOwnBadgeAndScopeNote) {
-  source().enqueue(ExploreSnapshot{.packages = {makePackage("helper", "Utility", "community-custom", "1-1")},
-                                   .databasesFound = true,
-                                   .dataAsOf = kNow - hours(2)});
+  source().enqueue(ExploreSnapshot{
+      .packages = {makePackage("helper", "Utility", "community-custom", "1-1")},
+      .databasesFound = true,
+      .dataAsOf = kNow - hours(2),
+  });
   startModel();
   createView();
   typeQuery(QStringLiteral("helper"));

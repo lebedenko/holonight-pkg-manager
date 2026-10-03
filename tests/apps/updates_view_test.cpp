@@ -48,13 +48,15 @@ void rejectQmlWarnings(QQmlEngine& engine) {
 QUrl qmlSource(const QString& path) { return QUrl::fromLocalFile(QStringLiteral(HOLONIGHT_QML_SOURCE_DIR) + path); }
 
 PendingUpdate makeUpdate(std::string name, std::uint64_t download_bytes, bool ignored) {
-  return PendingUpdate{.name = std::move(name),
-                       .installedVersion = "1.0-1",
-                       .availableVersion = "2.0-1",
-                       .repository = "extra",
-                       .downloadSizeBytes = download_bytes,
-                       .installedSizeDeltaBytes = -1024,
-                       .ignored = ignored};
+  return PendingUpdate{
+      .name = std::move(name),
+      .installedVersion = "1.0-1",
+      .availableVersion = "2.0-1",
+      .repository = "extra",
+      .downloadSizeBytes = download_bytes,
+      .installedSizeDeltaBytes = -1024,
+      .ignored = ignored,
+  };
 }
 
 UpdateSnapshot snapshotWith(std::vector<PendingUpdate> updates, std::chrono::system_clock::time_point data_as_of) {
@@ -131,10 +133,11 @@ class UpdatesViewTest : public ::testing::Test {
     ASSERT_EQ(component.status(), QQmlComponent::Ready) << component.errorString().toStdString();
     explore_model_ = std::make_unique<ExploreModel>(std::make_shared<holonight_packages_testing::FakeExploreSource>());
     ASSERT_TRUE(QTest::qWaitFor([this] { return !explore_model_->loading(); }, 2000));
-    view_.reset(qobject_cast<QQuickItem*>(component.createWithInitialProperties(
-        {{QStringLiteral("installedPackagesModel"), QVariant::fromValue(&installed)},
-         {QStringLiteral("updatesModel"), QVariant::fromValue(model_.get())},
-         {QStringLiteral("exploreModel"), QVariant::fromValue(explore_model_.get())}})));
+    view_.reset(qobject_cast<QQuickItem*>(component.createWithInitialProperties({
+        {QStringLiteral("installedPackagesModel"), QVariant::fromValue(&installed)},
+        {QStringLiteral("updatesModel"), QVariant::fromValue(model_.get())},
+        {QStringLiteral("exploreModel"), QVariant::fromValue(explore_model_.get())},
+    })));
     ASSERT_NE(view_, nullptr);
   }
 

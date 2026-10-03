@@ -61,6 +61,7 @@ class ExploreModel : public QAbstractListModel {
   enum class ViewState : std::uint8_t { Loading, NoDatabases, Error, Hint, NoMatches, Results };
   Q_ENUM(ViewState)
 
+  // NOLINTNEXTLINE(cppcoreguidelines-use-enum-class): preserve Qt model role constants.
   enum Role : std::uint16_t {
     NameRole = Qt::UserRole + 1,
     AvailableVersionRole,
@@ -136,8 +137,8 @@ class ExploreModel : public QAbstractListModel {
   // Copyable, as QFutureWatcher requires.
   struct LoadedIndex {
     std::shared_ptr<const holonight_packages_application::ExploreIndex> index;
-    bool databasesFound = true;
-    std::chrono::system_clock::time_point dataAsOf;
+    bool databases_found = true;
+    std::chrono::system_clock::time_point data_as_of;
   };
   using LoadResult = std::expected<LoadedIndex, holonight_packages_domain::ExploreSourceError>;
 

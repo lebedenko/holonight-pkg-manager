@@ -10,9 +10,12 @@ namespace holonight_packages_application {
 
 struct UpdateSummary {
   // Rows not flagged as ignored.
+  // NOLINTNEXTLINE(readability-identifier-naming): preserve the established public data contract.
   int updateCount = 0;
+  // NOLINTNEXTLINE(readability-identifier-naming): preserve the established public data contract.
   int ignoredCount = 0;
   // Sum of download sizes of rows not flagged as ignored.
+  // NOLINTNEXTLINE(readability-identifier-naming): preserve the established public data contract.
   std::uint64_t totalDownloadBytes = 0;
 
   bool operator==(const UpdateSummary&) const = default;

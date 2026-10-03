@@ -35,17 +35,19 @@ ExploreModel::Clock fixedClock() {
 
 SyncPackage makePackage(std::string name, std::string description = "", std::string repository = "extra",
                         std::string version = "1.0-1") {
-  return SyncPackage{.name = std::move(name),
-                     .version = std::move(version),
-                     .repository = std::move(repository),
-                     .description = std::move(description),
-                     .url = "vim.example.org",
-                     .licenses = {"GPL", "MIT"},
-                     .dependencies = {"glibc>=2.38"},
-                     .optionalDependencies = {"python: Python support"},
-                     .downloadSizeBytes = 2048,
-                     .installedSizeBytes = 4096,
-                     .installedVersion = std::nullopt};
+  return SyncPackage{
+      .name = std::move(name),
+      .version = std::move(version),
+      .repository = std::move(repository),
+      .description = std::move(description),
+      .url = "vim.example.org",
+      .licenses = {"GPL", "MIT"},
+      .dependencies = {"glibc>=2.38"},
+      .optionalDependencies = {"python: Python support"},
+      .downloadSizeBytes = 2048,
+      .installedSizeBytes = 4096,
+      .installedVersion = std::nullopt,
+  };
 }
 
 std::vector<SyncPackage> vimPackages() {
@@ -490,10 +492,24 @@ TEST(ExploreModel, EveryRoleHasAName) {
 
   const auto names = model->roleNames().values();
 
-  for (const char* expected :
-       {"name", "availableVersion", "repository", "description", "downloadSize", "downloadSizeLabel", "installedSize",
-        "installedSizeLabel", "url", "licenses", "dependencies", "optionalDependencies", "isInstalled",
-        "installedVersion", "installedBadgeText", "installedVersionDiffers"}) {
+  for (const char* expected : {
+           "name",
+           "availableVersion",
+           "repository",
+           "description",
+           "downloadSize",
+           "downloadSizeLabel",
+           "installedSize",
+           "installedSizeLabel",
+           "url",
+           "licenses",
+           "dependencies",
+           "optionalDependencies",
+           "isInstalled",
+           "installedVersion",
+           "installedBadgeText",
+           "installedVersionDiffers",
+       }) {
     EXPECT_TRUE(names.contains(expected)) << expected;
   }
 }

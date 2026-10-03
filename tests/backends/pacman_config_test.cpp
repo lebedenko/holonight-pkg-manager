@@ -41,8 +41,8 @@ TEST(PacmanConfig, AccumulatesIgnoreListsAcrossLines) {
   const auto config = parsePacmanConfig(file.path());
 
   ASSERT_TRUE(config.has_value()) << config.error();
-  EXPECT_THAT(config->ignorePkgs, ElementsAre("linux", "linux-headers", "nvidia*"));
-  EXPECT_THAT(config->ignoreGroups, ElementsAre("gnome", "kde-applications", "xfce4"));
+  EXPECT_THAT(config->ignore_pkgs, ElementsAre("linux", "linux-headers", "nvidia*"));
+  EXPECT_THAT(config->ignore_groups, ElementsAre("gnome", "kde-applications", "xfce4"));
 }
 
 TEST(PacmanConfig, IgnoresCommentsUnknownKeysAndFlags) {
@@ -58,8 +58,8 @@ TEST(PacmanConfig, IgnoresCommentsUnknownKeysAndFlags) {
   const auto config = parsePacmanConfig(file.path());
 
   ASSERT_TRUE(config.has_value()) << config.error();
-  EXPECT_THAT(config->ignorePkgs, ElementsAre("kept"));
-  EXPECT_TRUE(config->ignoreGroups.empty());
+  EXPECT_THAT(config->ignore_pkgs, ElementsAre("kept"));
+  EXPECT_TRUE(config->ignore_groups.empty());
 }
 
 TEST(PacmanConfig, DoesNotCollectKeysOutsideOptions) {
@@ -77,8 +77,8 @@ TEST(PacmanConfig, DoesNotCollectKeysOutsideOptions) {
   const auto config = parsePacmanConfig(file.path());
 
   ASSERT_TRUE(config.has_value()) << config.error();
-  EXPECT_THAT(config->ignorePkgs, ElementsAre("in-options"));
-  EXPECT_THAT(config->ignoreGroups, ElementsAre("reopened-options"));
+  EXPECT_THAT(config->ignore_pkgs, ElementsAre("in-options"));
+  EXPECT_THAT(config->ignore_groups, ElementsAre("reopened-options"));
 }
 
 TEST(PacmanConfig, EmptyFileGivesEmptyLists) {
@@ -95,8 +95,8 @@ TEST(PacmanConfig, FixtureConfigYieldsExpectedLists) {
       parsePacmanConfig(std::filesystem::path(HOLONIGHT_TEST_FIXTURES_DIR) / "pacman" / "updates" / "pacman.conf");
 
   ASSERT_TRUE(config.has_value()) << config.error();
-  EXPECT_THAT(config->ignorePkgs, ElementsAre("ign*", "never-installed"));
-  EXPECT_THAT(config->ignoreGroups, ElementsAre("fruits"));
+  EXPECT_THAT(config->ignore_pkgs, ElementsAre("ign*", "never-installed"));
+  EXPECT_THAT(config->ignore_groups, ElementsAre("fruits"));
 }
 
 TEST(PacmanConfig, MissingFileIsAnError) {

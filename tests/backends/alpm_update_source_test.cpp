@@ -28,7 +28,10 @@ std::filesystem::path updatesFixture() {
 
 AlpmUpdateSourceOptions optionsFor(const std::filesystem::path& database_path) {
   return AlpmUpdateSourceOptions{
-      .databaseRoot = database_path, .databasePath = database_path, .pacmanConfPath = updatesFixture() / "pacman.conf"};
+      .databaseRoot = database_path,
+      .databasePath = database_path,
+      .pacmanConfPath = updatesFixture() / "pacman.conf",
+  };
 }
 
 std::vector<std::string> namesOf(const UpdateSnapshot& snapshot) {
@@ -78,9 +81,11 @@ std::map<std::filesystem::path, FileState> syncFileStates(const std::filesystem:
   for (const auto& entry : std::filesystem::directory_iterator(sync_dir)) {
     QFile file(QString::fromStdString(entry.path().string()));
     EXPECT_TRUE(file.open(QIODevice::ReadOnly));
-    states[entry.path()] = FileState{.sha256 = QCryptographicHash::hash(file.readAll(), QCryptographicHash::Sha256),
-                                     .size = std::filesystem::file_size(entry.path()),
-                                     .modified = std::filesystem::last_write_time(entry.path())};
+    states[entry.path()] = FileState{
+        .sha256 = QCryptographicHash::hash(file.readAll(), QCryptographicHash::Sha256),
+        .size = std::filesystem::file_size(entry.path()),
+        .modified = std::filesystem::last_write_time(entry.path()),
+    };
   }
   return states;
 }

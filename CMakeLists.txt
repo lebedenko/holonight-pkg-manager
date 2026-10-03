@@ -90,12 +90,14 @@ if(CLANG_TIDY)
   if(RUN_CLANG_TIDY)
     add_custom_target(tidy
       COMMAND ${CMAKE_COMMAND} -P ${STRIP_TIDY_FLAGS_SCRIPT}
-      COMMAND ${RUN_CLANG_TIDY} -quiet -j ${TIDY_JOBS} -p ${TIDY_DB_DIR} ${ALL_CXX_FILES}
+      COMMAND ${RUN_CLANG_TIDY} -quiet -j ${TIDY_JOBS} -p ${TIDY_DB_DIR}
+        -header-filter "^${CMAKE_CURRENT_SOURCE_DIR}/(apps|src|include|tests)/.*\\.(h|hpp)$" ${ALL_CXX_FILES}
       VERBATIM)
   else()
     add_custom_target(tidy
       COMMAND ${CMAKE_COMMAND} -P ${STRIP_TIDY_FLAGS_SCRIPT}
-      COMMAND ${CLANG_TIDY} --quiet -p ${TIDY_DB_DIR} ${ALL_CXX_FILES}
+      COMMAND ${CLANG_TIDY} --quiet -p ${TIDY_DB_DIR}
+        -header-filter "^${CMAKE_CURRENT_SOURCE_DIR}/(apps|src|include|tests)/.*\\.(h|hpp)$" ${ALL_CXX_FILES}
       VERBATIM)
   endif()
 endif()

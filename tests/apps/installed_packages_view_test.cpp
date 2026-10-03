@@ -120,10 +120,11 @@ class InstalledPackagesViewTest : public ::testing::Test {
     }
     QQmlComponent component(&engine, qmlSource(QStringLiteral("/workspace/WorkspaceWindow.qml")));
     EXPECT_EQ(component.status(), QQmlComponent::Ready) << component.errorString().toStdString();
-    return std::unique_ptr<QObject>(component.createWithInitialProperties(
-        {{QStringLiteral("installedPackagesModel"), QVariant::fromValue(&model)},
-         {QStringLiteral("updatesModel"), QVariant::fromValue(updates_model_.get())},
-         {QStringLiteral("exploreModel"), QVariant::fromValue(explore_model_.get())}}));
+    return std::unique_ptr<QObject>(component.createWithInitialProperties({
+        {QStringLiteral("installedPackagesModel"), QVariant::fromValue(&model)},
+        {QStringLiteral("updatesModel"), QVariant::fromValue(updates_model_.get())},
+        {QStringLiteral("exploreModel"), QVariant::fromValue(explore_model_.get())},
+    }));
   }
 
  private:
@@ -238,13 +239,16 @@ TEST_F(InstalledPackagesViewTest, TableKeepsReadableColumnsAtDefaultAndMinimumWi
   auto source = std::make_shared<MockPackageSource>();
   EXPECT_CALL(*source, enumerateInstalledPackages())
       .WillOnce(Return(std::vector<Package>{
-          Package{.name = long_name.toStdString(),
-                  .installedVersion = long_version.toStdString(),
-                  .sourceType = holonight_packages_domain::SourceType::Official,
-                  .repository = "extra",
-                  .description = "A package description with a long unbroken word " + std::string(100, 'd'),
-                  .requiredBy = {std::string(100, 'r')},
-                  .optionalDependencies = {std::string(100, 'o')}}}));
+          Package{
+              .name = long_name.toStdString(),
+              .installedVersion = long_version.toStdString(),
+              .sourceType = holonight_packages_domain::SourceType::Official,
+              .repository = "extra",
+              .description = "A package description with a long unbroken word " + std::string(100, 'd'),
+              .requiredBy = {std::string(100, 'r')},
+              .optionalDependencies = {std::string(100, 'o')},
+          },
+      }));
   InstalledPackagesModel model(std::make_shared<PackageListUseCase>(source));
   QSignalSpy loaded(&model, &InstalledPackagesModel::statusChanged);
   ASSERT_TRUE(loaded.wait(2000));
@@ -310,9 +314,11 @@ TEST_F(InstalledPackagesViewTest, TableKeepsReadableColumnsAtDefaultAndMinimumWi
     EXPECT_GE(reason->mapToItem(table, QPointF()).x(), 0);
     EXPECT_LE(reason->mapToItem(table, QPointF(reason->width(), 0)).x(), table->width());
     flickable->setProperty("contentX", 0);
-    for (const auto& labels :
-         {std::pair{QStringLiteral("Package"), long_name}, std::pair{QStringLiteral("Origin"), QStringLiteral("extra")},
-          std::pair{QStringLiteral("Version"), long_version}}) {
+    for (const auto& labels : {
+             std::pair{QStringLiteral("Package"), long_name},
+             std::pair{QStringLiteral("Origin"), QStringLiteral("extra")},
+             std::pair{QStringLiteral("Version"), long_version},
+         }) {
       auto* header = findLabel(*table, labels.first);
       auto* value = findLabel(*row, labels.second);
       ASSERT_NE(header, nullptr);
@@ -352,8 +358,14 @@ TEST_F(InstalledPackagesViewTest, TableKeepsReadableColumnsAtDefaultAndMinimumWi
 TEST_F(InstalledPackagesViewTest, OriginBadgesFitTheirLabelsAndPreserveFullRepositoryNames) {
   using holonight_packages_domain::SourceType;
   const QString long_repository(80, QLatin1Char('r'));
-  for (const auto& repository : {QStringLiteral("core"), QStringLiteral("extra"), QStringLiteral("g14"), QString(),
-                                 long_repository, QStringLiteral("foreign")}) {
+  for (const auto& repository : {
+           QStringLiteral("core"),
+           QStringLiteral("extra"),
+           QStringLiteral("g14"),
+           QString(),
+           long_repository,
+           QStringLiteral("foreign"),
+       }) {
     const bool foreign = repository == QStringLiteral("foreign");
     QString label = repository;
     if (foreign) {
@@ -363,10 +375,13 @@ TEST_F(InstalledPackagesViewTest, OriginBadgesFitTheirLabelsAndPreserveFullRepos
     }
     auto source = std::make_shared<MockPackageSource>();
     EXPECT_CALL(*source, enumerateInstalledPackages())
-        .WillOnce(
-            Return(std::vector<Package>{Package{.name = "apple",
-                                                .sourceType = foreign ? SourceType::Foreign : SourceType::Official,
-                                                .repository = repository.toStdString()}}));
+        .WillOnce(Return(std::vector<Package>{
+            Package{
+                .name = "apple",
+                .sourceType = foreign ? SourceType::Foreign : SourceType::Official,
+                .repository = repository.toStdString(),
+            },
+        }));
     InstalledPackagesModel model(std::make_shared<PackageListUseCase>(source));
     QSignalSpy loaded(&model, &InstalledPackagesModel::statusChanged);
     ASSERT_TRUE(loaded.wait(2000));
@@ -388,8 +403,10 @@ TEST_F(InstalledPackagesViewTest, OriginBadgesFitTheirLabelsAndPreserveFullRepos
     auto* list = stateObject(*view, "packageList");
     ASSERT_TRUE(QTest::qWaitFor([&] { return list->property("currentItem").value<QQuickItem*>() != nullptr; }));
     auto* row = list->property("currentItem").value<QQuickItem*>();
-    for (auto* badge : {qobject_cast<QQuickItem*>(stateObject(*row, "packageRowOriginBadge")),
-                        qobject_cast<QQuickItem*>(stateObject(*view, "packageDetailOriginBadge"))}) {
+    for (auto* badge : {
+             qobject_cast<QQuickItem*>(stateObject(*row, "packageRowOriginBadge")),
+             qobject_cast<QQuickItem*>(stateObject(*view, "packageDetailOriginBadge")),
+         }) {
       ASSERT_NE(badge, nullptr);
       EXPECT_EQ(badge->property("text").toString(), label);
       EXPECT_EQ(badge->property("toolTipText").toString(),
@@ -468,9 +485,15 @@ TEST_F(InstalledPackagesViewTest, ToolbarAndCategoryTabsRemainReachableAtMinimum
     auto* list = qobject_cast<QQuickItem*>(stateObject(*view, "packageList"));
     ASSERT_NE(list, nullptr);
     EXPECT_GE(list->height(), 64);
-    for (const char* name :
-         {"installedSearchField", "installedSortComboBox", "installedListViewButton", "installedGridViewButton",
-          "installedOverflowButton", "installedRepositoryComboBox", "installedAllStatesComboBox"}) {
+    for (const char* name : {
+             "installedSearchField",
+             "installedSortComboBox",
+             "installedListViewButton",
+             "installedGridViewButton",
+             "installedOverflowButton",
+             "installedRepositoryComboBox",
+             "installedAllStatesComboBox",
+         }) {
       auto* control = qobject_cast<QQuickItem*>(stateObject(*view, name));
       ASSERT_NE(control, nullptr);
       EXPECT_TRUE(page_bounds.contains(control->mapRectToItem(item, QRectF(QPointF(), control->size())))) << name;
@@ -613,12 +636,13 @@ TEST_F(InstalledPackagesViewTest, OptionalDependenciesCanBeExpandedFromTheKeyboa
   QQmlEngine engine;
   rejectQmlWarnings(engine);
   QQmlComponent component(&engine, qmlSource(QStringLiteral("/packages/PackageDetailDependencySections.qml")));
-  std::unique_ptr<QObject> section(component.createWithInitialProperties(
-      {{QStringLiteral("description"), QString()},
-       {QStringLiteral("requiredByCount"), 0},
-       {QStringLiteral("requiredByList"), QStringList()},
-       {QStringLiteral("optionalDependencies"), QStringList{"one", "two", "three", "four", "five", "six"}},
-       {QStringLiteral("configFileCount"), 0}}));
+  std::unique_ptr<QObject> section(component.createWithInitialProperties({
+      {QStringLiteral("description"), QString()},
+      {QStringLiteral("requiredByCount"), 0},
+      {QStringLiteral("requiredByList"), QStringList()},
+      {QStringLiteral("optionalDependencies"), QStringList{"one", "two", "three", "four", "five", "six"}},
+      {QStringLiteral("configFileCount"), 0},
+  }));
   ASSERT_NE(section, nullptr) << component.errorString().toStdString();
   QQuickWindow window;
   auto* item = qobject_cast<QQuickItem*>(section.get());

@@ -15,8 +15,10 @@ namespace holonight_packages_backends {
 // Every path the adapter touches comes from here; it holds no default pacman locations.
 struct AlpmExploreSourceOptions {
   // libalpm root directory.
+  // NOLINTNEXTLINE(readability-identifier-naming): preserve the established public data contract.
   std::filesystem::path databaseRoot;
   // libalpm database path, containing local/ and sync/.
+  // NOLINTNEXTLINE(readability-identifier-naming): preserve the established public data contract.
   std::filesystem::path databasePath;
 };
 

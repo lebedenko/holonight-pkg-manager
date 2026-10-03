@@ -48,8 +48,11 @@ TEST(UpdateSummary, AllIgnoredGivesZeroCount) {
 }
 
 TEST(UpdateSummary, SortByNameOrdersAscending) {
-  std::vector<PendingUpdate> updates = {makeUpdate("zeta", 1, false), makeUpdate("alpha", 2, false),
-                                        makeUpdate("mid", 3, true)};
+  std::vector<PendingUpdate> updates = {
+      makeUpdate("zeta", 1, false),
+      makeUpdate("alpha", 2, false),
+      makeUpdate("mid", 3, true),
+  };
 
   sortUpdatesByName(updates);
 

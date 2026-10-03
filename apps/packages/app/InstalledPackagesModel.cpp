@@ -121,19 +121,19 @@ InstalledPackagesModel::Status InstalledPackagesModel::status() const { return s
 
 QString InstalledPackagesModel::errorMessage() const { return error_message_; }
 
-int InstalledPackagesModel::totalPackageCount() const { return aggregates_.totalPackageCount; }
+int InstalledPackagesModel::totalPackageCount() const { return aggregates_.total_package_count; }
 
-quint64 InstalledPackagesModel::totalInstalledSizeBytes() const { return aggregates_.totalInstalledSizeBytes; }
+quint64 InstalledPackagesModel::totalInstalledSizeBytes() const { return aggregates_.total_installed_size_bytes; }
 
-int InstalledPackagesModel::explicitPackageCount() const { return aggregates_.explicitPackageCount; }
+int InstalledPackagesModel::explicitPackageCount() const { return aggregates_.explicit_package_count; }
 
-int InstalledPackagesModel::dependencyPackageCount() const { return aggregates_.dependencyPackageCount; }
+int InstalledPackagesModel::dependencyPackageCount() const { return aggregates_.dependency_package_count; }
 
-int InstalledPackagesModel::foreignPackageCount() const { return aggregates_.foreignPackageCount; }
+int InstalledPackagesModel::foreignPackageCount() const { return aggregates_.foreign_package_count; }
 
-int InstalledPackagesModel::orphanPackageCount() const { return aggregates_.orphanPackageCount; }
+int InstalledPackagesModel::orphanPackageCount() const { return aggregates_.orphan_package_count; }
 
-quint64 InstalledPackagesModel::reclaimableSizeBytes() const { return aggregates_.reclaimableSizeBytes; }
+quint64 InstalledPackagesModel::reclaimableSizeBytes() const { return aggregates_.reclaimable_size_bytes; }
 
 QString InstalledPackagesModel::formatSize(quint64 bytes) {
   return QString::fromStdString(holonight_packages_application::formatSizeBytes(bytes));
@@ -154,11 +154,14 @@ void InstalledPackagesModel::startLoading() {
       return use_case->enumerateInstalledPackages();
     } catch (const std::exception& exception) {
       return std::unexpected(holonight_packages_domain::PackageSourceError{
-          .code = holonight_packages_domain::PackageSourceErrorCode::Unknown, .message = exception.what()});
+          .code = holonight_packages_domain::PackageSourceErrorCode::Unknown,
+          .message = exception.what(),
+      });
     } catch (...) {
       return std::unexpected(holonight_packages_domain::PackageSourceError{
           .code = holonight_packages_domain::PackageSourceErrorCode::Unknown,
-          .message = "Unknown package enumeration failure"});
+          .message = "Unknown package enumeration failure",
+      });
     }
   }));
   emit statusChanged();
@@ -187,21 +190,21 @@ void InstalledPackagesModel::onEnumerationFinished() {
 
 void InstalledPackagesModel::recomputeAggregates() {
   Aggregates aggregates;
-  aggregates.totalPackageCount = static_cast<int>(packages_.size());
+  aggregates.total_package_count = static_cast<int>(packages_.size());
   for (const Package& package : packages_) {
-    aggregates.totalInstalledSizeBytes += package.sizeBytes;
+    aggregates.total_installed_size_bytes += package.sizeBytes;
     if (package.installReason == InstallReason::Explicit) {
-      ++aggregates.explicitPackageCount;
+      ++aggregates.explicit_package_count;
     } else {
-      ++aggregates.dependencyPackageCount;
+      ++aggregates.dependency_package_count;
     }
     if (package.sourceType == SourceType::Foreign) {
-      ++aggregates.foreignPackageCount;
+      ++aggregates.foreign_package_count;
     }
   }
   const holonight_packages_application::OrphanStatistics orphan_statistics =
       holonight_packages_application::computeOrphanStatistics(packages_);
-  aggregates.orphanPackageCount = orphan_statistics.orphanPackageCount;
-  aggregates.reclaimableSizeBytes = orphan_statistics.reclaimableSizeBytes;
+  aggregates.orphan_package_count = orphan_statistics.orphanPackageCount;
+  aggregates.reclaimable_size_bytes = orphan_statistics.reclaimableSizeBytes;
   aggregates_ = aggregates;
 }

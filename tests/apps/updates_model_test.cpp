@@ -30,13 +30,15 @@ UpdatesModel::Clock fixedClock() {
 }
 
 PendingUpdate makeUpdate(std::string name, std::uint64_t download_bytes = 1024, bool ignored = false) {
-  return PendingUpdate{.name = std::move(name),
-                       .installedVersion = "1.0-1",
-                       .availableVersion = "2.0-1",
-                       .repository = "core",
-                       .downloadSizeBytes = download_bytes,
-                       .installedSizeDeltaBytes = 0,
-                       .ignored = ignored};
+  return PendingUpdate{
+      .name = std::move(name),
+      .installedVersion = "1.0-1",
+      .availableVersion = "2.0-1",
+      .repository = "core",
+      .downloadSizeBytes = download_bytes,
+      .installedSizeDeltaBytes = 0,
+      .ignored = ignored,
+  };
 }
 
 UpdateSnapshot snapshotWith(std::vector<PendingUpdate> updates, TimePoint data_as_of = kNow - hours(2)) {
@@ -323,13 +325,17 @@ TEST(UpdatesModel, FreshModelCarriesNoPreviousState) {
 
 TEST(UpdatesModel, RolesExposeAllFields) {
   auto source = std::make_shared<FakeUpdateSource>();
-  source->enqueue(snapshotWith({PendingUpdate{.name = "gamma",
-                                              .installedVersion = "1.0-1",
-                                              .availableVersion = "1.1-1",
-                                              .repository = "extra",
-                                              .downloadSizeBytes = 4096,
-                                              .installedSizeDeltaBytes = -2048,
-                                              .ignored = true}}));
+  source->enqueue(snapshotWith({
+      PendingUpdate{
+          .name = "gamma",
+          .installedVersion = "1.0-1",
+          .availableVersion = "1.1-1",
+          .repository = "extra",
+          .downloadSizeBytes = 4096,
+          .installedSizeDeltaBytes = -2048,
+          .ignored = true,
+      },
+  }));
 
   const auto model = loadedModel(source);
 
@@ -346,8 +352,17 @@ TEST(UpdatesModel, RolesExposeAllFields) {
   EXPECT_TRUE(model->data(index, UpdatesModel::IsIgnoredRole).toBool());
 
   const QHash<int, QByteArray> names = model->roleNames();
-  for (const char* role : {"name", "installedVersion", "availableVersion", "repository", "downloadSize",
-                           "downloadSizeLabel", "sizeDelta", "sizeDeltaLabel", "isIgnored"}) {
+  for (const char* role : {
+           "name",
+           "installedVersion",
+           "availableVersion",
+           "repository",
+           "downloadSize",
+           "downloadSizeLabel",
+           "sizeDelta",
+           "sizeDeltaLabel",
+           "isIgnored",
+       }) {
     EXPECT_TRUE(names.values().contains(QByteArray(role))) << role;
   }
 }

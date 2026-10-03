@@ -37,6 +37,7 @@ class InstalledPackagesModel : public QAbstractListModel {
   enum class Status : std::uint8_t { Loading, Loaded, Error };
   Q_ENUM(Status)
 
+  // NOLINTNEXTLINE(cppcoreguidelines-use-enum-class): preserve Qt model role constants.
   enum Role : std::uint16_t {
     NameRole = Qt::UserRole + 1,
     InstalledVersionRole,
@@ -88,13 +89,13 @@ class InstalledPackagesModel : public QAbstractListModel {
       std::expected<std::vector<holonight_packages_domain::Package>, holonight_packages_domain::PackageSourceError>;
 
   struct Aggregates {
-    int totalPackageCount = 0;
-    quint64 totalInstalledSizeBytes = 0;
-    int explicitPackageCount = 0;
-    int dependencyPackageCount = 0;
-    int foreignPackageCount = 0;
-    int orphanPackageCount = 0;
-    quint64 reclaimableSizeBytes = 0;
+    int total_package_count = 0;
+    quint64 total_installed_size_bytes = 0;
+    int explicit_package_count = 0;
+    int dependency_package_count = 0;
+    int foreign_package_count = 0;
+    int orphan_package_count = 0;
+    quint64 reclaimable_size_bytes = 0;
   };
 
   void startLoading();

@@ -51,6 +51,7 @@ class UpdatesModel : public QAbstractListModel {
   enum class ViewState : std::uint8_t { Loading, Updates, UpToDate, NoDatabases, Error };
   Q_ENUM(ViewState)
 
+  // NOLINTNEXTLINE(cppcoreguidelines-use-enum-class): preserve Qt model role constants.
   enum Role : std::uint16_t {
     NameRole = Qt::UserRole + 1,
     InstalledVersionRole,
