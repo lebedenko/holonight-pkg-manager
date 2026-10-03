@@ -12,6 +12,10 @@ vars:
     sh: nproc
   PRESET: '{{default "debug" .PRESET}}'
 tasks:
+  ci:
+    desc: Rehearse all push validation in pinned isolated containers
+    cmds:
+    - python3 scripts/ci/run.py
   license-check:
     desc: Validate REUSE licensing metadata
     cmds:

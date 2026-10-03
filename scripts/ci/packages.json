@@ -1,0 +1,14 @@
+[
+  {
+    "name": "ripgrep",
+    "version": "15.2.0-1",
+    "sha256": "4ab540861ee43dfe6974403dd3f03830615fd4b53971736f5c4fc7aa82133a21",
+    "url": "https://archive.archlinux.org/packages/r/ripgrep/ripgrep-15.2.0-1-x86_64.pkg.tar.zst"
+  },
+  {
+    "name": "noto-fonts",
+    "version": "1:2026.10.01-1",
+    "sha256": "3cf6de13b1f3600ed782ff5e22eb6b3827fcc0ab5ee407bc0b121239fe19d949",
+    "url": "https://archive.archlinux.org/packages/n/noto-fonts/noto-fonts-1%3A2026.10.01-1-any.pkg.tar.zst"
+  }
+]
