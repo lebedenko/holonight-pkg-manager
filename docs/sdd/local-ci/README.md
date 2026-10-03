@@ -50,4 +50,3 @@ only expected private Gui/Qml version-coupling notices remain. C++ string litera
 are unchanged; internal names follow conventions while public data and role APIs
 are preserved with narrow annotations. No package transactions or desktop focus
 interaction occurred.
-
