@@ -11,6 +11,7 @@
 #include <QQmlComponent>
 #include <QQmlEngine>
 #include <QQmlError>
+#include <QQmlPropertyMap>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QTest>
@@ -128,16 +129,20 @@ class UpdatesViewTest : public ::testing::Test {
   }
 
   // Hosts the workspace (sidebar + both pages) instead of the bare Updates page; not placed in a window.
-  void createWorkspace(InstalledPackagesModel& installed) {
+  void createWorkspace(InstalledPackagesModel& installed, QObject* status_client = nullptr) {
     QQmlComponent component(&engine_, qmlSource(QStringLiteral("/workspace/WorkspaceWindow.qml")));
     ASSERT_EQ(component.status(), QQmlComponent::Ready) << component.errorString().toStdString();
     explore_model_ = std::make_unique<ExploreModel>(std::make_shared<holonight_packages_testing::FakeExploreSource>());
     ASSERT_TRUE(QTest::qWaitFor([this] { return !explore_model_->loading(); }, 2000));
-    view_.reset(qobject_cast<QQuickItem*>(component.createWithInitialProperties({
+    QVariantMap initial{
         {QStringLiteral("installedPackagesModel"), QVariant::fromValue(&installed)},
         {QStringLiteral("updatesModel"), QVariant::fromValue(model_.get())},
         {QStringLiteral("exploreModel"), QVariant::fromValue(explore_model_.get())},
-    })));
+    };
+    if (status_client != nullptr) {
+      initial.insert(QStringLiteral("updateStatusClient"), QVariant::fromValue(status_client));
+    }
+    view_.reset(qobject_cast<QQuickItem*>(component.createWithInitialProperties(initial)));
     ASSERT_NE(view_, nullptr);
   }
 
@@ -297,6 +302,47 @@ TEST_F(UpdatesViewTest, FreshDataShowsNoStaleHint) {
   createView();
 
   EXPECT_FALSE(isVisible("updatesStaleHint"));
+}
+
+namespace {
+std::unique_ptr<InstalledPackagesModel> loadedEmptyInstalledModel() {
+  auto package_source = std::make_shared<MockPackageSource>();
+  EXPECT_CALL(*package_source, enumerateInstalledPackages()).WillOnce(Return(std::vector<Package>{}));
+  auto installed = std::make_unique<InstalledPackagesModel>(std::make_shared<PackageListUseCase>(package_source));
+  EXPECT_TRUE(
+      QTest::qWaitFor([&installed] { return installed->status() != InstalledPackagesModel::Status::Loading; }, 2000));
+  return installed;
+}
+}  // namespace
+
+TEST_F(UpdatesViewTest, SidebarShowsNoBadgeWithoutAStatusClient) {
+  const auto installed = loadedEmptyInstalledModel();
+  startModel();
+  createWorkspace(*installed);
+
+  EXPECT_TRUE(child("sidebarUpdatesNav")->property("badgeText").toString().isEmpty());
+  destroyView();
+}
+
+TEST_F(UpdatesViewTest, SidebarBadgeFollowsAvailableStatusClientCount) {
+  const auto installed = loadedEmptyInstalledModel();
+  const std::unique_ptr<QQmlPropertyMap> client(QQmlPropertyMap::create());
+  client->insert(QStringLiteral("available"), false);
+  client->insert(QStringLiteral("count"), 5);
+  startModel();
+  createWorkspace(*installed, client.get());
+  EXPECT_TRUE(child("sidebarUpdatesNav")->property("badgeText").toString().isEmpty());
+
+  client->insert(QStringLiteral("available"), true);
+  EXPECT_EQ(child("sidebarUpdatesNav")->property("badgeText").toString(), QStringLiteral("5"));
+
+  client->insert(QStringLiteral("count"), 0);
+  EXPECT_TRUE(child("sidebarUpdatesNav")->property("badgeText").toString().isEmpty());
+
+  client->insert(QStringLiteral("count"), 12);
+  client->insert(QStringLiteral("available"), false);
+  EXPECT_TRUE(child("sidebarUpdatesNav")->property("badgeText").toString().isEmpty());
+  destroyView();
 }
 
 TEST_F(UpdatesViewTest, SidebarSwitchesBetweenInstalledUpdatesAndExplorePages) {

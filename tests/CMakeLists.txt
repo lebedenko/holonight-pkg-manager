@@ -15,7 +15,13 @@ add_executable(test_holonight_packages
   application/package_list_use_case_test.cpp
   application/orphan_package_filter_test.cpp
   application/package_size_formatter_test.cpp
+  application/update_monitor_integration_test.cpp
+  application/update_monitor_test.cpp
+  application/update_status_test.cpp
   application/update_summary_test.cpp
+  packaged/packaged_dbus_test.cpp
+  packaged/packaged_process_test.cpp
+  packaged/update_status_client_test.cpp
   application/data_freshness_test.cpp
   apps/installed_packages_model_test.cpp
   apps/installed_packages_filter_model_test.cpp
@@ -29,6 +35,7 @@ add_executable(test_holonight_packages
   ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdatesModel.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/ExploreModel.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/DataFreshness.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdateStatusClient.cpp
 )
 qt_add_resources(test_holonight_packages workspace_assets
   PREFIX "/HolonightPackages"
@@ -38,16 +45,20 @@ qt_add_resources(test_holonight_packages workspace_assets
 target_include_directories(test_holonight_packages PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/application
   ${CMAKE_CURRENT_SOURCE_DIR}/apps
+  ${CMAKE_CURRENT_SOURCE_DIR}/packaged
   ${PROJECT_SOURCE_DIR}/apps/packages/app
   ${PROJECT_SOURCE_DIR}/src/backends/src)
 set_target_properties(test_holonight_packages PROPERTIES AUTOMOC ON)
+add_dependencies(test_holonight_packages holonight-packaged)
 target_compile_features(test_holonight_packages PRIVATE cxx_std_23)
 target_compile_definitions(test_holonight_packages PRIVATE
   HOLONIGHT_QML_IMPORT_PATH="${HOLONIGHT_QML_IMPORT_PATH}"
   HOLONIGHT_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+  HOLONIGHT_PACKAGED_EXECUTABLE="$<TARGET_FILE:holonight-packaged>"
   HOLONIGHT_QML_SOURCE_DIR="${PROJECT_SOURCE_DIR}/qml")
 target_link_libraries(test_holonight_packages PRIVATE
-  GTest::gtest GTest::gmock Qt6::Gui Qt6::Quick Qt6::Qml Qt6::Test Qt6::Concurrent
+  GTest::gtest GTest::gmock Qt6::Gui Qt6::Quick Qt6::Qml Qt6::Test Qt6::Concurrent Qt6::DBus
+  holonight_packaged_service
   holonight_packages_domain
   holonight_packages_backends
   holonight_packages_persistence
@@ -72,6 +83,9 @@ if(ENABLE_COVERAGE)
     VERBATIM)
 endif()
 
+add_test(NAME packaged_install_layout
+  COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${CMAKE_BINARY_DIR} -DSTAGE_DIR=${CMAKE_CURRENT_BINARY_DIR}/install-stage
+    -P "${CMAKE_CURRENT_SOURCE_DIR}/packaged/check_install.cmake")
 add_test(NAME runtime_qml_import_policy
   COMMAND bash "${PROJECT_SOURCE_DIR}/scripts/check-runtime-qml-imports.sh" "${PROJECT_SOURCE_DIR}")
 add_test(NAME runtime_qml_import_policy_fixtures

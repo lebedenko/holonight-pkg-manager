@@ -14,6 +14,7 @@ Item {
     id: root
 
     property string currentPage: "installed"
+    property string updatesBadgeText: ""
 
     signal pageRequested(string page)
 
@@ -48,6 +49,7 @@ Item {
             HnNavigationDelegate {
                 objectName: "sidebarUpdatesNav"
                 title: qsTr("Updates")
+                badgeText: root.updatesBadgeText
                 checked: root.currentPage === "updates"
                 Layout.fillWidth: true
 

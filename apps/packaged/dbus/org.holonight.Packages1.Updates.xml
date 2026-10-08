@@ -1,0 +1,19 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<node>
+  <interface name="org.holonight.Packages1.Updates">
+    <!-- One of "loading", "ready", "no-databases", "error". -->
+    <property name="State" type="s" access="read"/>
+    <!-- Pending updates, not counting packages ignored in pacman.conf. -->
+    <property name="Count" type="u" access="read"/>
+    <property name="IgnoredCount" type="u" access="read"/>
+    <!-- Total download size of the non-ignored updates. -->
+    <property name="DownloadSizeBytes" type="t" access="read"/>
+    <!-- Oldest sync database mtime in Unix seconds; 0 when unknown. -->
+    <property name="DataAsOf" type="x" access="read"/>
+    <!-- Empty unless State is "error". -->
+    <property name="LastError" type="s" access="read"/>
+    <!-- Starts an evaluation and returns immediately. -->
+    <method name="Refresh"/>
+  </interface>
+</node>

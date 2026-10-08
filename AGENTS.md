@@ -4,7 +4,9 @@ Use Conventional Commits for every new commit: `type(scope): imperative summary`
 
 ## Structure
 
-`apps/packages/` owns the `holonight-packages` executable, application wiring, and QML module registration. Reusable
+`apps/packages/` owns the `holonight-packages` executable, application wiring, and QML module registration.
+`apps/packaged/` owns the `holonight-packaged` session D-Bus service (adaptor, activation files, introspection XML);
+its `UpdateMonitor` lives in `src/application/`. Reusable
 C++ targets live in `src/domain/`, `src/application/`, `src/backends/`, `src/advisor/`, `src/persistence/`, and
 `src/platform/`. QML sources are feature-scoped under `qml/`; design notes and mockups live in `docs/`; tests live in
 `tests/`.
@@ -20,7 +22,8 @@ Use C++23 and the checked-in clang-format/clang-tidy configuration. Classes use 
 `camelBack`, and private data members use `lower_case_`. Add focused GTest coverage with behavior changes and keep QML
 files grouped by feature.
 
-`domain`, `application`, `backends` and `persistence` are static libraries; `advisor` and `platform` remain
+`domain`, `application`, `backends` and `persistence` are static libraries (`application` links Qt Core and
+Concurrent for `UpdateMonitor`); `advisor` and `platform` remain
 interface stubs. Preserve the current ownership and dependency direction.
 
 Application QML imports `QtQuick.Controls as Controls` and qualifies instances, enums and attached properties.

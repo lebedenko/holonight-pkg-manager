@@ -12,6 +12,8 @@ Rectangle {
     required property InstalledPackagesModel installedPackagesModel
     required property UpdatesModel updatesModel
     required property ExploreModel exploreModel
+    // Optional: pending-update count published by holonight-packaged. Null, or available === false, hides the badge.
+    property var updateStatusClient: null
 
     // Installed stays the landing page until the Updates page gains an advisor and update actions.
     property string currentPage: "installed"
@@ -29,6 +31,8 @@ Rectangle {
 
         Sidebar {
             currentPage: root.currentPage
+            updatesBadgeText: root.updateStatusClient && root.updateStatusClient.available
+                              && root.updateStatusClient.count > 0 ? String(root.updateStatusClient.count) : ""
             Layout.preferredWidth: 196
             Layout.fillHeight: true
             Layout.margins: 12

@@ -29,6 +29,7 @@ add_subdirectory(src/backends)
 add_subdirectory(src/advisor)
 add_subdirectory(src/platform)
 add_subdirectory(apps/packages)
+add_subdirectory(apps/packaged)
 
 option(BUILD_TESTS "Build unit tests" OFF)
 option(ENABLE_COVERAGE "Instrument for gcov/gcovr coverage reporting" OFF)

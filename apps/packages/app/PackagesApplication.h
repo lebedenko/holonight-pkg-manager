@@ -8,6 +8,7 @@ class QQuickView;
 class ExploreModel;
 class InstalledPackagesModel;
 class UpdatesModel;
+class UpdateStatusClient;
 
 class PackagesApplication : public QGuiApplication {
   Q_OBJECT
@@ -30,6 +31,7 @@ class PackagesApplication : public QGuiApplication {
   std::unique_ptr<InstalledPackagesModel> installed_packages_model_;
   std::unique_ptr<UpdatesModel> updates_model_;
   std::unique_ptr<ExploreModel> explore_model_;
+  std::unique_ptr<UpdateStatusClient> update_status_client_;
   std::unique_ptr<QQuickView> view_;
   bool ready_ = false;
 };

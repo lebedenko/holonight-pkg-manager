@@ -1,0 +1,7 @@
+[Unit]
+Description=HoloNight Packages update service
+
+[Service]
+Type=dbus
+BusName=org.holonight.Packages1
+ExecStart=@HOLONIGHT_PACKAGED_EXECUTABLE@

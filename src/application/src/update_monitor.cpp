@@ -1,0 +1,120 @@
+#include "holonight_packages_application/update_monitor.h"
+
+#include <QtConcurrentRun>
+#include <QDir>
+#include <QFileInfo>
+
+#include <exception>
+#include <utility>
+
+namespace holonight_packages_application {
+
+UpdateMonitor::UpdateMonitor(std::shared_ptr<holonight_packages_domain::UpdateSource> source,
+                             UpdateMonitorOptions options, QObject* parent)
+    : QObject(parent), source_(std::move(source)), options_(std::move(options)) {
+  debounce_timer_.setSingleShot(true);
+  debounce_timer_.setInterval(options_.debounce);
+  connect(&debounce_timer_, &QTimer::timeout, this, &UpdateMonitor::refresh);
+  connect(&fs_watcher_, &QFileSystemWatcher::directoryChanged, this, &UpdateMonitor::onFilesystemChanged);
+  connect(&fs_watcher_, &QFileSystemWatcher::fileChanged, this, &UpdateMonitor::onFilesystemChanged);
+  connect(&evaluation_watcher_, &QFutureWatcher<LoadResult>::finished, this, &UpdateMonitor::onEvaluationFinished);
+}
+
+UpdateMonitor::~UpdateMonitor() {
+  // The worker holds its own shared_ptr to the source, so waiting here only avoids delivering into a dead watcher.
+  evaluation_watcher_.disconnect(this);
+  evaluation_watcher_.waitForFinished();
+}
+
+void UpdateMonitor::start() {
+  armWatcher();
+  refresh();
+}
+
+void UpdateMonitor::refresh() {
+  debounce_timer_.stop();
+  if (running_) {
+    rerun_ = true;
+    return;
+  }
+  startEvaluation();
+}
+
+// Keep an existing ancestor watched as well, so missing or removed paths can be discovered without polling.
+// Reconcile the watches after every event as directories are created, removed or replaced by rename.
+void UpdateMonitor::armWatcher() {
+  QStringList desired;
+  for (const QString& path : options_.watchPaths) {
+    const QFileInfo info(path);
+    if (info.exists()) {
+      desired.push_back(info.absoluteFilePath());
+    }
+    QDir ancestor = info.absoluteDir();
+    while (!ancestor.exists()) {
+      const QDir parent = QFileInfo(ancestor.absolutePath()).absoluteDir();
+      if (parent.absolutePath() == ancestor.absolutePath()) {
+        break;
+      }
+      ancestor = parent;
+    }
+    if (ancestor.exists()) {
+      desired.push_back(ancestor.absolutePath());
+    }
+  }
+  desired.removeDuplicates();
+  const QStringList watched = fs_watcher_.directories() + fs_watcher_.files();
+  QStringList obsolete;
+  for (const QString& path : watched) {
+    if (!desired.contains(path)) {
+      obsolete.push_back(path);
+    }
+  }
+  if (!obsolete.isEmpty()) {
+    fs_watcher_.removePaths(obsolete);
+  }
+  QStringList missing;
+  for (const QString& path : desired) {
+    if (!watched.contains(path)) {
+      missing.push_back(path);
+    }
+  }
+  if (!missing.isEmpty()) {
+    fs_watcher_.addPaths(missing);
+  }
+}
+
+void UpdateMonitor::onFilesystemChanged() {
+  armWatcher();
+  debounce_timer_.start();
+}
+
+void UpdateMonitor::startEvaluation() {
+  running_ = true;
+  armWatcher();
+  evaluation_watcher_.setFuture(QtConcurrent::run([source = source_] -> LoadResult {
+    try {
+      return source->loadUpdates();
+    } catch (const std::exception& error) {
+      return std::unexpected(holonight_packages_domain::UpdateSourceError{
+          .code = holonight_packages_domain::UpdateSourceErrorCode::Unknown, .message = error.what()});
+    }
+  }));
+}
+
+void UpdateMonitor::onEvaluationFinished() {
+  const LoadResult result = evaluation_watcher_.result();
+  running_ = false;
+
+  const UpdateStatus updated = buildUpdateStatus(result, status_);
+  if (updated != status_) {
+    status_ = updated;
+    emit statusChanged(status_);
+  }
+
+  if (rerun_) {
+    rerun_ = false;
+    startEvaluation();
+  }
+}
+
+}  // namespace holonight_packages_application

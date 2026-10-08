@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=org.holonight.Packages1
+Exec=@HOLONIGHT_PACKAGED_EXECUTABLE@
+SystemdService=holonight-packaged.service
