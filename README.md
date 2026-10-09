@@ -10,7 +10,7 @@ official-repository updates by comparing installed packages with the sync databa
 page searches every package in configured sync repositories, including third-party repositories (with an installed badge and a read-only details panel).
 Both pages' Reload buttons only re-read the databases, so they must be synced with your package manager outside the
 application. It is
-transactionally inert — no install, remove, update, or database-sync action is implemented. Package transactions,
+transactionally inert — no install, remove, or update action is implemented. The Updates page has an opt-in **Check now** control, and `holonight-packaged` checks online on a schedule: it refreshes a private copy of the sync databases under `$XDG_CACHE_HOME/holonight-packages/checkdb`, never the system databases. Package transactions,
 the per-user service, the privileged helper, and desktop/D-Bus integration are not implemented yet.
 
 ## Requirements
@@ -72,6 +72,7 @@ The code is a modular monolith with dependency direction toward the domain:
 | `holonight_packages_domain` | `Package`/`PendingUpdate`/`SyncPackage` models, `PackageSource`/`UpdateSource`/`ExploreSource` ports, source/trust/install-reason concepts |
 | `holonight_packages_application` | Use cases and pure helpers (e.g. `PackageListUseCase`, `summarizeUpdates`, `ExploreIndex`/`searchPackages`) — no Qt/QML types |
 | `holonight_packages_backends` | Native package-manager adapters (`AlpmPackageSource`, `AlpmUpdateSource`, `AlpmExploreSource`, via libalpm) |
+| `holonight_packages_snapshot_store` | libalpm-free JSON store for the last online update snapshot (`update-snapshot.json` under the XDG cache) |
 | `holonight_packages_advisor` | Deterministic update assessment and evidence collection |
 | `holonight_packages_persistence` | Cache (e.g. `AlpmConnectionCache`), settings, and transaction history |
 | `holonight_packages_platform` | D-Bus, notifications, systemd, and desktop integration |
@@ -102,3 +103,18 @@ Logs, source state, image/tool identities, lane results and runtime evidence are
 saved under ignored `build/ci/`. A failed or unavailable required check returns
 nonzero and prints its full log. Container layers may be cached. Publication,
 releases and remote artifact uploads are outside this command.
+
+## Online update check
+
+Only `holonight-packaged` checks. It runs the first check 60 s after start and then every 6 h (±10 min jitter), with 5 min,
+15 min and 1 h backoff after failures. Set the interval in `$XDG_CONFIG_HOME/holonight/packages.toml`
+(`HOLONIGHT_PACKAGES_FILE` overrides the path) or with `holonight-packaged --check-interval-minutes N`:
+
+```toml
+[updates]
+check_interval_minutes = 360   # minimum 15; a missing key uses the default
+```
+
+The GUI's **Check now** calls `org.holonight.Packages1.UpdateCheck.CheckNow()` (bus-activating the service) and reads the
+resulting list from the snapshot file. Tests may sync only fixture repositories under a temp dir via `file://`; run
+`task layering-check` for the policy checks.

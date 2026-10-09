@@ -90,7 +90,8 @@ TEST_F(UpdateMonitorTest, EventLoopStaysResponsiveWhileEvaluationIsBlocked) {
 
 TEST_F(UpdateMonitorTest, FailureAfterSuccessKeepsCountAndReportsError) {
   source_->enqueue(snapshotWithCount(4));
-  source_->enqueue(std::unexpected(UpdateSourceError{UpdateSourceErrorCode::DatabaseOpenFailed, "cannot open"}));
+  source_->enqueue(
+      std::unexpected(UpdateSourceError{.code = UpdateSourceErrorCode::DatabaseOpenFailed, .message = "cannot open"}));
   UpdateMonitor monitor(source_, UpdateMonitorOptions{.debounce = milliseconds{10}});
   QSignalSpy spy(&monitor, &UpdateMonitor::statusChanged);
 
@@ -135,7 +136,7 @@ class UpdateMonitorWatchTest : public UpdateMonitorTest {
     ASSERT_TRUE(file.commit());
   }
 
-  UpdateMonitorOptions options(milliseconds debounce) const {
+  [[nodiscard]] UpdateMonitorOptions options(milliseconds debounce) const {
     return UpdateMonitorOptions{.watchPaths = {syncDir()}, .debounce = debounce};
   }
 

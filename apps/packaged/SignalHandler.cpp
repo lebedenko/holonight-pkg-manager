@@ -2,13 +2,16 @@
 
 #include <QSocketNotifier>
 
+#include <array>
 #include <csignal>
 #include <sys/socket.h>
 #include <unistd.h>
 
 namespace {
 
-int signal_pipe[2] = {-1, -1};  // NOLINT(cppcoreguidelines-avoid-c-arrays,readability-identifier-naming)
+// The POSIX signal callback requires storage independent of QObject lifetime.
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
+std::array<int, 2> signal_pipe{-1, -1};
 
 void onSignal(int /*signal*/) {
   const char byte = 1;
@@ -18,7 +21,7 @@ void onSignal(int /*signal*/) {
 }  // namespace
 
 SignalHandler::SignalHandler(QObject* parent) : QObject(parent) {
-  if (::socketpair(AF_UNIX, SOCK_STREAM, 0, signal_pipe) != 0) {
+  if (::socketpair(AF_UNIX, SOCK_STREAM, 0, signal_pipe.data()) != 0) {
     return;
   }
   auto* notifier = new QSocketNotifier(signal_pipe[1], QSocketNotifier::Read, this);

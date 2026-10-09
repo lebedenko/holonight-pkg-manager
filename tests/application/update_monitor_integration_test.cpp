@@ -58,9 +58,14 @@ TEST(UpdateMonitorIntegration, FixtureStatusMatchesAndSyncDatabasesAreNeverModif
       .pacmanConfPath = updatesFixture() / "pacman.conf",
   };
   auto source = std::make_shared<holonight_packages_backends::AlpmUpdateSource>(source_options);
-  UpdateMonitor monitor(source, UpdateMonitorOptions{.watchPaths = {QString::fromStdString((root / "local").string()),
-                                                                    QString::fromStdString((root / "sync").string())},
-                                                     .debounce = std::chrono::milliseconds{20}});
+  UpdateMonitor monitor(source, UpdateMonitorOptions{
+                                    .watchPaths =
+                                        {
+                                            QString::fromStdString((root / "local").string()),
+                                            QString::fromStdString((root / "sync").string()),
+                                        },
+                                    .debounce = std::chrono::milliseconds{20},
+                                });
   QSignalSpy spy(&monitor, &UpdateMonitor::statusChanged);
 
   monitor.start();

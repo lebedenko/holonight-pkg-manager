@@ -16,4 +16,21 @@
     <!-- Starts an evaluation and returns immediately. -->
     <method name="Refresh"/>
   </interface>
+  <interface name="org.holonight.Packages1.UpdateCheck">
+    <!-- Starts an online check (private copy of the sync databases) and returns immediately.
+         Joins a running check; ignored for 10 s after the previous check completed. -->
+    <method name="CheckNow"/>
+    <!-- False when the backend cannot check online. -->
+    <property name="CanCheck" type="b" access="read"/>
+    <property name="Checking" type="b" access="read"/>
+    <!-- Unix seconds of the latest attempt's completion; 0 = never checked. -->
+    <property name="LastCheckTime" type="x" access="read"/>
+    <property name="LastCheckSucceeded" type="b" access="read"/>
+    <!-- "", "network-unavailable", "repository-unreachable", "busy" or "unknown". -->
+    <property name="LastCheckError" type="s" access="read"/>
+    <!-- Unix seconds of the last successful check; 0 = no snapshot. -->
+    <property name="SnapshotFetchedAt" type="x" access="read"/>
+    <!-- Emitted once per completed check, success or failure. -->
+    <signal name="StatusChanged"/>
+  </interface>
 </node>

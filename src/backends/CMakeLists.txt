@@ -3,11 +3,20 @@ pkg_check_modules(Alpm REQUIRED IMPORTED_TARGET libalpm)
 
 add_library(holonight_packages_backends STATIC
   src/alpm_package_conversion.h
+  src/alpm_error_mapping.h
+  src/alpm_error_mapping.cpp
   src/alpm_explore_source.cpp
+  src/alpm_update_checker.cpp
   src/alpm_package_source.cpp
   src/alpm_update_source.cpp
   src/pacman_config.h
   src/pacman_config.cpp
+  src/pacman_repositories.h
+  src/pacman_repositories.cpp
+  src/pending_update_computation.h
+  src/pending_update_computation.cpp
+  src/scratch_dir.h
+  src/scratch_dir.cpp
   src/sync_database_files.h
   src/sync_database_files.cpp
   src/update_matching.h

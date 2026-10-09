@@ -11,6 +11,8 @@ Item {
     id: root
 
     required property UpdatesModel updatesModel
+    // Optional: the online-check control. Null hides it and leaves the page exactly as it was.
+    property var updateCheckModel: null
 
     readonly property bool hasResult: root.updatesModel.state === UpdatesModel.Updates
                                       || root.updatesModel.state === UpdatesModel.UpToDate
@@ -25,17 +27,10 @@ Item {
         anchors.margins: 16
         spacing: 12
 
-        RowLayout {
-            spacing: 12
+        UpdatesCheckBar {
+            updateCheckModel: root.updateCheckModel
+            titleText: qsTr("Updates")
             Layout.fillWidth: true
-
-            HnLabel {
-                role: HnTypographyRole.Heading
-                font.bold: true
-                rawText: qsTr("Updates")
-                color: HoloniightPalette.textPrimary
-                Layout.fillWidth: true
-            }
 
             Controls.Button {
                 objectName: "updatesReloadButton"

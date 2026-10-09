@@ -56,3 +56,20 @@ for repo in core extra; do
   tar --sort=name --mtime='2026-01-01 00:00:00Z' --owner=0 --group=0 --numeric-owner \
     -C "${scratch}/${repo}" -cf - $(ls "${scratch}/${repo}") | gzip -n >"${here}/sync/${repo}.db"
 done
+
+# sync-old/: the same repositories where nothing is newer than what is installed. Used as the "real" sync directory of
+# online-check tests (the mirror serves sync/) and as a mirror that has nothing new.
+rm -rf "${scratch:?}"/* "${here}/sync-old"
+mkdir -p "${here}/sync-old"
+sync_pkg core alpha 1.0-1 1024 1000
+sync_pkg core beta 1.0-1 2048 1000
+sync_pkg core delta 2.0-1 2048 1000
+sync_pkg core dup 1.0-1 1024 1000
+sync_pkg extra gamma 1.0-1 1024 5000
+sync_pkg extra ignoreme 1.0-1 1024 1000
+sync_pkg extra banana 1.0-1 1024 1000 fruits
+
+for repo in core extra; do
+  tar --sort=name --mtime='2026-01-01 00:00:00Z' --owner=0 --group=0 --numeric-owner \
+    -C "${scratch}/${repo}" -cf - $(ls "${scratch}/${repo}") | gzip -n >"${here}/sync-old/${repo}.db"
+done

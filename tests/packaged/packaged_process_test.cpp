@@ -51,10 +51,16 @@ class PackagedProcessTest : public ::testing::Test {
     environment.insert(QStringLiteral("XDG_DATA_HOME"), home_.filePath(QStringLiteral("data")));
     process->setProcessEnvironment(environment);
     process->setProgram(QString::fromLatin1(HOLONIGHT_PACKAGED_EXECUTABLE));
-    process->setArguments({QStringLiteral("--root"), db_root_, QStringLiteral("--dbpath"), db_root_,
-                           QStringLiteral("--pacman-conf"),
-                           QString::fromStdString((updatesFixture() / "pacman.conf").string()),
-                           QStringLiteral("--debounce-ms"), QStringLiteral("20")});
+    process->setArguments({
+        QStringLiteral("--root"),
+        db_root_,
+        QStringLiteral("--dbpath"),
+        db_root_,
+        QStringLiteral("--pacman-conf"),
+        QString::fromStdString((updatesFixture() / "pacman.conf").string()),
+        QStringLiteral("--debounce-ms"),
+        QStringLiteral("20"),
+    });
     process->start();
     return process;
   }

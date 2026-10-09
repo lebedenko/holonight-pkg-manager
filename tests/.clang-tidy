@@ -1,2 +1,3 @@
 InheritParentConfig: true
-Checks: '-readability-identifier-naming,-cppcoreguidelines-avoid-non-const-global-variables'
+# GTest-generated fixture subclasses access protected state; fake ports expose test controls.
+Checks: '-cppcoreguidelines-non-private-member-variables-in-classes,-readability-identifier-naming,-cppcoreguidelines-avoid-non-const-global-variables'

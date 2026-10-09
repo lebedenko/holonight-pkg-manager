@@ -1,8 +1,13 @@
 #include "ExploreModel.h"
 #include "InstalledPackagesFilterModel.h"
 #include "InstalledPackagesModel.h"
+#include "SnapshotFileReader.h"
+#include "UpdateCheckModel.h"
 #include "UpdatesModel.h"
+#include "fake_clock.h"
 #include "fake_explore_source.h"
+#include "fake_snapshot_store.h"
+#include "fake_update_check_client.h"
 #include "fake_update_source.h"
 #include "mock_package_source.h"
 
@@ -122,10 +127,16 @@ class RuntimeControls : public testing::Test {
     ASSERT_TRUE(QTest::qWaitFor([this] { return !updates_model_->loading(); }, 2000));
     explore_model_ = std::make_unique<ExploreModel>(std::make_shared<holonight_packages_testing::FakeExploreSource>());
     ASSERT_TRUE(QTest::qWaitFor([this] { return !explore_model_->loading(); }, 2000));
+    check_reader_ =
+        std::make_unique<SnapshotFileReader>(check_store_, std::filesystem::path("/nonexistent/snapshot.json"));
+    update_check_model_ = std::make_unique<UpdateCheckModel>(
+        &check_client_, check_reader_.get(), updates_model_.get(), [this] { return check_clock_.now(); },
+        check_clock_.makeTimer());
     view_.setInitialProperties({
         {QStringLiteral("installedPackagesModel"), QVariant::fromValue(model_.get())},
         {QStringLiteral("updatesModel"), QVariant::fromValue(updates_model_.get())},
         {QStringLiteral("exploreModel"), QVariant::fromValue(explore_model_.get())},
+        {QStringLiteral("updateCheckModel"), QVariant::fromValue(update_check_model_.get())},
     });
     view_.setSource(QUrl(QStringLiteral("qrc:/HolonightPackages/workspace/WorkspaceWindow.qml")));
     ASSERT_EQ(view_.status(), QQuickView::Ready);
@@ -155,6 +166,11 @@ class RuntimeControls : public testing::Test {
   }
 
   QQuickView* view() { return &view_; }
+  holonight_packages_testing::FakeUpdateCheckClient& checkClient() { return check_client_; }
+  auto& checkStore() { return *check_store_; }
+  auto& updatesModel() { return *updates_model_; }
+  holonight_packages_testing::FakeClock& checkClock() { return check_clock_; }
+  UpdateCheckModel* updateCheckModel() { return update_check_model_.get(); }
   InstalledPackagesModel* model() { return model_.get(); }
   InstalledPackagesFilterModel* filter() { return filter_; }
 
@@ -164,6 +180,14 @@ class RuntimeControls : public testing::Test {
   std::unique_ptr<InstalledPackagesModel> model_;
   std::unique_ptr<UpdatesModel> updates_model_;
   std::unique_ptr<ExploreModel> explore_model_;
+  // Online-check control: a fake client, no snapshot file, and a fake clock. Declared before the view so the view is
+  // destroyed first.
+  holonight_packages_testing::FakeClock check_clock_;
+  holonight_packages_testing::FakeUpdateCheckClient check_client_;
+  std::shared_ptr<holonight_packages_testing::FakeSnapshotStore> check_store_ =
+      std::make_shared<holonight_packages_testing::FakeSnapshotStore>();
+  std::unique_ptr<SnapshotFileReader> check_reader_;
+  std::unique_ptr<UpdateCheckModel> update_check_model_;
   QStringList diagnostics_;
   QQuickView view_;
   InstalledPackagesFilterModel* filter_ = nullptr;
@@ -337,4 +361,159 @@ TEST_F(RuntimeControls, TableListDetailAndPageScrollIndependentlyToTheirEnds) {
   EXPECT_LE(bounds.bottom(), page_flick->height() + 1);
   EXPECT_GE(bounds.top(), 0);
 }
+// ---- Online update check control (Updates page) --------------------------------------------------------------------
+
+bool isPopupLike(const QObject& object) {
+  for (const QMetaObject* meta = object.metaObject(); meta != nullptr; meta = meta->superClass()) {
+    const QByteArray name = meta->className();
+    // An attached ToolTip (the Reload button's) is only the attachment; it instantiates no popup item until shown.
+    if (name.endsWith("Attached")) {
+      return false;
+    }
+    if (name.contains("Popup") || name.contains("Dialog") || name.contains("ToolTip")) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void collectPopupLike(QObject& root, QList<QObject*>& found) {
+  for (auto* child : root.children()) {
+    if (isPopupLike(*child)) {
+      found.append(child);
+    }
+    collectPopupLike(*child, found);
+  }
+  if (auto* item = qobject_cast<QQuickItem*>(&root)) {
+    for (auto* child : item->childItems()) {
+      if (isPopupLike(*child)) {
+        found.append(child);
+      }
+      collectPopupLike(*child, found);
+    }
+  }
+}
+
+UpdateCheckClientStatus failedStatus(const char* code) {
+  UpdateCheckClientStatus status;
+  status.serviceReachable = true;
+  status.lastCheckTime = 1'760'000'000;
+  status.lastCheckSucceeded = false;
+  status.lastCheckError = QString::fromLatin1(code);
+  return status;
+}
+
+TEST_F(RuntimeControls, UpdateCheckFailureShowsInTheControlRowWithoutAnyPopupOrDialog) {
+  view()->rootObject()->setProperty("currentPage", QStringLiteral("updates"));
+  checkClient().setStatus(failedStatus("network-unavailable"));
+  QCoreApplication::processEvents();
+
+  auto* failure = qobject_cast<QQuickItem*>(object("updatesCheckFailure"));
+  ASSERT_NE(failure, nullptr);
+  EXPECT_TRUE(failure->isVisible());
+  EXPECT_EQ(failure->property("rawText").toString(),
+            QStringLiteral("Last check failed: No network connection to the package servers."));
+  // The failure is in the same row as the Check now button.
+  auto* button = qobject_cast<QQuickItem*>(object("updatesCheckNowButton"));
+  ASSERT_NE(button, nullptr);
+  EXPECT_EQ(failure->parentItem(), button->parentItem());
+
+  // Nothing popup-like exists inside the check bar, and no popup or dialog is open anywhere.
+  QList<QObject*> popups;
+  collectPopupLike(*button->parentItem(), popups);
+  for (auto* popup : popups) {
+    ADD_FAILURE() << "popup-like object in the check bar: " << popup->metaObject()->className();
+  }
+  for (auto* candidate : view()->rootObject()->findChildren<QObject*>()) {
+    if (isPopupLike(*candidate) && candidate->property("visible").isValid()) {
+      EXPECT_FALSE(candidate->property("visible").toBool()) << candidate->metaObject()->className();
+    }
+  }
+}
+
+TEST_F(RuntimeControls, UpdateCheckNotCheckedYetShowsNoAgeLine) {
+  view()->rootObject()->setProperty("currentPage", QStringLiteral("updates"));
+  QCoreApplication::processEvents();
+
+  EXPECT_EQ(object("updatesCheckStatusLine")->property("rawText").toString(), QStringLiteral("Not checked yet"));
+  EXPECT_FALSE(object("updatesCheckFailure")->property("visible").toBool());
+  EXPECT_TRUE(object("updatesCheckNowButton")->property("enabled").toBool());
+}
+
+TEST_F(RuntimeControls, UpdateCheckSnapshotAgeIsShownInTheStatusLine) {
+  view()->rootObject()->setProperty("currentPage", QStringLiteral("updates"));
+  UpdateCheckClientStatus status;
+  status.serviceReachable = true;
+  status.snapshotFetchedAt =
+      std::chrono::duration_cast<std::chrono::seconds>((checkClock().now() - std::chrono::hours{3}).time_since_epoch())
+          .count();
+  checkStore().setStored(holonight_packages_domain::CheckedSnapshot{
+      .snapshot = {.dataAsOf = checkClock().now()},
+      .fetchedAt = checkClock().now() - std::chrono::hours{3},
+  });
+  checkClient().setStatus(status);
+  QCoreApplication::processEvents();
+  EXPECT_TRUE(object("updatesCheckStatusLine")->property("rawText").toString().contains(QStringLiteral("3 h")));
+}
+
+TEST_F(RuntimeControls, UpdateCheckWhileCheckingDisablesTheButtonAndShowsTheBusyIndicator) {
+  view()->rootObject()->setProperty("currentPage", QStringLiteral("updates"));
+  UpdateCheckClientStatus status;
+  status.serviceReachable = true;
+  status.checking = true;
+  checkClient().setStatus(status);
+  QCoreApplication::processEvents();
+
+  EXPECT_FALSE(object("updatesCheckNowButton")->property("enabled").toBool());
+  EXPECT_TRUE(object("updatesCheckBusy")->property("visible").toBool());
+  EXPECT_EQ(object("updatesCheckNowButton")->property("text").toString(), QStringLiteral("Checking…"));
+}
+
+TEST_F(RuntimeControls, UpdateCheckServiceUnavailableShowsInlineAndReEnablesTheButton) {
+  view()->rootObject()->setProperty("currentPage", QStringLiteral("updates"));
+  checkClient().failCheckNow();
+  QCoreApplication::processEvents();
+
+  EXPECT_EQ(object("updatesCheckFailure")->property("rawText").toString(),
+            QStringLiteral("Update service unavailable"));
+  EXPECT_TRUE(object("updatesCheckFailure")->property("visible").toBool());
+  EXPECT_TRUE(object("updatesCheckNowButton")->property("enabled").toBool());
+  EXPECT_FALSE(object("updatesCheckBusy")->property("visible").toBool());
+}
+
+TEST_F(RuntimeControls, UpdateCheckActivatingTheButtonMakesExactlyOneClientCall) {
+  view()->rootObject()->setProperty("currentPage", QStringLiteral("updates"));
+  QCoreApplication::processEvents();
+  auto* button = object("updatesCheckNowButton");
+  ASSERT_NE(button, nullptr);
+  ASSERT_TRUE(QMetaObject::invokeMethod(button, "clicked"));
+  EXPECT_EQ(checkClient().checkNowCalls(), 1);
+}
+
+TEST_F(RuntimeControls, UpdateCheckIsHiddenWhenTheBackendCannotCheck) {
+  view()->rootObject()->setProperty("currentPage", QStringLiteral("updates"));
+  UpdateCheckClientStatus status;
+  status.serviceReachable = true;
+  status.canCheck = false;
+  checkClient().setStatus(status);
+  QCoreApplication::processEvents();
+
+  EXPECT_FALSE(object("updatesCheckNowButton")->property("visible").toBool());
+  EXPECT_FALSE(object("updatesCheckStatusLine")->property("visible").toBool());
+}
+
 }  // namespace
+
+TEST_F(RuntimeControls, UpdateCheckLocalDataHasAnExplicitStatus) {
+  view()->rootObject()->setProperty("currentPage", QStringLiteral("updates"));
+  holonight_packages_domain::CheckedSnapshot online{};
+  online.fetchedAt = checkClock().now() - std::chrono::hours{3};
+  online.snapshot.dataAsOf = std::chrono::system_clock::time_point{};
+  checkStore().setStored(online);
+  UpdateCheckClientStatus status{};
+  status.serviceReachable = true;
+  checkClient().setStatus(status);
+  QCoreApplication::processEvents();
+  EXPECT_EQ(object("updatesCheckStatusLine")->property("rawText").toString(),
+            QStringLiteral("Showing local package data"));
+}

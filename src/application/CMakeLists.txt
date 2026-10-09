@@ -4,6 +4,15 @@ add_library(holonight_packages_application STATIC
   src/orphan_package_filter.cpp
   src/package_size_formatter.cpp
   include/holonight_packages_application/update_monitor.h
+  src/snapshot_selection.cpp
+  src/update_age_format.cpp
+  src/update_check_policy.cpp
+  src/update_check_ports.cpp
+  src/update_check_runtime.cpp
+  include/holonight_packages_application/update_check_scheduler.h
+  src/update_check_scheduler.cpp
+  include/holonight_packages_application/update_check_service.h
+  src/update_check_service.cpp
   src/update_monitor.cpp
   src/update_status.cpp
   src/update_summary.cpp

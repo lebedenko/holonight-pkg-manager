@@ -3,6 +3,7 @@
 #include "DataFreshness.h"
 #include "holonight_packages_application/data_freshness.h"
 #include "holonight_packages_application/package_size_formatter.h"
+#include "holonight_packages_application/snapshot_selection.h"
 #include "holonight_packages_domain/require_non_null.h"
 
 #include <QtConcurrentRun>
@@ -145,11 +146,35 @@ void UpdatesModel::startLoading() {
 void UpdatesModel::onLoadFinished() {
   LoadResult result = watcher_.future().takeResult();
   if (result.has_value()) {
-    applySnapshot(std::move(*result));
+    local_ = *result;
+    applyFreshest();
   } else {
     applyFailure(result.error());
   }
   loading_ = false;
+  emit stateChanged();
+}
+
+void UpdatesModel::applyFreshest() {
+  const bool online = holonight_packages_application::selectFresherSnapshot(local_, online_) ==
+                      holonight_packages_application::SnapshotChoice::Online;
+  displayed_fetched_at_ = online ? online_fetched_at_ : std::nullopt;
+  applySnapshot(online ? *online_ : *local_);
+}
+
+void UpdatesModel::applyCheckedSnapshot(const holonight_packages_domain::CheckedSnapshot& snapshot) {
+  online_ = snapshot.snapshot;
+  online_fetched_at_ = snapshot.fetchedAt;
+  // Without a local result yet the online snapshot is shown at once; the local result is merged in by the same rule
+  // when it arrives.
+  applyFreshest();
+  emit stateChanged();
+}
+
+void UpdatesModel::invalidateCheckedSnapshot() {
+  online_.reset();
+  online_fetched_at_.reset();
+  displayed_fetched_at_.reset();
   emit stateChanged();
 }
 

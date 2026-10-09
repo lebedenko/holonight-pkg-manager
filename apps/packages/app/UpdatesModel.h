@@ -2,6 +2,7 @@
 
 #include "holonight_packages_application/update_summary.h"
 #include "holonight_packages_domain/pending_update.h"
+#include "holonight_packages_domain/update_checker.h"
 #include "holonight_packages_domain/update_source.h"
 
 #include <QAbstractListModel>
@@ -20,6 +21,7 @@
 #include <expected>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <vector>
 
 // Pending official-repository updates for the Updates page. The initial load starts in the constructor; reload()
@@ -97,6 +99,15 @@ class UpdatesModel : public QAbstractListModel {
   // Single-flight: ignored while a load or reload is in progress. Never retried automatically.
   Q_INVOKABLE void reload();
 
+  // Merges an online snapshot (read from the file holonight-packaged writes) with this model's own local result by
+  // the freshness rule: the online snapshot wins unless the local databases are at least as new. A failed check
+  // never reaches this function, so a failure leaves the list unchanged.
+  void applyCheckedSnapshot(const holonight_packages_domain::CheckedSnapshot& snapshot);
+
+  void invalidateCheckedSnapshot();
+  [[nodiscard]] bool hasCheckedSnapshot() const { return online_.has_value(); }
+  [[nodiscard]] const auto& displayedFetchedAt() const { return displayed_fetched_at_; }
+
  signals:
   void stateChanged();
 
@@ -107,12 +118,17 @@ class UpdatesModel : public QAbstractListModel {
   void startLoading();
   void onLoadFinished();
   void applySnapshot(holonight_packages_domain::UpdateSnapshot snapshot);
+  void applyFreshest();
   void applyFailure(const holonight_packages_domain::UpdateSourceError& error);
   [[nodiscard]] bool hasResult() const;
 
   std::shared_ptr<holonight_packages_domain::UpdateSource> source_;
   Clock now_;
   QFutureWatcher<LoadResult> watcher_;
+  std::optional<holonight_packages_domain::UpdateSnapshot> local_;
+  std::optional<holonight_packages_domain::UpdateSnapshot> online_;
+  std::optional<std::chrono::system_clock::time_point> online_fetched_at_;
+  std::optional<std::chrono::system_clock::time_point> displayed_fetched_at_;
   std::vector<holonight_packages_domain::PendingUpdate> updates_;
   holonight_packages_application::UpdateSummary summary_;
   bool loading_ = false;

@@ -1,6 +1,7 @@
 #include "holonight_packages_backends/alpm_update_source.h"
 
 #include <QCryptographicHash>
+#include <QDir>
 #include <QFile>
 #include <QTemporaryDir>
 
@@ -338,6 +339,33 @@ TEST(AlpmUpdateSource, ChangedSyncDatabaseIsReflectedOnNextLoad) {
 
   ASSERT_TRUE(second.has_value()) << second.error().message;
   EXPECT_THAT(namesOf(*second), ElementsAre("alpha", "dup"));
+}
+
+TEST(AlpmUpdateSource, UnreachableServerInPacmanConfChangesNothingAndCreatesNoScratchDirectory) {
+  const TemporaryUpdatesDatabase database;
+  QTemporaryDir cache;
+  ASSERT_TRUE(cache.isValid());
+  const auto conf = database.root().parent_path() / "pacman.conf";
+  {
+    QFile file(QString::fromStdString(conf.string()));
+    ASSERT_TRUE(file.open(QIODevice::WriteOnly));
+    file.write("[options]\nIgnorePkg = ign*\nIgnoreGroup = fruits\n[core]\nServer = file:///nonexistent\n");
+  }
+  auto options = optionsFor(database.root());
+  const auto baseline = AlpmUpdateSource(options).loadUpdates();
+  ASSERT_TRUE(baseline.has_value());
+  options.pacmanConfPath = conf;
+  const auto syncBefore = syncFileStates(database.syncDir());
+  qputenv("XDG_CACHE_HOME", cache.path().toUtf8());
+
+  const auto snapshot = AlpmUpdateSource(options).loadUpdates();
+  qunsetenv("XDG_CACHE_HOME");
+
+  ASSERT_TRUE(snapshot.has_value()) << snapshot.error().message;
+  EXPECT_EQ(namesOf(*snapshot), namesOf(*baseline));
+  EXPECT_EQ(syncFileStates(database.syncDir()), syncBefore);
+  EXPECT_TRUE(QDir(cache.path()).isEmpty()) << "loadUpdates() must not create any scratch directory";
+  EXPECT_FALSE(std::filesystem::exists(database.root() / "db.lck"));
 }
 
 }  // namespace

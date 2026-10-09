@@ -1,5 +1,6 @@
 #include "UpdateStatusService.h"
 
+#include "UpdateCheckAdaptor.h"
 #include "UpdatesAdaptor.h"
 
 #include <QDBusConnectionInterface>
@@ -12,6 +13,44 @@ UpdateStatusService::UpdateStatusService(holonight_packages_application::UpdateM
   new UpdatesAdaptor(this);
   connect(monitor_, &holonight_packages_application::UpdateMonitor::statusChanged, this,
           [this] { emitPropertiesChanged(); });
+}
+
+UpdateStatusService::UpdateStatusService(holonight_packages_application::UpdateMonitor* monitor,
+                                         holonight_packages_application::UpdateCheckService* check, QObject* parent)
+    : UpdateStatusService(monitor, parent) {
+  check_ = check;
+  auto* adaptor = new UpdateCheckAdaptor(this);
+  connect(check_, &holonight_packages_application::UpdateCheckService::statusChanged, this,
+          [this] { emitCheckPropertiesChanged(); });
+  // checkCompleted fires after the properties have been updated, so StatusChanged follows them on the wire.
+  connect(check_, &holonight_packages_application::UpdateCheckService::checkCompleted, adaptor,
+          [adaptor] { emit adaptor->StatusChanged(); });
+}
+
+void UpdateStatusService::requestOnDemandCheck() {
+  if (check_ != nullptr) {
+    check_->requestCheck(holonight_packages_application::CheckOrigin::OnDemand);
+  }
+}
+
+void UpdateStatusService::emitCheckPropertiesChanged() {
+  if (!connection_.isConnected()) {
+    return;
+  }
+  const UpdateCheckAdaptor* adaptor = findChild<UpdateCheckAdaptor*>();
+  QVariantMap changed{
+      {QStringLiteral("CanCheck"), adaptor->canCheck()},
+      {QStringLiteral("Checking"), adaptor->checking()},
+      {QStringLiteral("LastCheckTime"), adaptor->lastCheckTime()},
+      {QStringLiteral("LastCheckSucceeded"), adaptor->lastCheckSucceeded()},
+      {QStringLiteral("LastCheckError"), adaptor->lastCheckError()},
+      {QStringLiteral("SnapshotFetchedAt"), adaptor->snapshotFetchedAt()},
+  };
+  QDBusMessage signal =
+      QDBusMessage::createSignal(QString::fromLatin1(kObjectPath), QStringLiteral("org.freedesktop.DBus.Properties"),
+                                 QStringLiteral("PropertiesChanged"));
+  signal << QString::fromLatin1(kCheckInterfaceName) << changed << QStringList{};
+  connection_.send(signal);
 }
 
 bool UpdateStatusService::registerOn(const QDBusConnection& connection) {

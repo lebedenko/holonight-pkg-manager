@@ -70,7 +70,7 @@ TEST(UpdateStatus, MissingDatabasesGiveNoDatabasesAndClearEarlierValues) {
 TEST(UpdateStatus, FailureAfterSuccessKeepsEarlierCountsAndReportsError) {
   const UpdateStatus earlier = buildUpdateStatus(makeSnapshot(7, 3), std::nullopt);
   const std::expected<UpdateSnapshot, UpdateSourceError> failure =
-      std::unexpected(UpdateSourceError{UpdateSourceErrorCode::DatabaseOpenFailed, "cannot open"});
+      std::unexpected(UpdateSourceError{.code = UpdateSourceErrorCode::DatabaseOpenFailed, .message = "cannot open"});
 
   const UpdateStatus status = buildUpdateStatus(failure, earlier);
 
@@ -84,7 +84,7 @@ TEST(UpdateStatus, FailureAfterSuccessKeepsEarlierCountsAndReportsError) {
 
 TEST(UpdateStatus, RecoveryAfterFailureClearsTheError) {
   const std::expected<UpdateSnapshot, UpdateSourceError> failure =
-      std::unexpected(UpdateSourceError{UpdateSourceErrorCode::Unknown, "boom"});
+      std::unexpected(UpdateSourceError{.code = UpdateSourceErrorCode::Unknown, .message = "boom"});
   const UpdateStatus failed = buildUpdateStatus(failure, std::nullopt);
 
   const UpdateStatus status = buildUpdateStatus(makeSnapshot(2, 0), failed);
@@ -96,7 +96,7 @@ TEST(UpdateStatus, RecoveryAfterFailureClearsTheError) {
 
 TEST(UpdateStatus, FailureWithoutEarlierStatusHasZeroCounts) {
   const std::expected<UpdateSnapshot, UpdateSourceError> failure =
-      std::unexpected(UpdateSourceError{UpdateSourceErrorCode::ConfigurationInvalid, "no conf"});
+      std::unexpected(UpdateSourceError{.code = UpdateSourceErrorCode::ConfigurationInvalid, .message = "no conf"});
 
   const UpdateStatus status = buildUpdateStatus(failure, std::nullopt);
 

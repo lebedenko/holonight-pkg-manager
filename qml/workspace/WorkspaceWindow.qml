@@ -14,6 +14,8 @@ Rectangle {
     required property ExploreModel exploreModel
     // Optional: pending-update count published by holonight-packaged. Null, or available === false, hides the badge.
     property var updateStatusClient: null
+    // Optional: the online-check view-model. Null hides the Check now control.
+    property var updateCheckModel: null
 
     // Installed stays the landing page until the Updates page gains an advisor and update actions.
     property string currentPage: "installed"
@@ -54,6 +56,7 @@ Rectangle {
             UpdatesView {
                 objectName: "updatesPage"
                 updatesModel: root.updatesModel
+                updateCheckModel: root.updateCheckModel
             }
 
             ExploreView {

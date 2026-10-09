@@ -1,14 +1,20 @@
 #include "PackagesApplication.h"
 
+#include "DBusUpdateCheckClient.h"
 #include "ExploreModel.h"
 #include "InstalledPackagesModel.h"
+#include "SnapshotFileReader.h"
+#include "UpdateCheckModel.h"
 #include "UpdateStatusClient.h"
 #include "UpdatesModel.h"
 #include "holonight_packages_application/package_list_use_case.h"
+#include "holonight_packages_application/update_check_runtime.h"
 #include "holonight_packages_backends/alpm_explore_source.h"
 #include "holonight_packages_backends/alpm_package_source.h"
 #include "holonight_packages_backends/alpm_update_source.h"
 #include "holonight_packages_backends/pacman_defaults.h"
+#include "holonight_packages_persistence/cache_locations.h"
+#include "holonight_packages_persistence/json_update_snapshot_store.h"
 
 #include <QDBusConnection>
 #include <QDebug>
@@ -19,6 +25,10 @@
 #include <QQuickView>
 #include <QScreen>
 #include <QVariant>
+
+#include <chrono>
+#include <filesystem>
+#include <string>
 
 PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplication(argc, argv) {
   setApplicationName(QStringLiteral("holonight-packages"));
@@ -48,6 +58,22 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
 
   update_status_client_ = std::make_unique<UpdateStatusClient>(QDBusConnection::sessionBus());
 
+  // Online update check: the GUI neither checks nor writes anything. "Check now" asks holonight-packaged over D-Bus,
+  // and the resulting list is read back from the snapshot file it writes.
+  update_check_client_ = std::make_unique<DBusUpdateCheckClient>(QDBusConnection::sessionBus());
+  const auto cache_dir =
+      holonight_packages_persistence::appCacheDir(holonight_packages_persistence::processEnvironment());
+  snapshot_reader_ = std::make_unique<SnapshotFileReader>(
+      std::make_shared<holonight_packages_persistence::JsonUpdateSnapshotStore>(
+          cache_dir.value_or(std::filesystem::path()) / std::string(holonight_packages_persistence::kSnapshotFileName)),
+      cache_dir.value_or(std::filesystem::path()) / std::string(holonight_packages_persistence::kSnapshotFileName));
+  update_check_model_ = std::make_unique<UpdateCheckModel>(
+      update_check_client_.get(), snapshot_reader_.get(), updates_model_.get(), &std::chrono::system_clock::now,
+      std::make_unique<holonight_packages_application::QtOneShotTimer>());
+  if (cache_dir.has_value()) {
+    snapshot_reader_->start();
+  }
+
   view_ = std::make_unique<QQuickView>();
   if (QFileInfo{applicationFilePath()}.canonicalFilePath() ==
       QFileInfo{QStringLiteral(HOLONIGHT_BUILD_EXECUTABLE)}.canonicalFilePath()) {
@@ -68,6 +94,7 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
       {QStringLiteral("updatesModel"), QVariant::fromValue(updates_model_.get())},
       {QStringLiteral("exploreModel"), QVariant::fromValue(explore_model_.get())},
       {QStringLiteral("updateStatusClient"), QVariant::fromValue(update_status_client_.get())},
+      {QStringLiteral("updateCheckModel"), QVariant::fromValue(update_check_model_.get())},
   });
   view_->setSource(QUrl(QStringLiteral("qrc:/HolonightPackages/workspace/WorkspaceWindow.qml")));
   if (view_->status() == QQuickView::Error) {
@@ -83,6 +110,9 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
 
 PackagesApplication::~PackagesApplication() {
   view_.reset();
+  update_check_model_.reset();
+  snapshot_reader_.reset();
+  update_check_client_.reset();
   update_status_client_.reset();
   explore_model_.reset();
   updates_model_.reset();

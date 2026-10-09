@@ -23,7 +23,8 @@ Use C++23 and the checked-in clang-format/clang-tidy configuration. Classes use 
 files grouped by feature.
 
 `domain`, `application`, `backends` and `persistence` are static libraries (`application` links Qt Core and
-Concurrent for `UpdateMonitor`); `advisor` and `platform` remain
+Concurrent for `UpdateMonitor`); `holonight_packages_snapshot_store` is a libalpm-free static library (JSON update
+snapshot store); `advisor` and `platform` remain
 interface stubs. Preserve the current ownership and dependency direction.
 
 Application QML imports `QtQuick.Controls as Controls` and qualifies instances, enums and attached properties.
@@ -35,7 +36,9 @@ Run policy fixtures, dual-style runtime acceptance and existing QML tests for UI
 acceptance module under `tests/runtime` separate from source-based tests. Its source boundary is MockPackageSource,
 with real presentation/filter models. Preserve table horizontal and independent list/detail/page vertical scrolling.
 Production launch checks may only enumerate ALPM read-only with isolated HOME/XDG and desktop activation.
-No pointer/focus automation or package transactions. See `docs/sdd/unified-qtquick-controls/SPEC.md`.
+No pointer/focus automation or package transactions.
+Carve-out: tests may sync only fixture repositories under a temp dir via file://; nothing runs package transactions.
+See `docs/sdd/unified-qtquick-controls/SPEC.md`.
 
 Developer tooling uses `build/debug`, `build/test`, `build/release` and module-owned `build/deps`.
 See tooling/README.md; run task tooling:refresh explicitly after configuring/building for editor metadata.

@@ -1,8 +1,10 @@
 #include "holonight_packages_application/update_monitor.h"
 
-#include <QtConcurrentRun>
+#include "holonight_packages_application/snapshot_selection.h"
+
 #include <QDir>
 #include <QFileInfo>
+#include <QtConcurrentRun>
 
 #include <exception>
 #include <utility>
@@ -96,7 +98,9 @@ void UpdateMonitor::startEvaluation() {
       return source->loadUpdates();
     } catch (const std::exception& error) {
       return std::unexpected(holonight_packages_domain::UpdateSourceError{
-          .code = holonight_packages_domain::UpdateSourceErrorCode::Unknown, .message = error.what()});
+          .code = holonight_packages_domain::UpdateSourceErrorCode::Unknown,
+          .message = error.what(),
+      });
     }
   }));
 }
@@ -105,15 +109,36 @@ void UpdateMonitor::onEvaluationFinished() {
   const LoadResult result = evaluation_watcher_.result();
   running_ = false;
 
-  const UpdateStatus updated = buildUpdateStatus(result, status_);
-  if (updated != status_) {
-    status_ = updated;
-    emit statusChanged(status_);
+  if (result.has_value()) {
+    local_ = *result;
+  }
+  if (online_.has_value() && result.has_value()) {
+    applyFreshest();
+  } else {
+    publish(buildUpdateStatus(result, status_));
   }
 
   if (rerun_) {
     rerun_ = false;
     startEvaluation();
+  }
+}
+
+void UpdateMonitor::adoptOnline(const holonight_packages_domain::CheckedSnapshot& snapshot) {
+  online_ = snapshot.snapshot;
+  applyFreshest();
+}
+
+void UpdateMonitor::applyFreshest() {
+  const bool online = selectFresherSnapshot(local_, online_) == SnapshotChoice::Online;
+  const holonight_packages_domain::UpdateSnapshot& chosen = online ? *online_ : *local_;
+  publish(buildUpdateStatus(chosen, status_));
+}
+
+void UpdateMonitor::publish(const UpdateStatus& updated) {
+  if (updated != status_) {
+    status_ = updated;
+    emit statusChanged(status_);
   }
 }
 

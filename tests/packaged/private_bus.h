@@ -2,6 +2,7 @@
 
 #include <QByteArray>
 #include <QProcess>
+#include <QProcessEnvironment>
 #include <QString>
 
 namespace holonight_packages_testing {
@@ -22,6 +23,9 @@ class PrivateBus {
       daemon_.waitForFinished(3000);
     }
   }
+
+  // Environment for the daemon (and so for services it activates). Call before start(); the default is the caller's.
+  void setProcessEnvironment(const QProcessEnvironment& environment) { daemon_.setProcessEnvironment(environment); }
 
   // Returns false (with a remediation message in error()) when dbus-daemon cannot be started.
   [[nodiscard]] bool start() {

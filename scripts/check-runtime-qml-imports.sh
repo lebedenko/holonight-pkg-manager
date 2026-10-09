@@ -45,6 +45,13 @@ while IFS= read -r qml_file; do
   fi
 done < <(find "${qml_dir}" -type f -name '*.qml' -print | sort)
 
+# The online-check bar reports failures inline: it must not instantiate a tooltip, popup, dialog or menu.
+check_bar="${qml_dir}/updates/UpdatesCheckBar.qml"
+if [[ -f "${check_bar}" ]] && rg -n '\b(ToolTip|Popup|Dialog|Menu|Overlay)\b' "${check_bar}"; then
+  echo "${check_bar}: the check bar must show failures inline, without ToolTip, Popup, Dialog, Menu or Overlay" >&2
+  failed=1
+fi
+
 if rg -n '^import holonight\.(core|controls)' "${qml_dir}"; then
   echo "lowercase canonical module import found" >&2
   failed=1

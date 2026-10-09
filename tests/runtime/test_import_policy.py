@@ -33,4 +33,21 @@ with tempfile.TemporaryDirectory() as directory:
         check(False)
     path.unlink()
     check(True)
+    # The check bar has its own rules on top of the shared ones; each mutation must fail on its own.
+    bar = fixture / "qml/updates/UpdatesCheckBar.qml"
+    original = bar.read_text()
+    for old, new in [
+        ("Controls.Button {", "Button {"),
+        ("import QtQuick.Controls as Controls", "import QtQuick.Controls"),
+        ("import QtQuick.Controls as Controls", "import QtQuick.Controls as Wrong"),
+        ("objectName: \"updatesCheckNowButton\"", "objectName: \"updatesCheckNowButton\"\n            Controls.ToolTip.visible: hovered"),
+        ("objectName: \"updatesCheckNowButton\"", "objectName: \"updatesCheckNowButton\"\n            Controls.Popup {}"),
+        ("Controls.ProgressBar {", "Controls.Dialog {"),
+        ("Controls.Button {", "Controls.Menu {"),
+    ]:
+        assert old in original, old
+        bar.write_text(original.replace(old, new, 1))
+        check(False)
+    bar.write_text(original)
+    check(True)
 print("Independent runtime import policy fixtures passed")

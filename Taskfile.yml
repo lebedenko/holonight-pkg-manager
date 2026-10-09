@@ -123,6 +123,11 @@ tasks:
     desc: Check QML runtime import contracts
     cmds:
     - python3 tooling/qml_policy.py
+  layering-check:
+    desc: Check layering and safety policy (libalpm, processes, transactions, GUI/service split, test sync carve-out)
+    cmds:
+    - python3 scripts/check-layering.py
+    - python3 tests/policy/test_layering_policy.py
   qmltypes-check:
     desc: Build and verify generated QML metadata
     cmds:
@@ -146,4 +151,5 @@ tasks:
     - task: format-check
     - task: lint
     - task: qml-import-check
+    - task: layering-check
     - task: qmltypes-check

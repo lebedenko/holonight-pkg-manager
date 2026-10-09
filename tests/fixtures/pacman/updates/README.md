@@ -19,6 +19,11 @@ cases (missing or empty `sync/`) are created in temporary directories by the tes
 `IgnorePkg`/`IgnoreGroup` inside repository sections that must not be collected (`alpha` would otherwise be ignored).
 It contains no servers and no URLs.
 
+## `sync-old/`
+
+The same two repositories with every package at the installed version, so nothing is newer. Online-check tests use it
+as the "real" `sync/` directory (the file:// mirror serves `sync/`, which is newer) and as a mirror with nothing new.
+
 ## Regenerating
 
 `local/` and the binary `sync/*.db` files (gzip tars of per-package `desc` files, pacman's sync database format) are
