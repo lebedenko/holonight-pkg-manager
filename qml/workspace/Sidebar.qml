@@ -15,6 +15,7 @@ Item {
 
     property string currentPage: "installed"
     property string updatesBadgeText: ""
+    property string checkHistoryText: qsTr("Not checked yet")
 
     signal pageRequested(string page)
 
@@ -109,7 +110,10 @@ Item {
         HnLabel {
             objectName: "sidebarLastSyncedLabel"
             role: HnTypographyRole.Caption
-            rawText: qsTr("Last synced —")
+            rawText: root.checkHistoryText
+            wrapMode: Text.Wrap
+            Layout.fillWidth: true
+            Layout.minimumWidth: 0
             color: HoloniightPalette.textMuted
             Layout.leftMargin: 8
         }

@@ -74,6 +74,7 @@ class UpdateMonitor : public QObject {
   std::optional<holonight_packages_domain::UpdateSnapshot> online_;
   bool running_ = false;
   bool rerun_ = false;
+  bool dirty_ = false;
 };
 
 }  // namespace holonight_packages_application

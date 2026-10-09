@@ -230,7 +230,7 @@ State machine (home thread): `Idle -> Running -> Idle`.
 
 The existing displayed list comes from the local comparison (`loadUpdates`). An online snapshot is newer information about the mirrors, but the local comparison is better information about the installed set. A rule decides which one is shown:
 
-**DECIDED (user, 2026-10-09) P-13**: `selectFresherSnapshot(local, online)` returns the online snapshot unless the local result's `dataAsOf` (oldest real sync database mtime) is greater than or equal to the online snapshot's `dataAsOf`. In that case the local result wins.
+**SUPERSEDED by repository selection below (2026-10-09). Historical P-13**: `selectFresherSnapshot(local, online)` returns the online snapshot unless the local result's `dataAsOf` (oldest real sync database mtime) is greater than or equal to the online snapshot's `dataAsOf`. In that case the local result wins.
 
 Why this rule:
 
@@ -728,7 +728,7 @@ File: `<appCacheDir>/update-snapshot.json` (`$XDG_CACHE_HOME/holonight-packages/
 - **Load** (REQ-F-033/034), read-only in every process: a missing file gives `{nullopt, Absent}`. A file that is truncated, not an object, has a missing or wrong-typed field, an unknown `schemaVersion`, a `count` mismatch, or is larger than 8 MiB gives `{nullopt, Invalid}` and is left untouched. The reader then reports "no snapshot" (`SnapshotFetchedAt == 0`).
 - **Discard** (REQ-F-034): `discardInvalid()` removes the file if it is still invalid. Only `holonight-packaged`, the single writer, calls it (from `UpdateCheckService::start()`). The GUI process never does, so a GUI that reads while packaged is mid-write can never destroy a good file.
 - **Writer and readers.** Packaged writes; the GUI reads. Because the write is `rename`, a reader sees either the old or the new complete file, never a partial one. A GUI read that races a first-ever write sees `Absent` and picks the file up on the next watcher event.
-- **Save** (REQ-F-032, REQ-NF-004): `mkstemp` in the same directory (mode 0600), `write`, `fsync`, `rename` over the target, `fsync` of the directory. Any failure removes the temporary file and leaves the old file untouched. `JsonUpdateSnapshotStore` takes a `beforeRename` fault-injection hook used by the REQ-NF-004 test. Save failures are logged and the in-memory snapshot stays (REQ-F-035). The old file's bytes are unchanged in that case.
+- **Save** (REQ-F-032, REQ-NF-004): `mkstemp` in the same directory (mode 0600), `write`, `fsync`, `rename` over the target, `fsync` of the directory. Any failure removes the temporary file and leaves the old file untouched. `JsonUpdateSnapshotStore` takes a `beforeRename` fault-injection hook used by the REQ-NF-004 test. Save failures are logged and the previously published in-memory result stays (REQ-F-035). The old file's bytes are unchanged in that case.
 - Failed checks never call `save` (REQ-F-032).
 
 ## 7. Resolving the configuration items
@@ -959,7 +959,7 @@ Nothing here is a proposal any more. The only items not yet closed are the verif
 | R-8 | Flaky timing tests. | Fake clock, fake timer, seeded random everywhere. |
 | R-9 | Signature verification as non-root may need writable gnupg state, so `Required` configurations could fail for every user. | Spike S-2. The failure is fail-closed (`Unknown`), never a weaker level. |
 | R-10 | The monotonic `QTimer` can fire late after a long suspend. | Acceptable: the next check runs soon after resume. A wall-clock sanity check can be added later. |
-| R-11 | Installed-set change without a sync does not flip the freshness rule, so an old online list can show already-installed updates. | The age line is shown; the next check replaces it. Rare, because `pacman -Syu` syncs first. |
+| R-11 | Installed-set change without a sync does not flip the freshness rule, so an old online list can show already-installed updates. | Offline catalog reevaluation on installed-database events removes installed upgrades without another online check. |
 | R-12 | `src/persistence` exposes libalpm headers to anything that links it. | The new store sits in its own target. The layering script checks includes, not include paths. |
 | R-13 | (Largely resolved by P-14 reversed.) The GUI-versus-packaged `Busy` collision no longer exists because only packaged checks. What remains: the GUI shows a stale `Checking` state if packaged dies mid-check, and `Busy` can still appear for a second packaged instance or a wedged thread. | The GUI clears its busy state when the bus name disappears (service watcher). `CheckNow()` while `Checking` is a no-op on the service. The `flock` still returns `Busy` for the leftover cases. |
 | R-14 | (Largely resolved.) libalpm's libcurl global initialisation race cannot involve the GUI because the GUI performs no network transfers. In packaged, a second handle in the same process is only the existing local-only `AlpmConnectionCache`. | Initialise a throwaway handle on the home thread at packaged start, or confirm in spike S-1. |
@@ -1044,3 +1044,18 @@ The interval resolver derives a safe minute bound from INT_MAX milliseconds incl
 The GUI retains fetchedAt with the checked data. Service SnapshotFetchedAt remains mirrored independently and never supplies displayed age. Selection changes, including asynchronous local loads, notify the check model. A valid online snapshot with fresher local rows displays “Showing local package data”. Missing, invalid or unreadable snapshot loads invalidate cached online metadata on transition while retaining rows; subsequent successful local loads select local data. Property changes, completion signals and file watching all trigger read-only hand-off.
 
 Successful CheckNow method replies acknowledge reachability even for cooldown no-ops. Completion detaches the completed run's callbacks before idle notification, and captures its outcome and snapshot before synchronous observers can start another run. Timestamp parsing checks the system_clock range before conversion. Pacman includes recursively expand in section context and repeated SigLevel directives accumulate partial settings.
+
+
+### Repository catalogs and independent check history (2026-10-09)
+
+Production AlpmUpdateSource reads the hash-keyed provenance beside the unchanged version-1 snapshot. JsonUpdateSnapshotStore copies complete checked databases into a UUID catalog generation, verifies their digests, writes the versioned provenance sidecar, then atomically replaces the snapshot. Only replacement publishes the result. Failed publication preserves the previous in-memory result as well as the old file. Catalog serialization and locking remain libalpm-free.
+
+Repository identities hash repository name, resolved servers, effective signature policy, GPG directory and architectures. For each repository in current configured order, equivalent digests use checked data; otherwise local wins only with a strictly later repository timestamp. Missing or incompatible checked entries use local data. Fresh libalpm handles compare the selected catalog against current installed packages with existing ignore and version rules, using a private temporary layout. They perform no downloads or transactions. Both the GUI and UpdateMonitor use this backend evaluation; aggregate snapshot selection remains only for legacy ports and snapshot-only fallback rows.
+
+The catalog lock uses shared leases throughout backend evaluation and exclusive leases throughout publication and reclamation. Readers validate generation names, regular database files and digests. After snapshot replacement, the writer reclaims obsolete generations and sidecars while readers are excluded. Failed checks and timed-out workers cannot publish a generation. Scratch run cleanup is independent of retained catalogs.
+
+Installed database files and directories, sync paths, configuration and publication paths are watched with a debounce. Events during an active evaluation cause another evaluation; Reload follows the same path. Offline results never change check completion metadata.
+
+Check completion history is stored separately in updates snapshot history JSON and mirrored through the existing D-Bus properties. Acknowledgements do not advance history. The page and sidebar bind the latest completion time and outcome separately from source labels and database metadata age. Busy states and failures retain displayed rows; local-only zero results use qualified local wording. Legacy or damaged provenance retains saved rows labeled previously loaded until valid evaluation succeeds.
+
+Repository timestamps retain nanoseconds as decimal strings in the provenance sidecar, alongside metadata epoch seconds. This avoids JSON numeric precision loss and preserves equal-time selection across publication and restart. A valid snapshot without usable provenance is returned by the shared backend as previously loaded rows, so page and service count remain consistent. Missing current repository data produces an evaluation failure that retains the last usable rows and qualifies the GUI source.

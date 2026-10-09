@@ -70,16 +70,28 @@ int main(int argc, char* argv[]) {
   }
 
   const QString dbpath = parser.value(dbpath_option);
+  const auto cache_dir =
+      holonight_packages_persistence::appCacheDir(holonight_packages_persistence::processEnvironment());
   auto source = std::make_shared<holonight_packages_backends::AlpmUpdateSource>(
       holonight_packages_backends::AlpmUpdateSourceOptions{
           .databaseRoot = parser.value(root_option).toStdString(),
           .databasePath = dbpath.toStdString(),
           .pacmanConfPath = parser.value(conf_option).toStdString(),
+          .snapshotFile = cache_dir.value_or(std::filesystem::path()) /
+                          std::string(holonight_packages_persistence::kSnapshotFileName),
       });
   holonight_packages_application::UpdateMonitor monitor(
       std::move(source),
       holonight_packages_application::UpdateMonitorOptions{
-          .watchPaths = {QDir(dbpath).filePath(QStringLiteral("local")), QDir(dbpath).filePath(QStringLiteral("sync"))},
+          .watchPaths =
+              {
+                  QDir(dbpath).filePath(QStringLiteral("local")),
+                  QDir(dbpath).filePath(QStringLiteral("sync")),
+                  parser.value(conf_option),
+                  QString::fromStdString((cache_dir.value_or(std::filesystem::path()) /
+                                          std::string(holonight_packages_persistence::kSnapshotFileName))
+                                             .string()),
+              },
           .debounce = std::chrono::milliseconds{debounce_ms},
       });
 
@@ -96,8 +108,6 @@ int main(int argc, char* argv[]) {
   holonight_packages_application::UpdateCheckPolicy policy = policy_defaults;
   policy.interval = settings.checkInterval;
 
-  const auto cache_dir =
-      holonight_packages_persistence::appCacheDir(holonight_packages_persistence::processEnvironment());
   if (!cache_dir.has_value()) {
     qWarning() << "holonight-packaged: neither XDG_CACHE_HOME nor HOME is set; online update checks are disabled";
   }

@@ -299,7 +299,7 @@ TEST_F(UpdateCheckServiceTest, SuccessSavesAndFailureNeverSaves) {
   EXPECT_EQ(store_->stored()->snapshot.updates.size(), 2U);
 }
 
-TEST_F(UpdateCheckServiceTest, FailedSaveKeepsTheNewCountInMemoryAndLogsIt) {
+TEST_F(UpdateCheckServiceTest, FailedSavePreservesPublishedResultAndLogsIt) {
   store_->failSaves(true);
   static std::mutex mutex;
   static std::vector<std::string> lines;
@@ -312,8 +312,8 @@ TEST_F(UpdateCheckServiceTest, FailedSaveKeepsTheNewCountInMemoryAndLogsIt) {
   runCheck();
   qInstallMessageHandler(previous);
 
-  EXPECT_EQ(*service_->status().count, 5);
-  EXPECT_TRUE(service_->status().lastCheckSucceeded);
+  EXPECT_FALSE(service_->status().count.has_value());
+  EXPECT_FALSE(service_->status().lastCheckSucceeded);
   bool logged = false;
   for (const std::string& line : lines) {
     logged = logged || line.contains("cannot save");

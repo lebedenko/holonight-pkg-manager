@@ -36,6 +36,15 @@ UpdateCheckService::~UpdateCheckService() {
 }
 
 void UpdateCheckService::start() {
+  if (const auto history = dependencies_.store->loadHistory()) {
+    UpdateCheckStatus updated = status_;
+    updated.hasCheckResult = true;
+    updated.lastCheckTime = history->completed;
+    updated.lastCheckSucceeded = history->succeeded;
+    updated.lastError = history->error;
+    last_completed_ = history->completed;
+    setStatus(updated);
+  }
   const auto loaded = dependencies_.store->load();
   if (!loaded) {
     qWarning().noquote() << "update check: cannot read the stored snapshot:"
@@ -132,9 +141,9 @@ void UpdateCheckService::onWorkerFinished() {
   UpdateCheckOutcome outcome{};
   outcome.completedAt = worker.completedAt;
   outcome.origin = running_origin_;
-  outcome.succeeded = worker.result.has_value();
-  if (!worker.result) {
-    outcome.error = worker.result.error().code;
+  outcome.succeeded = worker.result.has_value() && !worker.saveError.has_value();
+  if (!outcome.succeeded) {
+    outcome.error = worker.result ? UpdateCheckErrorCode::Unknown : worker.result.error().code;
   }
 
   UpdateCheckStatus updated = status_;
@@ -158,6 +167,11 @@ void UpdateCheckService::onWorkerFinished() {
     last_good_ = CheckedSnapshot{.snapshot = *worker.result, .fetchedAt = worker.completedAt};
     updated.snapshotFetchedAt = worker.completedAt;
     updated.count = summarizeUpdates(last_good_->snapshot.updates).updateCount;
+  }
+  if (const auto saved = dependencies_.store->saveHistory(
+          {.completed = outcome.completedAt, .succeeded = outcome.succeeded, .error = outcome.error});
+      !saved) {
+    qWarning() << "update check: cannot save check history";
   }
   const auto completedSnapshot = last_good_;
   setStatus(updated);

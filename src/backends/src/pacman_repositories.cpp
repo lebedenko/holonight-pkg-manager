@@ -120,6 +120,7 @@ struct RawRepository {
 };
 
 struct Parser {
+  std::vector<std::filesystem::path> configuration_files;
   std::string machine;
   std::string gpgdir;
   std::vector<std::string> architectures;
@@ -160,6 +161,7 @@ std::expected<void, std::string> Parser::beginSection(std::string_view line, std
 }
 
 std::expected<void, std::string> Parser::readFile(const std::filesystem::path& path, int depth, std::string& section) {
+  configuration_files.push_back(path);
   if (depth > kMaxIncludeDepth) {
     return std::unexpected("Include nesting is too deep at " + path.string());
   }
@@ -286,6 +288,7 @@ std::expected<PacmanRepositories, std::string> parsePacmanRepositories(const std
   }
 
   PacmanRepositories result;
+  result.configuration_files = parser.configuration_files;
   if (!parser.gpgdir.empty()) {
     result.gpg_directory = parser.gpgdir;
   }
@@ -293,6 +296,9 @@ std::expected<PacmanRepositories, std::string> parsePacmanRepositories(const std
   result.default_sig_level = merge(parser.global_sig, kPacmanDefaultSigLevel);
   const std::string& arch = result.architectures.front();
   for (const RawRepository& raw : parser.repositories) {
+    if (raw.name.empty() || raw.name.contains('/') || raw.name.contains("..")) {
+      return std::unexpected("Repository name is not a safe database identity");
+    }
     if (raw.servers.empty()) {
       return std::unexpected("Repository '" + raw.name + "' has no Server");
     }

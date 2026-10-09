@@ -70,10 +70,28 @@ ColumnLayout {
     }
 
     HnLabel {
+        objectName: "updatesCheckHistory"
+        role: HnTypographyRole.Caption
+        rawText: root.updateCheckModel ? root.updateCheckModel.checkHistoryText : ""
+        visible: root.updateCheckModel !== null
+        color: HoloniightPalette.textMuted
+        Layout.fillWidth: true
+    }
+
+    HnLabel {
+        objectName: "updatesDataSource"
+        role: HnTypographyRole.Caption
+        rawText: root.updateCheckModel ? root.updateCheckModel.sourceText : ""
+        visible: root.updateCheckModel !== null
+        color: HoloniightPalette.textMuted
+        Layout.fillWidth: true
+    }
+
+    HnLabel {
         objectName: "updatesCheckStatusLine"
         role: HnTypographyRole.Caption
         rawText: root.checkAvailable ? root.updateCheckModel.statusLineText : ""
-        visible: root.checkAvailable
+        visible: root.checkAvailable && root.updateCheckModel.snapshotAgeText.length > 0
         color: HoloniightPalette.textMuted
         Layout.fillWidth: true
     }

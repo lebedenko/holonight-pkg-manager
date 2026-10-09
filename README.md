@@ -106,6 +106,17 @@ releases and remote artifact uploads are outside this command.
 
 ## Online update check
 
+Run the service directly from the build tree without installing it:
+
+```sh
+task run:packaged
+task run:packaged -- --check-interval-minutes 30
+```
+
+This builds the selected preset (`debug` by default) and runs the service in the foreground on your current session
+D-Bus. Run the GUI in another terminal with `task run`; stop the service with Ctrl+C. Use `PRESET=test` or
+`PRESET=release` to select another build, and pass service arguments after `--`.
+
 Only `holonight-packaged` checks. It runs the first check 60 s after start and then every 6 h (±10 min jitter), with 5 min,
 15 min and 1 h backoff after failures. Set the interval in `$XDG_CONFIG_HOME/holonight/packages.toml`
 (`HOLONIGHT_PACKAGES_FILE` overrides the path) or with `holonight-packaged --check-interval-minutes N`:

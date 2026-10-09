@@ -32,6 +32,7 @@ Rectangle {
         spacing: 0
 
         Sidebar {
+            checkHistoryText: root.updateCheckModel ? root.updateCheckModel.checkHistoryText : qsTr("Not checked yet")
             currentPage: root.currentPage
             updatesBadgeText: root.updateStatusClient && root.updateStatusClient.available
                               && root.updateStatusClient.count > 0 ? String(root.updateStatusClient.count) : ""

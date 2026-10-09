@@ -517,3 +517,31 @@ TEST_F(RuntimeControls, UpdateCheckLocalDataHasAnExplicitStatus) {
   EXPECT_EQ(object("updatesCheckStatusLine")->property("rawText").toString(),
             QStringLiteral("Showing local package data"));
 }
+
+TEST_F(RuntimeControls, PageAndSidebarCheckHistoryRemainIndependentOfLocalRowsAndBusyState) {
+  view()->rootObject()->setProperty("currentPage", QStringLiteral("updates"));
+  UpdateCheckClientStatus status{};
+  status.serviceReachable = true;
+  status.lastCheckTime =
+      std::chrono::duration_cast<std::chrono::seconds>(checkClock().now().time_since_epoch()).count();
+  status.lastCheckSucceeded = true;
+  checkClient().setStatus(status);
+  QCoreApplication::processEvents();
+  const auto history = object("updatesCheckHistory")->property("rawText").toString();
+  EXPECT_TRUE(history.contains(QStringLiteral("succeeded")));
+  EXPECT_EQ(object("sidebarLastSyncedLabel")->property("rawText").toString(), history);
+  EXPECT_EQ(object("updatesDataSource")->property("rawText").toString(), QStringLiteral("Local package data"));
+  status.checking = true;
+  checkClient().setStatus(status);
+  QCoreApplication::processEvents();
+  EXPECT_EQ(object("updatesCheckHistory")->property("rawText").toString(), history);
+  status.checking = false;
+  status.lastCheckSucceeded = false;
+  status.lastCheckError = QStringLiteral("network-unavailable");
+  ++status.lastCheckTime;
+  checkClient().setStatus(status);
+  QCoreApplication::processEvents();
+  EXPECT_TRUE(object("updatesCheckHistory")->property("rawText").toString().contains(QStringLiteral("failed")));
+  EXPECT_EQ(object("sidebarLastSyncedLabel")->property("rawText").toString(),
+            object("updatesCheckHistory")->property("rawText").toString());
+}

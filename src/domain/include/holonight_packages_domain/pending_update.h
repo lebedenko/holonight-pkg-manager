@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -27,6 +28,16 @@ struct PendingUpdate {
   bool operator==(const PendingUpdate&) const = default;
 };
 
+struct RepositoryProvenance {
+  std::string name;
+  std::string identity;
+  std::string digest;
+  std::chrono::system_clock::time_point timestamp;
+  std::filesystem::path database;
+  bool checked = false;
+  bool operator==(const RepositoryProvenance&) const = default;
+};
+
 struct UpdateSnapshot {
   // Includes ignored rows; order is unspecified.
   std::vector<PendingUpdate> updates;
@@ -36,6 +47,11 @@ struct UpdateSnapshot {
   // Modification time of the oldest sync database. Meaningless when databasesFound is false.
   // NOLINTNEXTLINE(readability-identifier-naming): preserve the established public data contract.
   std::chrono::system_clock::time_point dataAsOf;
+
+  // Internal only: never included in the public snapshot JSON schema.
+  std::vector<RepositoryProvenance> repositories;
+  bool evaluated = false;
+  bool previously_loaded = false;
 
   bool operator==(const UpdateSnapshot&) const = default;
 };

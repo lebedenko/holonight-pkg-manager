@@ -11,6 +11,7 @@ add_library(holonight_packages_backends STATIC
   src/alpm_update_source.cpp
   src/pacman_config.h
   src/pacman_config.cpp
+  src/repository_catalog.h
   src/pacman_repositories.h
   src/pacman_repositories.cpp
   src/pending_update_computation.h

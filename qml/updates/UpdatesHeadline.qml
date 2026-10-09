@@ -84,6 +84,14 @@ HnSurfaceFrame {
             }
 
             HnLabel {
+                role: HnTypographyRole.Caption
+                rawText: qsTr("Data as of describes repository database metadata.")
+                color: HoloniightPalette.textMuted
+                wrapMode: Text.Wrap
+                Layout.fillWidth: true
+            }
+
+            HnLabel {
                 objectName: "updatesHeadlineOfficialOnly"
                 role: HnTypographyRole.Caption
                 rawText: root.updatesModel.officialOnlyNote

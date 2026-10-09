@@ -3,6 +3,7 @@
 #include "holonight_packages_application/snapshot_selection.h"
 
 #include <QDir>
+#include <QDirIterator>
 #include <QFileInfo>
 #include <QtConcurrentRun>
 
@@ -10,6 +11,19 @@
 #include <utility>
 
 namespace holonight_packages_application {
+
+namespace {
+void appendDirectoryContents(const QFileInfo& info, QStringList& paths) {
+  if (!info.isDir()) {
+    return;
+  }
+  QDirIterator entries(info.absoluteFilePath(), QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot,
+                       QDirIterator::Subdirectories);
+  while (entries.hasNext()) {
+    paths.push_back(entries.next());
+  }
+}
+}  // namespace
 
 UpdateMonitor::UpdateMonitor(std::shared_ptr<holonight_packages_domain::UpdateSource> source,
                              UpdateMonitorOptions options, QObject* parent)
@@ -46,10 +60,17 @@ void UpdateMonitor::refresh() {
 // Reconcile the watches after every event as directories are created, removed or replaced by rename.
 void UpdateMonitor::armWatcher() {
   QStringList desired;
-  for (const QString& path : options_.watchPaths) {
+  QStringList paths = options_.watchPaths;
+  for (const auto& path : source_->watchPaths()) {
+    if (!path.empty()) {
+      paths.append(QString::fromStdString(path.string()));
+    }
+  }
+  for (const QString& path : paths) {
     const QFileInfo info(path);
     if (info.exists()) {
       desired.push_back(info.absoluteFilePath());
+      appendDirectoryContents(info, desired);
     }
     QDir ancestor = info.absoluteDir();
     while (!ancestor.exists()) {
@@ -86,6 +107,9 @@ void UpdateMonitor::armWatcher() {
 }
 
 void UpdateMonitor::onFilesystemChanged() {
+  if (running_) {
+    dirty_ = true;
+  }
   armWatcher();
   debounce_timer_.start();
 }
@@ -108,6 +132,11 @@ void UpdateMonitor::startEvaluation() {
 void UpdateMonitor::onEvaluationFinished() {
   const LoadResult result = evaluation_watcher_.result();
   running_ = false;
+  if (std::exchange(dirty_, false)) {
+    rerun_ = false;
+    startEvaluation();
+    return;
+  }
 
   if (result.has_value()) {
     local_ = *result;
@@ -126,7 +155,12 @@ void UpdateMonitor::onEvaluationFinished() {
 
 void UpdateMonitor::adoptOnline(const holonight_packages_domain::CheckedSnapshot& snapshot) {
   online_ = snapshot.snapshot;
-  applyFreshest();
+  if (snapshot.snapshot.repositories.empty()) {
+    applyFreshest();
+  } else {
+    dirty_ = running_;
+    refresh();
+  }
 }
 
 void UpdateMonitor::applyFreshest() {

@@ -106,7 +106,7 @@ Item {
                 anchors.centerIn: parent
                 width: Math.max(0, Math.min(parent.width - 48, 420))
                 visible: root.updatesModel.state === UpdatesModel.UpToDate
-                titleText: qsTr("All official-repository packages are up to date.")
+                titleText: root.updatesModel.emptyStateText
                 descriptionText: root.updatesModel.officialOnlyNote
             }
 

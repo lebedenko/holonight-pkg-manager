@@ -165,3 +165,14 @@ Verification evidence (2026-10-09):
 - Separate formatting and lint passes cover the new, untracked C++ files that the repository workflow does not enumerate.
 - Existing D-Bus contract and update-status-client tests remain unchanged; monitor/process fixture edits are lint-only.
 - CI rehearsal: licensing passed; build-test and static-checks failed before project validation because all retries of the pinned noto-fonts archive download timed out. Logs: build/ci/20261009T171112Z-yeks2dp8/. T-039 remains open until the full rehearsal passes.
+
+### Repository catalog correction (2026-10-09)
+
+- Replaced aggregate production freshness selection with per-repository digest/timestamp selection in configured order.
+- Retained complete checked catalogs with hash-keyed provenance, cache leases, atomic snapshot publication and safe reclamation.
+- Added offline installed-package reevaluation and independent persisted check history for page/sidebar presentation.
+- Preserved the pending documented `task run:packaged` development task.
+- CI rehearsal logs: `build/ci/20261009T182406Z-twve3z6s/`. Licensing passed. Build-test and static-checks stopped before project validation because all pinned noto-fonts archive download attempts timed out. T-039 remains open pending a successful full rehearsal.
+- Two prior regression expectations were corrected: failed snapshot persistence must preserve the published result rather than advance the in-memory count.
+- Final correction regressions: 480/480 tests passed, including the five-upgrade repository selection, offline installed-package changes, publication leases, cache recovery, nanosecond timestamp preservation, policy fixtures and Holonight/Fusion runtime acceptance. The libalpm-free checks executable passed in 0.476 s; editor metadata refresh passed.
+- Final `task check PRESET=test` passed, including formatting, full C++ lint, QML lint, import/layering policy checks and generated QML metadata. T-039 remains open because the full CI rehearsal is blocked by the dependency download described above.

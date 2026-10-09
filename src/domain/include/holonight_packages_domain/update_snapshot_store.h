@@ -23,6 +23,12 @@ struct SnapshotLoad {
   SnapshotFileState state = SnapshotFileState::Absent;
 };
 
+struct CheckHistory {
+  std::chrono::system_clock::time_point completed;
+  bool succeeded = false;
+  std::optional<UpdateCheckErrorCode> error;
+};
+
 class UpdateSnapshotStore {
  public:
   UpdateSnapshotStore() = default;
@@ -31,6 +37,10 @@ class UpdateSnapshotStore {
   UpdateSnapshotStore& operator=(const UpdateSnapshotStore&) = default;
   UpdateSnapshotStore& operator=(UpdateSnapshotStore&&) = default;
   virtual ~UpdateSnapshotStore();
+  [[nodiscard]] virtual std::optional<CheckHistory> loadHistory() const { return std::nullopt; }
+  [[nodiscard]] virtual std::expected<void, SnapshotStoreError> saveHistory(const CheckHistory& /*history*/) {
+    return {};
+  }
 
   // READ-ONLY, safe in any process. Absent gives {nullopt, Absent}; a corrupt, truncated or unknown-version file
   // gives {nullopt, Invalid}. Never modifies or deletes the file. An I/O error that prevents reading is an error.

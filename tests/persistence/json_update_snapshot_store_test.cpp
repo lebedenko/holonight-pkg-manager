@@ -171,7 +171,7 @@ TEST_F(JsonUpdateSnapshotStoreTest, AppCacheDirPrefersXdgThenHome) {
   EXPECT_FALSE(appCacheDir([](std::string_view) { return std::optional<std::string>(); }).has_value());
 }
 
-TEST_F(JsonUpdateSnapshotStoreTest, ReadOnlyCacheDirectoryKeepsTheOldFileAndTheInMemoryCountUpdates) {
+TEST_F(JsonUpdateSnapshotStoreTest, ReadOnlyCacheDirectoryPreservesThePublishedResult) {
   ASSERT_NE(::geteuid(), 0U) << "root bypasses directory permissions; run this test as a normal user";
   JsonUpdateSnapshotStore store(file_);
   ASSERT_TRUE(store.save(sample(1)).has_value());
@@ -189,12 +189,14 @@ TEST_F(JsonUpdateSnapshotStoreTest, ReadOnlyCacheDirectoryKeepsTheOldFileAndTheI
           .capabilities = {.canCheckForUpdates = true},
       },
       holonight_packages_application::UpdateCheckPolicy{});
+  service.start();
+  const auto previousCount = service.status().count;
   service.requestCheck(holonight_packages_application::CheckOrigin::Automatic);
   ASSERT_TRUE(holonight_packages_testing::waitIdle(service));
 
   EXPECT_EQ(slurp(file_), before);
-  ASSERT_TRUE(service.status().count.has_value());
-  EXPECT_EQ(*service.status().count, 3);  // four rows, one ignored
+  EXPECT_EQ(service.status().count, previousCount);
+  EXPECT_FALSE(service.status().lastCheckSucceeded);
 }
 
 // ---- T-017 ------------------------------------------------------------------------------------------------------

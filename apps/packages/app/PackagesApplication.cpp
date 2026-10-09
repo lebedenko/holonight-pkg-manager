@@ -41,11 +41,15 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
   auto use_case = std::make_shared<holonight_packages_application::PackageListUseCase>(std::move(package_source));
   installed_packages_model_ = std::make_unique<InstalledPackagesModel>(std::move(use_case));
 
+  const auto cache_dir =
+      holonight_packages_persistence::appCacheDir(holonight_packages_persistence::processEnvironment());
   auto update_source = std::make_shared<holonight_packages_backends::AlpmUpdateSource>(
       holonight_packages_backends::AlpmUpdateSourceOptions{
           .databaseRoot = holonight_packages_backends::kDefaultPacmanRoot,
           .databasePath = holonight_packages_backends::kDefaultPacmanDatabasePath,
           .pacmanConfPath = holonight_packages_backends::kDefaultPacmanConfPath,
+          .snapshotFile = cache_dir.value_or(std::filesystem::path()) /
+                          std::string(holonight_packages_persistence::kSnapshotFileName),
       });
   updates_model_ = std::make_unique<UpdatesModel>(std::move(update_source));
 
@@ -61,8 +65,7 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
   // Online update check: the GUI neither checks nor writes anything. "Check now" asks holonight-packaged over D-Bus,
   // and the resulting list is read back from the snapshot file it writes.
   update_check_client_ = std::make_unique<DBusUpdateCheckClient>(QDBusConnection::sessionBus());
-  const auto cache_dir =
-      holonight_packages_persistence::appCacheDir(holonight_packages_persistence::processEnvironment());
+
   snapshot_reader_ = std::make_unique<SnapshotFileReader>(
       std::make_shared<holonight_packages_persistence::JsonUpdateSnapshotStore>(
           cache_dir.value_or(std::filesystem::path()) / std::string(holonight_packages_persistence::kSnapshotFileName)),

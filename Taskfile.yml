@@ -50,6 +50,12 @@ tasks:
     - build
     cmds:
     - env LD_LIBRARY_PATH={{.HOLONIGHT_QT_PREFIX}}/lib ./{{.BUILD_DIR}}/holonight-packages
+  run:packaged:
+    desc: Build and run the session update service without installing it
+    deps:
+    - build
+    cmds:
+    - env LD_LIBRARY_PATH="{{.HOLONIGHT_QT_PREFIX}}/lib" "./build/{{.PRESET}}/holonight-packaged" {{.CLI_ARGS}}
   test:
     desc: test using standalone tooling
     cmds:

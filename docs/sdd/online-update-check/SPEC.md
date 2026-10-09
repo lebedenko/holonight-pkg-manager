@@ -36,7 +36,7 @@ The app remains transactionally inert. The feature never installs, removes or up
 - **Real dbpath**: the configured pacman database path, default `/var/lib/pacman`.
 - **Scratch dbpath**: a user-owned run directory created per check, containing a `local` symlink to the real local database and a copy of the real `sync` directory. The most recent run directory is retained after the check (REQ-F-042).
 - **Snapshot**: the result of one successful check: the pending-update list, its count, and `snapshotFetchedAt`.
-- **Last-good snapshot**: the most recent successful snapshot, in memory or persisted.
+- **Last-good snapshot**: the most recent successfully published snapshot, retained in memory and persisted.
 - **Neutral error code**: one of the `UpdateCheckError` codes. No libalpm message text crosses the port.
 - **Logical names**: `lastCheckTime`, `lastCheckSucceeded`, `lastError`, `snapshotFetchedAt`, `canCheckForUpdates`. These are the names used in this spec. Wire names on D-Bus are decided in DESIGN 4.5 (interface `org.holonight.Packages1.UpdateCheck`: `CheckNow`, `CanCheck`, `Checking`, `LastCheckTime`, `LastCheckSucceeded`, `LastCheckError`, `SnapshotFetchedAt`, `StatusChanged`).
 - **Automatic check**: a check started by the scheduler in `holonight-packaged`. **On-demand check**: a check started by the D-Bus method `CheckNow()`, which is also what the "Check now" control calls.
@@ -295,22 +295,23 @@ Template labels: **[U]** Ubiquitous, **[E]** Event-driven, **[S]** State-driven,
 - After the service starts with each invalid fixture that exists, the file is removed by the writer's discard operation.
 
 ### REQ-F-035: Write failure keeps memory and old file [X]
-**Statement:** If writing the snapshot fails, then the service shall keep the new snapshot in memory, log the failure, and leave the previously persisted file intact.
+**Statement:** If writing the snapshot fails, then the service shall preserve the previously published usable result and report a failed check.
 **Acceptance criteria:**
-- With a cache directory made read-only after an old snapshot was written, a successful check still updates the in-memory count, the log contains the failure, and the old file's bytes are unchanged.
+- With a cache directory made read-only after an old snapshot was written, the in-memory count and successful-data timestamp remain unchanged, the log contains the failure, and the old file's bytes are unchanged.
 - Tests that rely on read-only permissions must run as a non-root user (see Risks).
 
 ### REQ-F-043: Snapshot file is the hand-off to the GUI [E]
-**Statement:** When the GUI process receives the D-Bus `StatusChanged` signal or a `PropertiesChanged` for the `UpdateCheck` interface, or when the snapshot file changes on disk, the GUI process shall read the snapshot file read-only and merge it into the Updates list by the freshness rule (DESIGN 3.4, `selectFresherSnapshot`) against its own local `loadUpdates()` result. The GUI shall watch the snapshot file (this is mandatory) and shall tolerate the file being absent or corrupt without error, deletion or crash.
+**Statement:** When service status or the published snapshot changes, the GUI shall reevaluate displayed updates against the current installed packages using selected repository data.
 **Acceptance criteria:**
-- With a fake `UpdateCheckClient` emitting a status change and a snapshot file written by the test, the `UpdatesModel` list shows the snapshot's entries when it is fresher than the local result, and the local result otherwise.
-- Writing a new valid snapshot file (atomic rename) without any D-Bus signal also updates the model within the file-watcher delay.
-- With the file absent or corrupt, the model keeps its current list, reports no snapshot, and the file is untouched.
+- The page and service select repositories according to REQ-F-050.
+- The GUI watches the snapshot publication file and tolerates absent or corrupt files without deleting them.
+- Snapshot-only older caches retain saved rows as previously loaded data until a new successful check enables offline reevaluation.
+- No check or package transaction runs in the GUI.
 
 ### 6. Updates page
 
 ### REQ-F-036: Snapshot age line [S]
-**Statement:** While a valid online snapshot supplies the displayed rows, the Updates page shall show its age as a quiet status line, for example "Last checked 3 h ago" (placement and wording decided, DESIGN 4.7).
+**Statement:** While a valid online snapshot supplies the displayed rows, the Updates page shall show its age as a quiet status line, for example "Checked data saved 3 h ago" (placement and wording decided, DESIGN 4.7).
 **Acceptance criteria:**
 - With a fake clock and the displayed persisted snapshot’s `fetchedAt` three hours earlier, the view-model text contains "3 h" and the rendered line appears in both styles.
 - The line is not rendered as a modal or toast.
@@ -498,8 +499,8 @@ Remaining verification tasks (not decisions): spikes S-1..S-3 in DESIGN 8.3 (tim
 **Statement:** While valid online data supplies the displayed rows, the Updates page shall format their age from that snapshot's persisted fetchedAt.
 **Acceptance criteria:**
 - Newer service metadata after a failed persistence operation does not change the displayed age.
-- While a valid online snapshot exists and fresher local data supplies the rows, the status reads “Showing local package data”.
-- Without a valid online snapshot, the status reads “Not checked yet”.
+- While a valid online snapshot exists and fresher local data supplies the rows, the source label reads “Local package data”.
+- Without completed check history, the history line reads “Not checked yet”; source labels remain independent.
 
 ### REQ-F-048: Reader invalidation [X]
 **Statement:** If a previously valid snapshot becomes missing, invalid or unreadable, then the GUI shall invalidate its online selection metadata.
@@ -513,3 +514,42 @@ Remaining verification tasks (not decisions): spikes S-1..S-3 in DESIGN 8.3 (tim
 **Acceptance criteria:**
 - A cooldown no-op reply clears the error without a check completion signal.
 - The acknowledgement does not claim a completed check.
+
+### REQ-F-050: Repository selection [E]
+**Statement:** When evaluating available updates, the backend shall select each configured repository independently against the last successfully published checked catalog.
+**Acceptance criteria:**
+- Identical content is equivalent; differing content selects local only when its timestamp is strictly newer.
+- Equal timestamps with different digests select checked data.
+- Configured repository priority determines which repository supplies each package.
+- Unchanged old core plus newer checked extra yields five page rows and Updates.Count=5 when local data yields zero.
+
+### REQ-F-051: Offline reevaluation [E]
+**Statement:** When installed packages, sync databases, repository configuration, checked cache or Reload changes, the application shall reevaluate selected repositories against current installed packages offline.
+**Acceptance criteria:**
+- Upgrades, removals and additions change rows without a network request or package transaction.
+- Filesystem events are debounced; events during evaluation cause another evaluation.
+- Offline evaluation emits no check completion and changes no check timestamps.
+
+### REQ-F-052: Catalog publication [E]
+**Statement:** When publishing a successful check, the service shall retain the complete checked repository catalog before replacing the snapshot publication file.
+**Acceptance criteria:**
+- Snapshot JSON and D-Bus schemas remain unchanged.
+- Hash-keyed versioned provenance identifies an immutable generation and each repository's identity, priority, digest and metadata timestamp.
+- Failed checks, timeouts and publication failures preserve the previous usable catalog and rows.
+- Reclamation holds the cache lock and waits for readers before removing unpublished generations.
+
+### REQ-F-053: Incompatible or damaged provenance [X]
+**Statement:** If checked provenance is absent, corrupt or incompatible with current repository identity or signature policy, then the application shall exclude that provenance from repository selection.
+**Acceptance criteria:**
+- Snapshot-only caches remain readable as previously loaded rows until a new successful check supplies catalog provenance.
+- Metadata paths cannot escape the generation or traverse symlink generations.
+- Incompatible repository entries never supply offline candidates.
+
+### REQ-F-054: Independent check history [S]
+**Statement:** While displaying update data, the page and sidebar shall show the latest completed check time and outcome independently of repository source and metadata age.
+**Acceptance criteria:**
+- Success, failure and restart retain check history; busy states retain previous rows and successful-data timestamp.
+- Cooldown acknowledgements clear service-unavailable text without advancing history.
+- Source labels distinguish checked repository data, local package data, mixed local and checked data, and previously loaded data.
+- Data as of is explained as repository database metadata.
+- A checked zero-update result retains the up-to-date message; local zero-update data says “No updates found in local package data”. Unavailable data never claims up to date.

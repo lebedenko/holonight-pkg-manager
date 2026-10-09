@@ -24,9 +24,11 @@ class UpdateSource {
   UpdateSource& operator=(const UpdateSource&) = default;
   UpdateSource& operator=(UpdateSource&&) = default;
   virtual ~UpdateSource();
+  [[nodiscard]] virtual std::vector<std::filesystem::path> watchPaths() const { return {}; }
 
   // Read-only comparison of installed packages against the current sync databases. Makes no network access and
-  // never writes. Blocking; intended to run on a worker thread. Serves both the initial load and Reload.
+  // never mutates package databases. Blocking; intended to run on a worker thread. Serves both the initial load and
+  // Reload.
   [[nodiscard]] virtual std::expected<UpdateSnapshot, UpdateSourceError> loadUpdates() const = 0;
 };
 

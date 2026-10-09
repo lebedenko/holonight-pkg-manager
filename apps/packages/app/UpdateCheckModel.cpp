@@ -3,6 +3,8 @@
 #include "holonight_packages_application/update_age_format.h"
 #include "holonight_packages_domain/update_checker.h"
 
+#include <QLocale>
+
 #include <utility>
 
 namespace {
@@ -106,9 +108,9 @@ QString UpdateCheckModel::snapshotAgeText() const {
   }
   const QString age = QString::fromStdString(holonight_packages_application::formatSnapshotAge(now_(), *time));
   if (age == QLatin1String("just now")) {
-    return tr("Last checked just now");
+    return tr("Checked data saved just now");
   }
-  return tr("Last checked %1 ago").arg(age);
+  return tr("Checked data saved %1 ago").arg(age);
 }
 
 QString UpdateCheckModel::statusLineText() const {
@@ -116,6 +118,15 @@ QString UpdateCheckModel::statusLineText() const {
     return tr("Not checked yet");
   }
   return fetchedAt() ? snapshotAgeText() : tr("Showing local package data");
+}
+
+QString UpdateCheckModel::checkHistoryText() const {
+  if (!lastCheckTime().isValid()) {
+    return hasSnapshot() ? tr("Check history unavailable") : tr("Not checked yet");
+  }
+  return lastCheckSucceeded()
+             ? tr("Last check succeeded: %1").arg(QLocale().toString(lastCheckTime(), QLocale::ShortFormat))
+             : tr("Last check failed: %1").arg(QLocale().toString(lastCheckTime(), QLocale::ShortFormat));
 }
 
 QDateTime UpdateCheckModel::lastCheckTime() const {

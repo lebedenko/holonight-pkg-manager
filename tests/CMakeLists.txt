@@ -9,6 +9,7 @@ add_executable(test_holonight_packages_checks
   application/update_age_format_test.cpp
   application/update_monitor_adopt_test.cpp
   persistence/json_update_snapshot_store_test.cpp
+  persistence/check_history_test.cpp
   application/update_check_policy_test.cpp
   application/update_check_scheduler_test.cpp
   application/update_check_service_test.cpp
@@ -40,6 +41,7 @@ add_executable(test_holonight_packages
   backends/alpm_package_source_test.cpp
   backends/alpm_update_checker_test.cpp
   backends/alpm_update_source_test.cpp
+  backends/repository_catalog_test.cpp
   backends/file_repo_fixture_test.cpp
   backends/pacman_config_test.cpp
   backends/scratch_dir_test.cpp

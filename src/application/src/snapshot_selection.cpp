@@ -4,6 +4,12 @@ namespace holonight_packages_application {
 
 SnapshotChoice selectFresherSnapshot(const std::optional<holonight_packages_domain::UpdateSnapshot>& local,
                                      const std::optional<holonight_packages_domain::UpdateSnapshot>& online) {
+  if (local && local->previously_loaded) {
+    return SnapshotChoice::Local;
+  }
+  if (local && local->evaluated) {
+    return online && online->repositories.empty() ? SnapshotChoice::Online : SnapshotChoice::Local;
+  }
   if (!online.has_value()) {
     return SnapshotChoice::Local;
   }

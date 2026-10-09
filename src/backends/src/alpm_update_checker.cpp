@@ -4,6 +4,7 @@
 #include "pacman_config.h"
 #include "pacman_repositories.h"
 #include "pending_update_computation.h"
+#include "repository_catalog.h"
 #include "scratch_dir.h"
 #include "sync_database_files.h"
 
@@ -296,6 +297,15 @@ CheckResult refreshAndCompare(alpm_handle_t* handle, const CheckPlan& plan, cons
   snapshot.databasesFound = true;
   snapshot.dataAsOf = std::chrono::clock_cast<std::chrono::system_clock>(**oldest);
   snapshot.updates = computePendingUpdates(pkgcache, syncDatabases, plan.ignore_rules);
+  for (const auto& repository : plan.repositories.repositories) {
+    auto descriptor = describeRepository(repository, plan.repositories, run / "sync" / (repository.name + ".db"));
+    if (!descriptor) {
+      return fail(UpdateCheckErrorCode::Unknown, "cannot describe refreshed repository");
+    }
+    descriptor->checked = true;
+    snapshot.repositories.push_back(*descriptor);
+  }
+  snapshot.evaluated = true;
   return snapshot;
 }
 

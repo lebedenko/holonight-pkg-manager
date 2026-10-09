@@ -5,6 +5,7 @@
 #include <expected>
 #include <filesystem>
 #include <memory>
+#include <mutex>
 
 namespace holonight_packages_persistence {
 class AlpmConnectionCache;
@@ -20,17 +21,21 @@ struct AlpmUpdateSourceOptions {
   // libalpm database path, containing local/ and sync/.
   // NOLINTNEXTLINE(readability-identifier-naming): preserve the established public data contract.
   std::filesystem::path databasePath;
-  // Read for IgnorePkg / IgnoreGroup only; RootDir and DBPath in it are not consulted.
+  // Repository identities, priority and ignore rules; RootDir and DBPath in it are not consulted.
   // NOLINTNEXTLINE(readability-identifier-naming): preserve the established public data contract.
   std::filesystem::path pacmanConfPath;
+  // NOLINTNEXTLINE(readability-identifier-naming): matches established options naming.
+  std::filesystem::path snapshotFile;
 };
 
-// Compares the local database against the sync databases as they are on disk. Read-only: never syncs, downloads or
-// writes. Owns its own AlpmConnectionCache, so unchanged sync databases are parsed once per instance.
+// Compares current installed packages with selected local and published checked repositories. Never downloads or
+// mutates package databases. A private temporary layout supplies the selected catalog to libalpm.
+// Without a snapshot path, the legacy local-only path retains its AlpmConnectionCache.
 class AlpmUpdateSource : public holonight_packages_domain::UpdateSource {
  public:
   explicit AlpmUpdateSource(AlpmUpdateSourceOptions options);
   ~AlpmUpdateSource() override;
+  [[nodiscard]] std::vector<std::filesystem::path> watchPaths() const override;
 
   AlpmUpdateSource(const AlpmUpdateSource&) = delete;
   AlpmUpdateSource& operator=(const AlpmUpdateSource&) = delete;
@@ -41,6 +46,10 @@ class AlpmUpdateSource : public holonight_packages_domain::UpdateSource {
   loadUpdates() const override;
 
  private:
+  [[nodiscard]] std::expected<holonight_packages_domain::UpdateSnapshot, holonight_packages_domain::UpdateSourceError>
+  loadLocalUpdates() const;
+  mutable std::mutex watch_mutex_;
+  mutable std::vector<std::filesystem::path> configuration_watch_paths_;
   AlpmUpdateSourceOptions options_;
   std::unique_ptr<holonight_packages_persistence::AlpmConnectionCache> connection_cache_;
 };

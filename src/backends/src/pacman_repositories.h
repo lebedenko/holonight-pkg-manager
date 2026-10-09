@@ -44,6 +44,8 @@ struct PacmanRepositories {
   // The global level, passed to libalpm as the handle default.
   std::uint32_t default_sig_level = kPacmanDefaultSigLevel;
 
+  std::vector<std::filesystem::path> configuration_files;
+
   bool operator==(const PacmanRepositories&) const = default;
 };
 

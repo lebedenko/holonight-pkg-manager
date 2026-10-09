@@ -8,11 +8,13 @@
 #include <QAbstractListModel>
 #include <QByteArray>
 #include <QDateTime>
+#include <QFileSystemWatcher>
 #include <QFutureWatcher>
 #include <QHash>
 #include <QModelIndex>
 #include <QObject>
 #include <QString>
+#include <QTimer>
 #include <QVariant>
 #include <QtQmlIntegration/qqmlintegration.h>
 
@@ -30,6 +32,9 @@ class UpdatesModel : public QAbstractListModel {
   Q_OBJECT
   QML_NAMED_ELEMENT(UpdatesModel)
   QML_UNCREATABLE("UpdatesModel is provided by the application")
+  Q_PROPERTY(QString emptyStateText READ emptyStateText NOTIFY stateChanged)
+  Q_PROPERTY(QString sourceText READ sourceText NOTIFY stateChanged)
+  Q_PROPERTY(bool checkedData READ checkedData NOTIFY stateChanged)
   Q_PROPERTY(ViewState state READ state NOTIFY stateChanged)
   // Initial-load failure (state Error) only; reload failures with a previous list use reloadErrorMessage.
   Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY stateChanged)
@@ -82,6 +87,9 @@ class UpdatesModel : public QAbstractListModel {
   [[nodiscard]] QVariant data(const QModelIndex& index, int role) const override;
   [[nodiscard]] QHash<int, QByteArray> roleNames() const override;
 
+  [[nodiscard]] QString emptyStateText() const;
+  [[nodiscard]] QString sourceText() const { return source_text_; }
+  [[nodiscard]] bool checkedData() const { return checked_data_; }
   [[nodiscard]] ViewState state() const;
   [[nodiscard]] QString errorMessage() const;
   [[nodiscard]] bool loading() const;
@@ -115,6 +123,7 @@ class UpdatesModel : public QAbstractListModel {
   using LoadResult =
       std::expected<holonight_packages_domain::UpdateSnapshot, holonight_packages_domain::UpdateSourceError>;
 
+  void armWatcher();
   void startLoading();
   void onLoadFinished();
   void applySnapshot(holonight_packages_domain::UpdateSnapshot snapshot);
@@ -131,6 +140,12 @@ class UpdatesModel : public QAbstractListModel {
   std::optional<std::chrono::system_clock::time_point> displayed_fetched_at_;
   std::vector<holonight_packages_domain::PendingUpdate> updates_;
   holonight_packages_application::UpdateSummary summary_;
+  QFileSystemWatcher filesystem_watcher_;
+  QTimer debounce_timer_;
+  bool rerun_ = false;
+  bool checked_data_ = false;
+  bool previously_loaded_ = false;
+  QString source_text_;
   bool loading_ = false;
   ViewState state_ = ViewState::Loading;
   QString error_message_;

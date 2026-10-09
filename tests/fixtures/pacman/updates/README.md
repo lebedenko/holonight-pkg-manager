@@ -35,3 +35,8 @@ tests/fixtures/pacman/updates/generate.sh
 
 The output is deterministic (fixed mtimes, sorted entries, no gzip timestamp), so rerunning it without changes
 produces no diff.
+
+`extra-five.db` contains five independent upgrades (`pending-a` through `pending-e`).
+The repository-catalog regression installs their older versions only in its temporary local database and keeps
+core unchanged. It verifies five page updates and five service updates against a local result of zero.
+Regenerate this archive with `python3 tests/fixtures/pacman/updates/generate_checked_extra.py`.

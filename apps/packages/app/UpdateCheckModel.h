@@ -34,6 +34,8 @@ class UpdateCheckModel : public QObject {
   // "Last checked 3 h ago"; empty unless a valid online snapshot supplies the displayed rows.
   Q_PROPERTY(QString snapshotAgeText READ snapshotAgeText NOTIFY changed)
   // Displayed online age, "Showing local package data", or "Not checked yet".
+  Q_PROPERTY(QString sourceText READ sourceText NOTIFY changed)
+  Q_PROPERTY(QString checkHistoryText READ checkHistoryText NOTIFY changed)
   Q_PROPERTY(QString statusLineText READ statusLineText NOTIFY changed)
   Q_PROPERTY(QDateTime lastCheckTime READ lastCheckTime NOTIFY changed)
   Q_PROPERTY(bool lastCheckSucceeded READ lastCheckSucceeded NOTIFY changed)
@@ -59,6 +61,8 @@ class UpdateCheckModel : public QObject {
   [[nodiscard]] QDateTime displayedSnapshotFetchedAt() const;
   [[nodiscard]] QString snapshotAgeText() const;
   [[nodiscard]] QString statusLineText() const;
+  [[nodiscard]] QString checkHistoryText() const;
+  [[nodiscard]] QString sourceText() const { return updates_->sourceText(); }
   [[nodiscard]] QDateTime lastCheckTime() const;
   [[nodiscard]] bool lastCheckSucceeded() const;
   [[nodiscard]] bool failed() const;

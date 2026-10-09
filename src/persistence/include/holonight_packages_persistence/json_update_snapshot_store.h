@@ -23,6 +23,10 @@ class JsonUpdateSnapshotStore final : public holonight_packages_domain::UpdateSn
 
   explicit JsonUpdateSnapshotStore(std::filesystem::path file, JsonUpdateSnapshotStoreHooks hooks = {});
 
+  [[nodiscard]] std::optional<holonight_packages_domain::CheckHistory> loadHistory() const override;
+  [[nodiscard]] std::expected<void, holonight_packages_domain::SnapshotStoreError> saveHistory(
+      const holonight_packages_domain::CheckHistory& history) override;
+
   [[nodiscard]] const std::filesystem::path& file() const { return file_; }
 
   [[nodiscard]] std::expected<holonight_packages_domain::SnapshotLoad, holonight_packages_domain::SnapshotStoreError>

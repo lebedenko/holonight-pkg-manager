@@ -6,8 +6,11 @@
 #include "holonight_packages_application/snapshot_selection.h"
 #include "holonight_packages_domain/require_non_null.h"
 
+#include <QDirIterator>
+#include <QFileInfo>
 #include <QtConcurrentRun>
 
+#include <algorithm>
 #include <chrono>
 #include <exception>
 #include <utility>
@@ -30,6 +33,19 @@ UpdatesModel::UpdatesModel(std::shared_ptr<holonight_packages_domain::UpdateSour
       source_(holonight_packages_domain::requireNonNull(std::move(source), "UpdatesModel requires an update source")),
       now_(std::move(now)) {
   connect(&watcher_, &QFutureWatcher<LoadResult>::finished, this, &UpdatesModel::onLoadFinished);
+  debounce_timer_.setSingleShot(true);
+  debounce_timer_.setInterval(2000);
+  connect(&debounce_timer_, &QTimer::timeout, this, &UpdatesModel::reload);
+  const auto changed = [this] {
+    armWatcher();
+    if (loading_) {
+      rerun_ = true;
+    }
+    debounce_timer_.start();
+  };
+  connect(&filesystem_watcher_, &QFileSystemWatcher::fileChanged, this, changed);
+  connect(&filesystem_watcher_, &QFileSystemWatcher::directoryChanged, this, changed);
+  armWatcher();
   startLoading();
 }
 
@@ -88,6 +104,14 @@ QHash<int, QByteArray> UpdatesModel::roleNames() const {
 
 UpdatesModel::ViewState UpdatesModel::state() const { return state_; }
 
+QString UpdatesModel::emptyStateText() const {
+  if (previously_loaded_) {
+    return tr("No current update evaluation is available.");
+  }
+  return checked_data_ ? tr("All official-repository packages are up to date.")
+                       : tr("No updates found in local package data");
+}
+
 QString UpdatesModel::errorMessage() const { return error_message_; }
 
 bool UpdatesModel::loading() const { return loading_; }
@@ -125,6 +149,44 @@ bool UpdatesModel::hasResult() const {
 
 // Same mechanism as InstalledPackagesModel: QtConcurrent::run keeps libalpm work off the GUI thread and
 // QFutureWatcher delivers the result back on it, so all model state is only ever touched from the GUI thread.
+void UpdatesModel::armWatcher() {
+  QStringList desired;
+  for (const auto& path : source_->watchPaths()) {
+    if (path.empty()) {
+      continue;
+    }
+    const QFileInfo info(QString::fromStdString(path.string()));
+    if (info.exists()) {
+      desired.append(info.absoluteFilePath());
+    }
+    auto parent = info.absoluteDir();
+    while (!parent.exists() && parent.cdUp()) {
+    }
+    if (parent.exists()) {
+      desired.append(parent.absolutePath());
+    }
+    if (info.isDir()) {
+      QDirIterator entries(info.absoluteFilePath(), QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot,
+                           QDirIterator::Subdirectories);
+      while (entries.hasNext()) {
+        desired.append(entries.next());
+      }
+    }
+  }
+  desired.removeDuplicates();
+  const auto existing = filesystem_watcher_.files() + filesystem_watcher_.directories();
+  for (const auto& path : existing) {
+    if (!desired.contains(path)) {
+      filesystem_watcher_.removePath(path);
+    }
+  }
+  for (const auto& path : desired) {
+    if (!existing.contains(path)) {
+      filesystem_watcher_.addPath(path);
+    }
+  }
+}
+
 void UpdatesModel::startLoading() {
   loading_ = true;
   if (!hasResult()) {
@@ -145,6 +207,10 @@ void UpdatesModel::startLoading() {
 
 void UpdatesModel::onLoadFinished() {
   LoadResult result = watcher_.future().takeResult();
+  if (std::exchange(rerun_, false)) {
+    startLoading();
+    return;
+  }
   if (result.has_value()) {
     local_ = *result;
     applyFreshest();
@@ -153,12 +219,18 @@ void UpdatesModel::onLoadFinished() {
   }
   loading_ = false;
   emit stateChanged();
+  if (std::exchange(rerun_, false)) {
+    startLoading();
+  }
 }
 
 void UpdatesModel::applyFreshest() {
   const bool online = holonight_packages_application::selectFresherSnapshot(local_, online_) ==
                       holonight_packages_application::SnapshotChoice::Online;
-  displayed_fetched_at_ = online ? online_fetched_at_ : std::nullopt;
+  const bool checked =
+      !online && local_ && std::ranges::any_of(local_->repositories, [](const auto& repo) { return repo.checked; });
+  displayed_fetched_at_ =
+      online || checked || (local_ && local_->previously_loaded) ? online_fetched_at_ : std::nullopt;
   applySnapshot(online ? *online_ : *local_);
 }
 
@@ -167,7 +239,14 @@ void UpdatesModel::applyCheckedSnapshot(const holonight_packages_domain::Checked
   online_fetched_at_ = snapshot.fetchedAt;
   // Without a local result yet the online snapshot is shown at once; the local result is merged in by the same rule
   // when it arrives.
-  applyFreshest();
+  if (snapshot.snapshot.repositories.empty()) {
+    applyFreshest();
+  } else {
+    if (loading_) {
+      rerun_ = true;
+    }
+    reload();
+  }
   emit stateChanged();
 }
 
@@ -175,10 +254,27 @@ void UpdatesModel::invalidateCheckedSnapshot() {
   online_.reset();
   online_fetched_at_.reset();
   displayed_fetched_at_.reset();
+  previously_loaded_ = true;
+  source_text_ = tr("Previously loaded data");
+  checked_data_ = false;
+  reload();
   emit stateChanged();
 }
 
 void UpdatesModel::applySnapshot(UpdateSnapshot snapshot) {
+  const bool checked = std::ranges::any_of(snapshot.repositories, [](const auto& repo) { return repo.checked; });
+  const bool local = std::ranges::any_of(snapshot.repositories, [](const auto& repo) { return !repo.checked; });
+  checked_data_ = checked;
+  previously_loaded_ = snapshot.previously_loaded || (!snapshot.evaluated && displayed_fetched_at_.has_value());
+  if (previously_loaded_) {
+    source_text_ = tr("Previously loaded data");
+  } else if (checked && local) {
+    source_text_ = tr("Mixed local and checked data");
+  } else if (checked) {
+    source_text_ = tr("Checked repository data");
+  } else {
+    source_text_ = tr("Local package data");
+  }
   holonight_packages_application::sortUpdatesByName(snapshot.updates);
   beginResetModel();
   updates_ = std::move(snapshot.updates);
@@ -201,7 +297,10 @@ void UpdatesModel::applySnapshot(UpdateSnapshot snapshot) {
 void UpdatesModel::applyFailure(const UpdateSourceError& error) {
   const QString reason = QString::fromStdString(error.message);
   if (hasResult()) {
-    // A previous list exists: keep rows, timestamp and state; only report the failed reload.
+    // Keep the usable rows and timestamp, but qualify them when current evaluation is unavailable.
+    previously_loaded_ = true;
+    checked_data_ = false;
+    source_text_ = tr("Previously loaded data");
     reload_error_message_ = reason;
     return;
   }
