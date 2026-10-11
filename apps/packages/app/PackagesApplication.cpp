@@ -32,6 +32,7 @@
 
 PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplication(argc, argv) {
   setApplicationName(QStringLiteral("holonight-packages"));
+  setDesktopFileName(QStringLiteral("org.holonight.Packages"));
   setApplicationDisplayName(tr("HoloNight Packages"));
   setApplicationVersion(QStringLiteral(HOLONIGHT_PACKAGES_VERSION));
   setWindowIcon(QIcon(QStringLiteral(":/HolonightPackages/assets/holonight-pkg-manager.svg")));

@@ -75,3 +75,8 @@ target_include_directories(holonight-packages PRIVATE ${CMAKE_CURRENT_SOURCE_DIR
 target_compile_features(holonight-packages PRIVATE cxx_std_23)
 
 install(TARGETS holonight-packages DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+install(FILES "${PROJECT_SOURCE_DIR}/data/applications/org.holonight.Packages.desktop"
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
+install(FILES "${PROJECT_SOURCE_DIR}/assets/holonight-pkg-manager.svg"
+  DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps")

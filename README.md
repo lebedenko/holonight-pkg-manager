@@ -129,3 +129,8 @@ check_interval_minutes = 360   # minimum 15; a missing key uses the default
 The GUI's **Check now** calls `org.holonight.Packages1.UpdateCheck.CheckNow()` (bus-activating the service) and reads the
 resulting list from the snapshot file. Tests may sync only fixture repositories under a temp dir via `file://`; run
 `task layering-check` for the policy checks.
+
+## Installed application
+
+The application menu entry **HoloNight Packages** launches `holonight-packages` directly.
+CMake installs `org.holonight.Packages.desktop` and the `holonight-pkg-manager` SVG into the hicolor fallback theme.

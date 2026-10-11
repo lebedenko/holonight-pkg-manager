@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=HoloNight Packages
+Exec=holonight-packages
+Icon=holonight-pkg-manager
+Terminal=false
+Categories=System;PackageManager;Qt;
