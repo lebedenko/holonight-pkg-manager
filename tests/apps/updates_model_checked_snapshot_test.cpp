@@ -27,6 +27,7 @@ UpdatesModel::Clock fixedClock() {
 UpdateSnapshot snapshot(int count, TimePoint dataAsOf, const std::string& prefix) {
   UpdateSnapshot result;
   result.databasesFound = true;
+  result.evaluated = true;
   result.dataAsOf = dataAsOf;
   for (int index = 0; index < count; ++index) {
     result.updates.push_back(PendingUpdate{
@@ -54,75 +55,53 @@ QString nameAt(const UpdatesModel& model, int row) {
   return model.data(model.index(row), UpdatesModel::NameRole).toString();
 }
 
-TEST(UpdatesModelCheckedSnapshot, FresherOnlineSnapshotReplacesTheLocalList) {
+TEST(UpdatesModelCheckedSnapshot, LegacyArrivalReevaluatesRatherThanReplacingCurrentRows) {
   auto source = std::make_shared<FakeUpdateSource>();
   source->enqueue(snapshot(1, kNow - hours(48), "local"));
   auto model = loadedModel(source);
-  ASSERT_EQ(model->updateCount(), 1);
-
-  model->applyCheckedSnapshot(checked(4, kNow - hours(3)));
-
-  EXPECT_EQ(model->updateCount(), 4);
-  EXPECT_EQ(model->state(), ViewState::Updates);
-  EXPECT_EQ(nameAt(*model, 0), "online0");
-}
-
-TEST(UpdatesModelCheckedSnapshot, OlderOnlineSnapshotLeavesTheLocalList) {
-  auto source = std::make_shared<FakeUpdateSource>();
-  source->enqueue(snapshot(1, kNow - hours(1), "local"));
-  auto model = loadedModel(source);
-
-  model->applyCheckedSnapshot(checked(4, kNow - hours(24)));
-
+  source->enqueue(snapshot(1, kNow - hours(48), "current"));
+  model->applyCheckedSnapshot(checked(5, kNow));
   EXPECT_EQ(model->updateCount(), 1);
-  EXPECT_EQ(nameAt(*model, 0), "local0");
-}
-
-TEST(UpdatesModelCheckedSnapshot, EqualDataAsOfPrefersTheLocalList) {
-  auto source = std::make_shared<FakeUpdateSource>();
-  source->enqueue(snapshot(1, kNow - hours(5), "local"));
-  auto model = loadedModel(source);
-  model->applyCheckedSnapshot(checked(4, kNow - hours(5)));
-  EXPECT_EQ(model->updateCount(), 1);
-}
-
-TEST(UpdatesModelCheckedSnapshot, ReloadAfterOnlineSnapshotStillFollowsTheFreshnessRule) {
-  auto source = std::make_shared<FakeUpdateSource>();
-  source->enqueue(snapshot(1, kNow - hours(48), "local"));
-  auto model = loadedModel(source);
-  model->applyCheckedSnapshot(checked(4, kNow - hours(3)));
-  ASSERT_EQ(model->updateCount(), 4);
-
-  // The user syncs outside the app: the local databases become newer than the online snapshot.
-  source->enqueue(snapshot(0, kNow - hours(1), "local"));
-  model->reload();
   ASSERT_TRUE(QTest::qWaitFor([&model] { return !model->loading(); }, 2000));
-
-  EXPECT_EQ(model->updateCount(), 0);
-  EXPECT_EQ(model->state(), ViewState::UpToDate);
+  EXPECT_EQ(nameAt(*model, 0), "current0");
+  EXPECT_FALSE(model->previouslyLoaded());
 }
 
-TEST(UpdatesModelCheckedSnapshot, OnlineSnapshotArrivingDuringTheFirstLoadIsShownAndThenMerged) {
+TEST(UpdatesModelCheckedSnapshot, ArrivalDuringLoadIsHistoricalUntilReevaluationCompletes) {
   auto source = std::make_shared<FakeUpdateSource>();
   source->setBlocking(true);
-  source->enqueue(snapshot(1, kNow - hours(48), "local"));
+  source->enqueue(snapshot(5, kNow, "obsolete"));
+  source->enqueue(snapshot(1, kNow - hours(48), "current"));
   UpdatesModel model(source, nullptr, fixedClock());
-  ASSERT_EQ(model.state(), ViewState::Loading);
-
-  model.applyCheckedSnapshot(checked(4, kNow - hours(3)));
-  EXPECT_EQ(model.updateCount(), 4);
-
+  model.applyCheckedSnapshot(checked(5, kNow));
+  EXPECT_TRUE(model.previouslyLoaded());
+  EXPECT_EQ(model.updateCount(), 5);
+  EXPECT_EQ(model.displayedFetchedAt(), kNow + hours(1));
+  source->release();
+  ASSERT_TRUE(QTest::qWaitFor([&source] { return source->callCount() == 2; }, 2000));
   source->release();
   ASSERT_TRUE(QTest::qWaitFor([&model] { return !model.loading(); }, 2000));
-  EXPECT_EQ(model.updateCount(), 4) << "the online snapshot is fresher than the local databases";
+  EXPECT_EQ(model.updateCount(), 1);
+  EXPECT_EQ(nameAt(model, 0), "current0");
+  EXPECT_FALSE(model.previouslyLoaded());
 }
 
-TEST(UpdatesModelCheckedSnapshot, NoOnlineSnapshotLeavesTheBehaviourExactlyAsBefore) {
+TEST(UpdatesModelCheckedSnapshot, HistoricalEmptyFallbackExposesFailureAndRecovers) {
   auto source = std::make_shared<FakeUpdateSource>();
-  source->enqueue(snapshot(2, kNow - hours(1), "local"));
+  auto historical = snapshot(0, kNow, "saved");
+  historical.evaluated = false;
+  historical.previously_loaded = true;
+  historical.evaluation_error = "cannot read installed packages";
+  source->enqueue(historical);
   auto model = loadedModel(source);
-  EXPECT_EQ(model->updateCount(), 2);
-  EXPECT_EQ(model->state(), ViewState::Updates);
+  EXPECT_TRUE(model->previouslyLoaded());
+  EXPECT_EQ(model->emptyStateText(), "No current update evaluation is available.");
+  EXPECT_EQ(model->reloadErrorMessage(), "cannot read installed packages");
+  source->enqueue(snapshot(0, kNow, "current"));
+  model->reload();
+  ASSERT_TRUE(QTest::qWaitFor([&model] { return !model->loading(); }, 2000));
+  EXPECT_FALSE(model->previouslyLoaded());
+  EXPECT_TRUE(model->reloadErrorMessage().isEmpty());
 }
 
 }  // namespace

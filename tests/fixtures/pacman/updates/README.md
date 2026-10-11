@@ -40,3 +40,5 @@ produces no diff.
 The repository-catalog regression installs their older versions only in its temporary local database and keeps
 core unchanged. It verifies five page updates and five service updates against a local result of zero.
 Regenerate this archive with `python3 tests/fixtures/pacman/updates/generate_checked_extra.py`.
+
+`extra-fzf.db` contains only the fzf 2.0-1 upgrade for legacy-snapshot reevaluation tests. Regenerate it with `generate_checked_extra.py`.

@@ -161,6 +161,27 @@ TEST_F(PackagedDbusTest, AllPropertiesAreReadableWithMatchingTypes) {
   EXPECT_EQ(property(QStringLiteral("DataAsOf")).metaType().id(), QMetaType::LongLong);
 }
 
+TEST_F(PackagedDbusTest, HistoricalSnapshotReportsErrorWithRecordedTotalsAndRecovers) {
+  monitor_->start();
+  ASSERT_TRUE(QTest::qWaitFor([&] { return monitor_->status().updateCount == 7; }, kWaitMs));
+  auto historical = snapshot(5, 2);
+  historical.previously_loaded = true;
+  historical.evaluation_error = "cannot evaluate installed packages";
+  source_->enqueue(historical);
+  monitor_->refresh();
+  ASSERT_TRUE(QTest::qWaitFor([&] { return monitor_->status().lastError == historical.evaluation_error; }, kWaitMs));
+  EXPECT_EQ(property(QStringLiteral("State")).toString(), "error");
+  EXPECT_EQ(property(QStringLiteral("Count")).toUInt(), 5U);
+  EXPECT_EQ(property(QStringLiteral("DownloadSizeBytes")).toULongLong(), 500ULL);
+  EXPECT_EQ(property(QStringLiteral("DataAsOf")).toLongLong(), 1'700'000'000LL);
+  EXPECT_EQ(property(QStringLiteral("LastError")).toString(), "cannot evaluate installed packages");
+  source_->enqueue(snapshot(1, 0));
+  monitor_->refresh();
+  ASSERT_TRUE(QTest::qWaitFor([&] { return monitor_->status().updateCount == 1; }, kWaitMs));
+  EXPECT_EQ(property(QStringLiteral("State")).toString(), "ready");
+  EXPECT_TRUE(property(QStringLiteral("LastError")).toString().isEmpty());
+}
+
 TEST_F(PackagedDbusTest, RefreshReturnsImmediatelyAndPropertiesChangedCarriesNewCount) {
   monitor_->start();
   ASSERT_TRUE(QTest::qWaitFor([&] { return (monitor_->status().updateCount) == (7); }, kWaitMs));

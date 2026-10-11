@@ -155,12 +155,16 @@ void UpdateMonitor::onEvaluationFinished() {
 
 void UpdateMonitor::adoptOnline(const holonight_packages_domain::CheckedSnapshot& snapshot) {
   online_ = snapshot.snapshot;
-  if (snapshot.snapshot.repositories.empty()) {
-    applyFreshest();
-  } else {
-    dirty_ = running_;
-    refresh();
+  online_->evaluated = false;
+  online_->previously_loaded = true;
+  if (!local_) {
+    auto historical = snapshot.snapshot;
+    historical.evaluated = false;
+    historical.previously_loaded = true;
+    publish(buildUpdateStatus(historical, status_));
   }
+  dirty_ = running_;
+  refresh();
 }
 
 void UpdateMonitor::applyFreshest() {

@@ -8,7 +8,7 @@ SnapshotChoice selectFresherSnapshot(const std::optional<holonight_packages_doma
     return SnapshotChoice::Local;
   }
   if (local && local->evaluated) {
-    return online && online->repositories.empty() ? SnapshotChoice::Online : SnapshotChoice::Local;
+    return SnapshotChoice::Local;
   }
   if (!online.has_value()) {
     return SnapshotChoice::Local;

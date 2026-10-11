@@ -19,3 +19,16 @@ with tarfile.open(fileobj=archive_bytes, mode="w", format=tarfile.USTAR_FORMAT) 
         entry.mtime = 0
         archive.addfile(entry, io.BytesIO(data))
 Path(__file__).with_name("extra-five.db").write_bytes(gzip.compress(archive_bytes.getvalue(), mtime=0))
+
+# A current repository with only fzf, for legacy rows whose upgrades are installed.
+archive_bytes = io.BytesIO()
+with tarfile.open(fileobj=archive_bytes, mode="w", format=tarfile.USTAR_FORMAT) as archive:
+    data = (
+        "%NAME%\nfzf\n\n%VERSION%\n2.0-1\n\n"
+        "%FILENAME%\nfzf-2.0-1-x86_64.pkg.tar.zst\n\n"
+        "%CSIZE%\n100\n\n%ISIZE%\n100\n\n%ARCH%\nx86_64\n\n"
+    ).encode()
+    entry = tarfile.TarInfo("fzf-2.0-1/desc")
+    entry.size = len(data)
+    archive.addfile(entry, io.BytesIO(data))
+Path(__file__).with_name("extra-fzf.db").write_bytes(gzip.compress(archive_bytes.getvalue(), mtime=0))

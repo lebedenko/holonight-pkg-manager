@@ -54,6 +54,21 @@ TEST(UpdateStatus, UpToDateIsReadyWithZeroCount) {
   EXPECT_EQ(status.updateCount, 0);
 }
 
+TEST(UpdateStatus, HistoricalEmptyResultsRemainErrorsWithRecordedTimestamp) {
+  for (const bool found : {false, true}) {
+    auto historical = makeSnapshot(0, 0);
+    historical.databasesFound = found;
+    historical.previously_loaded = true;
+    historical.evaluation_error = "repository data unavailable";
+    const auto status = buildUpdateStatus(historical, std::nullopt);
+    EXPECT_EQ(status.state, UpdateState::Error);
+    EXPECT_EQ(status.updateCount, 0);
+    EXPECT_EQ(status.totalDownloadBytes, 0U);
+    EXPECT_EQ(status.dataAsOfEpochSeconds, 1'700'000'000);
+    EXPECT_EQ(status.lastError, "repository data unavailable");
+  }
+}
+
 TEST(UpdateStatus, MissingDatabasesGiveNoDatabasesAndClearEarlierValues) {
   const UpdateStatus earlier = buildUpdateStatus(makeSnapshot(4, 0), std::nullopt);
   UpdateSnapshot missing;

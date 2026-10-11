@@ -305,7 +305,7 @@ Template labels: **[U]** Ubiquitous, **[E]** Event-driven, **[S]** State-driven,
 **Acceptance criteria:**
 - The page and service select repositories according to REQ-F-050.
 - The GUI watches the snapshot publication file and tolerates absent or corrupt files without deleting them.
-- Snapshot-only older caches retain saved rows as previously loaded data until a new successful check enables offline reevaluation.
+- Snapshot-only older caches are reevaluated against current installed packages using local repository databases; saved rows remain historical only if evaluation fails.
 - No check or package transaction runs in the GUI.
 
 ### 6. Updates page
@@ -541,7 +541,7 @@ Remaining verification tasks (not decisions): spikes S-1..S-3 in DESIGN 8.3 (tim
 ### REQ-F-053: Incompatible or damaged provenance [X]
 **Statement:** If checked provenance is absent, corrupt or incompatible with current repository identity or signature policy, then the application shall exclude that provenance from repository selection.
 **Acceptance criteria:**
-- Snapshot-only caches remain readable as previously loaded rows until a new successful check supplies catalog provenance.
+- Snapshot-only caches remain readable and use local repository databases for reevaluation; evaluation failure retains previously loaded rows.
 - Metadata paths cannot escape the generation or traverse symlink generations.
 - Incompatible repository entries never supply offline candidates.
 

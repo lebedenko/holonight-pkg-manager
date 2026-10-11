@@ -48,6 +48,8 @@ class AlpmUpdateSource : public holonight_packages_domain::UpdateSource {
  private:
   [[nodiscard]] std::expected<holonight_packages_domain::UpdateSnapshot, holonight_packages_domain::UpdateSourceError>
   loadLocalUpdates() const;
+  [[nodiscard]] std::expected<holonight_packages_domain::UpdateSnapshot, holonight_packages_domain::UpdateSourceError>
+  loadEvaluatedUpdates(const std::vector<holonight_packages_domain::RepositoryProvenance>& checked) const;
   mutable std::mutex watch_mutex_;
   mutable std::vector<std::filesystem::path> configuration_watch_paths_;
   AlpmUpdateSourceOptions options_;

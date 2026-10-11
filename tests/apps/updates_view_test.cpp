@@ -285,6 +285,20 @@ TEST_F(UpdatesViewTest, ReloadButtonReloadsAndFailureShowsBannerOverPreviousList
   EXPECT_EQ(child("updatesList")->property("count").toInt(), 1);
 }
 
+TEST_F(UpdatesViewTest, HistoricalStartupLabelsRecordedRowsAndEvaluationFailure) {
+  auto historical = snapshotWith({makeUpdate("alpha", 10, false)}, kNow);
+  historical.previously_loaded = true;
+  historical.evaluation_error = "installed database unavailable";
+  source().enqueue(historical);
+  startModel();
+  createView();
+  EXPECT_EQ(child("updatesHeadlineTitle")->property("text").toString(), "Previously recorded updates");
+  EXPECT_EQ(child("updatesHeadlineDownloadTitle")->property("text").toString(), "Previously recorded download size");
+  EXPECT_EQ(child("updatesReloadBanner")->property("text").toString(),
+            "Current update evaluation failed: installed database unavailable. Showing previously loaded data.");
+  EXPECT_EQ(child("updatesList")->property("count").toInt(), 1);
+}
+
 TEST_F(UpdatesViewTest, StaleHintNamesNoCommand) {
   source().enqueue(snapshotWith({makeUpdate("alpha", 10, false)}, kNow - std::chrono::days(8)));
   startModel();
@@ -329,11 +343,16 @@ TEST_F(UpdatesViewTest, SidebarBadgeFollowsAvailableStatusClientCount) {
   const std::unique_ptr<QQmlPropertyMap> client(QQmlPropertyMap::create());
   client->insert(QStringLiteral("available"), false);
   client->insert(QStringLiteral("count"), 5);
+  client->insert(QStringLiteral("state"), QStringLiteral("error"));
   startModel();
   createWorkspace(*installed, client.get());
   EXPECT_TRUE(child("sidebarUpdatesNav")->property("badgeText").toString().isEmpty());
 
   client->insert(QStringLiteral("available"), true);
+  EXPECT_TRUE(child("sidebarUpdatesNav")->property("badgeText").toString().isEmpty());
+  client->insert(QStringLiteral("state"), QStringLiteral("loading"));
+  EXPECT_TRUE(child("sidebarUpdatesNav")->property("badgeText").toString().isEmpty());
+  client->insert(QStringLiteral("state"), QStringLiteral("ready"));
   EXPECT_EQ(child("sidebarUpdatesNav")->property("badgeText").toString(), QStringLiteral("5"));
 
   client->insert(QStringLiteral("count"), 0);

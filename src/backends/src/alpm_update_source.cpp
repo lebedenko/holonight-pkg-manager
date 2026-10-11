@@ -162,6 +162,7 @@ std::expected<UpdateSnapshot, UpdateSourceError> AlpmUpdateSource::loadLocalUpda
       .dataAsOf = std::chrono::clock_cast<std::chrono::system_clock>(**oldest),
   };
   snapshot.updates = computePendingUpdates(pkgcache, connection->syncDatabases(), *config);
+  snapshot.evaluated = true;
   return snapshot;
 }
 
@@ -170,34 +171,42 @@ std::expected<UpdateSnapshot, UpdateSourceError> AlpmUpdateSource::loadUpdates()
     return loadLocalUpdates();
   }
 
+  const holonight_packages_persistence::CatalogLock lease(options_.snapshotFile);
+  const auto saved = holonight_packages_persistence::JsonUpdateSnapshotStore(options_.snapshotFile).load();
+  std::vector<holonight_packages_domain::RepositoryProvenance> checked;
+  if (lease.valid() && saved && saved->snapshot) {
+    checked = saved->snapshot->snapshot.repositories;
+  }
+  auto result = loadEvaluatedUpdates(checked);
+  if (!result && saved && saved->snapshot) {
+    auto previous = saved->snapshot->snapshot;
+    previous.previously_loaded = true;
+    previous.evaluated = false;
+    previous.evaluation_error = result.error().message;
+    return previous;
+  }
+  return result;
+}
+
+std::expected<UpdateSnapshot, UpdateSourceError> AlpmUpdateSource::loadEvaluatedUpdates(
+    const std::vector<holonight_packages_domain::RepositoryProvenance>& checked) const {
   const auto config = parsePacmanConfig(options_.pacmanConfPath);
   if (!config) {
     return std::unexpected(
         UpdateSourceError{.code = UpdateSourceErrorCode::ConfigurationInvalid, .message = config.error()});
   }
-  const holonight_packages_persistence::CatalogLock lease(options_.snapshotFile);
-  std::vector<holonight_packages_domain::RepositoryProvenance> checked;
-  const auto saved = holonight_packages_persistence::JsonUpdateSnapshotStore(options_.snapshotFile).load();
-  if (saved && saved->snapshot && saved->snapshot->snapshot.repositories.empty()) {
-    auto previous = saved->snapshot->snapshot;
-    previous.previously_loaded = true;
-    return previous;
-  }
-  if (lease.valid() && saved && saved->snapshot) {
-    checked = saved->snapshot->snapshot.repositories;
-  }
   const auto repositories = parsePacmanRepositories(options_.pacmanConfPath, machineArchitecture());
   if (!repositories) {
     // Local enumeration has never required usable mirrorlists. Only checked-catalog reuse requires their identity.
-    if (checked.empty()) {
-      auto local = loadLocalUpdates();
-      if (local) {
-        local->evaluated = true;
-      }
+    auto local = loadLocalUpdates();
+    if (local && local->databasesFound) {
+      local->evaluated = true;
       return local;
     }
-    return std::unexpected(
-        UpdateSourceError{.code = UpdateSourceErrorCode::ConfigurationInvalid, .message = repositories.error()});
+    if (!local) {
+      return local;
+    }
+    return std::unexpected(databaseError("No usable repository data"));
   }
   if (const auto local = checkLocalDatabase(options_.databasePath); !local) {
     return std::unexpected(databaseError(local.error()));

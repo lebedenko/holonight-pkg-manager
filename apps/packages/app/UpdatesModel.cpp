@@ -229,34 +229,42 @@ void UpdatesModel::applyFreshest() {
                       holonight_packages_application::SnapshotChoice::Online;
   const bool checked =
       !online && local_ && std::ranges::any_of(local_->repositories, [](const auto& repo) { return repo.checked; });
-  displayed_fetched_at_ =
-      online || checked || (local_ && local_->previously_loaded) ? online_fetched_at_ : std::nullopt;
+  if (online || checked || (local_ && local_->previously_loaded && online_fetched_at_)) {
+    displayed_fetched_at_ = online_fetched_at_;
+  } else if (!local_ || !local_->previously_loaded) {
+    displayed_fetched_at_.reset();
+  }
   applySnapshot(online ? *online_ : *local_);
 }
 
 void UpdatesModel::applyCheckedSnapshot(const holonight_packages_domain::CheckedSnapshot& snapshot) {
   online_ = snapshot.snapshot;
+  online_->evaluated = false;
+  online_->previously_loaded = true;
   online_fetched_at_ = snapshot.fetchedAt;
-  // Without a local result yet the online snapshot is shown at once; the local result is merged in by the same rule
-  // when it arrives.
-  if (snapshot.snapshot.repositories.empty()) {
-    applyFreshest();
-  } else {
-    if (loading_) {
-      rerun_ = true;
-    }
-    reload();
+  if (!hasResult()) {
+    auto historical = snapshot.snapshot;
+    historical.evaluated = false;
+    historical.previously_loaded = true;
+    displayed_fetched_at_ = snapshot.fetchedAt;
+    applySnapshot(std::move(historical));
   }
+  if (loading_) {
+    rerun_ = true;
+  }
+  reload();
   emit stateChanged();
 }
 
 void UpdatesModel::invalidateCheckedSnapshot() {
   online_.reset();
   online_fetched_at_.reset();
-  displayed_fetched_at_.reset();
   previously_loaded_ = true;
   source_text_ = tr("Previously loaded data");
   checked_data_ = false;
+  if (loading_) {
+    rerun_ = true;
+  }
   reload();
   emit stateChanged();
 }
@@ -264,8 +272,8 @@ void UpdatesModel::invalidateCheckedSnapshot() {
 void UpdatesModel::applySnapshot(UpdateSnapshot snapshot) {
   const bool checked = std::ranges::any_of(snapshot.repositories, [](const auto& repo) { return repo.checked; });
   const bool local = std::ranges::any_of(snapshot.repositories, [](const auto& repo) { return !repo.checked; });
-  checked_data_ = checked;
   previously_loaded_ = snapshot.previously_loaded || (!snapshot.evaluated && displayed_fetched_at_.has_value());
+  checked_data_ = checked && !previously_loaded_;
   if (previously_loaded_) {
     source_text_ = tr("Previously loaded data");
   } else if (checked && local) {
@@ -281,7 +289,7 @@ void UpdatesModel::applySnapshot(UpdateSnapshot snapshot) {
   endResetModel();
   summary_ = holonight_packages_application::summarizeUpdates(updates_);
 
-  if (!snapshot.databasesFound) {
+  if (!snapshot.databasesFound && !previously_loaded_) {
     state_ = ViewState::NoDatabases;
     data_as_of_ = QDateTime();
     databases_stale_ = false;
@@ -291,7 +299,7 @@ void UpdatesModel::applySnapshot(UpdateSnapshot snapshot) {
     databases_stale_ = holonight_packages_application::isStale(snapshot.dataAsOf, now_());
   }
   error_message_.clear();
-  reload_error_message_.clear();
+  reload_error_message_ = QString::fromStdString(snapshot.evaluation_error);
 }
 
 void UpdatesModel::applyFailure(const UpdateSourceError& error) {

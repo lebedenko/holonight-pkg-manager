@@ -16,11 +16,9 @@ Item {
 
     readonly property bool hasResult: root.updatesModel.state === UpdatesModel.Updates
                                       || root.updatesModel.state === UpdatesModel.UpToDate
-    readonly property string reloadBannerText: root.updatesModel.dataAsOf.getTime() > 0
-        ? qsTr("Reload failed: %1. Showing data from %2.")
+    readonly property string reloadBannerText:
+        qsTr("Current update evaluation failed: %1. Showing previously loaded data.")
             .arg(root.updatesModel.reloadErrorMessage)
-            .arg(root.updatesModel.dataAsOf.toLocaleString(Qt.locale(), Locale.ShortFormat))
-        : qsTr("Reload failed: %1.").arg(root.updatesModel.reloadErrorMessage)
 
     ColumnLayout {
         anchors.fill: parent

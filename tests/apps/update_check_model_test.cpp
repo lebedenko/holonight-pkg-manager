@@ -30,11 +30,23 @@ class UpdateCheckModelTest : public ::testing::Test {
     ASSERT_TRUE(dir_.isValid());
     file_ = std::filesystem::path(dir_.path().toStdString()) / "update-snapshot.json";
     reader_ = std::make_unique<SnapshotFileReader>(store_, file_, std::chrono::milliseconds{10});
-    source_->enqueue(holonight_packages_domain::UpdateSnapshot{});
+    source_->enqueue(std::unexpected(holonight_packages_domain::UpdateSourceError{
+        .code = holonight_packages_domain::UpdateSourceErrorCode::DatabaseOpenFailed,
+        .message = "No current evaluation",
+    }));
     updates_ = std::make_unique<UpdatesModel>(source_);
     ASSERT_TRUE(QTest::qWaitFor([this] { return !updates_->loading(); }, 2000));
     model_ = std::make_unique<UpdateCheckModel>(
         &client_, reader_.get(), updates_.get(), [this] { return clock_.now(); }, clock_.makeTimer());
+  }
+
+  void storeSnapshot(const CheckedSnapshot& snapshot) {
+    store_->setStored(snapshot);
+    auto historical = snapshot.snapshot;
+    historical.evaluated = false;
+    historical.previously_loaded = true;
+    historical.evaluation_error = "No current evaluation";
+    source_->enqueue(historical);
   }
 
   [[nodiscard]] qint64 secondsAgo(std::chrono::hours age) const {
@@ -98,7 +110,7 @@ TEST_F(UpdateCheckModelTest, SnapshotThreeHoursOldShowsThreeHours) {
   UpdateCheckClientStatus status;
   status.serviceReachable = true;
   status.snapshotFetchedAt = secondsAgo(hours{3});
-  store_->setStored(CheckedSnapshot{.snapshot = {.dataAsOf = clock_.now()}, .fetchedAt = clock_.now() - hours{3}});
+  storeSnapshot(CheckedSnapshot{.snapshot = {.dataAsOf = clock_.now()}, .fetchedAt = clock_.now() - hours{3}});
   client_.setStatus(status);
   EXPECT_TRUE(model_->hasSnapshot());
   EXPECT_TRUE(model_->snapshotAgeText().contains("3 h")) << model_->snapshotAgeText().toStdString();
@@ -108,7 +120,7 @@ TEST_F(UpdateCheckModelTest, SnapshotThreeHoursOldShowsThreeHours) {
 TEST_F(UpdateCheckModelTest, AgeTextRefreshesWhenTheMinuteTimerFires) {
   UpdateCheckClientStatus status;
   status.snapshotFetchedAt = secondsAgo(hours{3});
-  store_->setStored(CheckedSnapshot{.snapshot = {.dataAsOf = clock_.now()}, .fetchedAt = clock_.now() - hours{3}});
+  storeSnapshot(CheckedSnapshot{.snapshot = {.dataAsOf = clock_.now()}, .fetchedAt = clock_.now() - hours{3}});
   client_.setStatus(status);
   QSignalSpy changed(model_.get(), &UpdateCheckModel::changed);
   clock_.advance(std::chrono::minutes{61});
@@ -125,7 +137,7 @@ TEST_F(UpdateCheckModelTest, EachOfTheFourCodesShowsItsMessageAndKeepsTheAgeText
           {"unknown", "The check failed for an unexpected reason."},
       },
   };
-  store_->setStored(CheckedSnapshot{.snapshot = {.dataAsOf = clock_.now()}, .fetchedAt = clock_.now() - hours{3}});
+  storeSnapshot(CheckedSnapshot{.snapshot = {.dataAsOf = clock_.now()}, .fetchedAt = clock_.now() - hours{3}});
   for (const auto& [token, message] : cases) {
     UpdateCheckClientStatus status;
     status.serviceReachable = true;
@@ -171,7 +183,7 @@ TEST_F(UpdateCheckModelTest, ASnapshotReadFromTheFileUpdatesTheUpdatesModelAndTh
   online.fetchedAt = clock_.now() - hours{2};
   online.snapshot.dataAsOf = clock_.now();  // fresher than the (empty) local databases
   online.snapshot.updates.push_back(PendingUpdate{.name = "from-file"});
-  store_->setStored(online);
+  storeSnapshot(online);
   QSignalSpy changed(model_.get(), &UpdateCheckModel::changed);
 
   reader_->readNow();
@@ -190,7 +202,7 @@ TEST_F(UpdateCheckModelTest, CheckCompletedAsksTheReaderToReadAgain) {
   client_.completeCheck();  // nothing stored yet: nothing changes
   EXPECT_EQ(updates_->updateCount(), 0);
 
-  store_->setStored(online);
+  storeSnapshot(online);
   client_.completeCheck();
 
   EXPECT_EQ(updates_->updateCount(), 1);
@@ -206,12 +218,12 @@ TEST_F(UpdateCheckModelTest, SuccessfulNoOpAcknowledgementClearsUnavailable) {
   EXPECT_EQ(completed.count(), 0);
 }
 
-TEST_F(UpdateCheckModelTest, InvalidatedSnapshotKeepsRowsAndClearsProvenance) {
+TEST_F(UpdateCheckModelTest, InvalidatedSnapshotKeepsHistoricalRowsAndAge) {
   CheckedSnapshot online{};
   online.fetchedAt = clock_.now();
   online.snapshot.dataAsOf = clock_.now();
   online.snapshot.updates.push_back(PendingUpdate{.name = "retained"});
-  store_->setStored(online);
+  storeSnapshot(online);
   reader_->readNow();
   QSignalSpy invalidated(reader_.get(), &SnapshotFileReader::snapshotInvalidated);
   store_->setInvalid();
@@ -220,11 +232,14 @@ TEST_F(UpdateCheckModelTest, InvalidatedSnapshotKeepsRowsAndClearsProvenance) {
   EXPECT_EQ(invalidated.count(), 1);
   EXPECT_FALSE(reader_->latest().has_value());
   EXPECT_EQ(updates_->rowCount(), 1);
-  EXPECT_EQ(model_->statusLineText(), "Not checked yet");
+  EXPECT_TRUE(updates_->previouslyLoaded());
+  EXPECT_EQ(model_->statusLineText(), model_->snapshotAgeText());
+  EXPECT_FALSE(model_->snapshotAgeText().isEmpty());
+  EXPECT_EQ(model_->checkHistoryText(), "Not checked yet");
 }
 
 TEST_F(UpdateCheckModelTest, NewerServiceMetadataDoesNotReplaceDisplayedSnapshotAge) {
-  store_->setStored(CheckedSnapshot{.snapshot = {.dataAsOf = clock_.now()}, .fetchedAt = clock_.now() - hours{3}});
+  storeSnapshot(CheckedSnapshot{.snapshot = {.dataAsOf = clock_.now()}, .fetchedAt = clock_.now() - hours{3}});
   UpdateCheckClientStatus status{};
   status.snapshotFetchedAt = secondsAgo(hours{1});
   client_.setStatus(status);
@@ -236,10 +251,12 @@ TEST_F(UpdateCheckModelTest, AsynchronousLocalReloadChangesDisplayedProvenance) 
   CheckedSnapshot online{};
   online.fetchedAt = clock_.now() - hours{3};
   online.snapshot.dataAsOf = clock_.now() - hours{2};
-  store_->setStored(online);
+  storeSnapshot(online);
   reader_->readNow();
+  ASSERT_TRUE(QTest::qWaitFor([this] { return !updates_->loading(); }, 2000));
   ASSERT_TRUE(model_->snapshotAgeText().contains("3 h"));
-  source_->enqueue(holonight_packages_domain::UpdateSnapshot{.databasesFound = true, .dataAsOf = clock_.now()});
+  source_->enqueue(
+      holonight_packages_domain::UpdateSnapshot{.databasesFound = true, .dataAsOf = clock_.now(), .evaluated = true});
   QSignalSpy changed(model_.get(), &UpdateCheckModel::changed);
   updates_->reload();
   ASSERT_TRUE(QTest::qWaitFor([this] { return !updates_->loading(); }, 2000));

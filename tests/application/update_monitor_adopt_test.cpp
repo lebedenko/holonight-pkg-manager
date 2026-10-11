@@ -22,6 +22,7 @@ constexpr int kWaitMs = 5000;
 
 UpdateSnapshot snapshot(int count, long long dataAsOfSeconds) {
   UpdateSnapshot result;
+  result.evaluated = true;
   for (int index = 0; index < count; ++index) {
     result.updates.push_back(PendingUpdate{.name = "pkg-" + std::to_string(index)});
   }
@@ -34,64 +35,37 @@ class UpdateMonitorAdoptTest : public ::testing::Test {
   std::shared_ptr<FakeUpdateSource> source_ = std::make_shared<FakeUpdateSource>();
 };
 
-TEST_F(UpdateMonitorAdoptTest, FresherOnlineSnapshotReplacesTheMonitorCount) {
+TEST_F(UpdateMonitorAdoptTest, LegacyArrivalTriggersEvaluationAndCannotReplaceCurrentCount) {
   source_->enqueue(snapshot(1, 100));
-  UpdateMonitor monitor(source_, UpdateMonitorOptions{});
-  QSignalSpy spy(&monitor, &UpdateMonitor::statusChanged);
+  UpdateMonitor monitor(source_, {});
   monitor.refresh();
-  ASSERT_TRUE(spy.wait(kWaitMs));
-  ASSERT_EQ(monitor.status().updateCount, 1);
-
-  monitor.adoptOnline(
-      CheckedSnapshot{.snapshot = snapshot(4, 200), .fetchedAt = system_clock::time_point{seconds{201}}});
-
-  EXPECT_EQ(monitor.status().updateCount, 4);
-  EXPECT_EQ(monitor.status().state, UpdateState::Ready);
-  EXPECT_EQ(monitor.status().dataAsOfEpochSeconds, 200);
-}
-
-TEST_F(UpdateMonitorAdoptTest, FresherLocalResultKeepsTheLocalCount) {
-  UpdateMonitor monitor(source_, UpdateMonitorOptions{});
-  monitor.adoptOnline(
-      CheckedSnapshot{.snapshot = snapshot(4, 200), .fetchedAt = system_clock::time_point{seconds{201}}});
-  EXPECT_EQ(monitor.status().updateCount, 4);
-
-  source_->enqueue(snapshot(1, 300));
-  QSignalSpy spy(&monitor, &UpdateMonitor::statusChanged);
-  monitor.refresh();
-  ASSERT_TRUE(spy.wait(kWaitMs));
-
+  QTRY_COMPARE_WITH_TIMEOUT(monitor.status().updateCount, 1, kWaitMs);
+  source_->enqueue(snapshot(2, 100));
+  monitor.adoptOnline({.snapshot = snapshot(5, 200), .fetchedAt = system_clock::time_point{seconds{201}}});
   EXPECT_EQ(monitor.status().updateCount, 1);
-  EXPECT_EQ(monitor.status().dataAsOfEpochSeconds, 300);
+  QTRY_COMPARE_WITH_TIMEOUT(monitor.status().updateCount, 2, kWaitMs);
+  EXPECT_EQ(monitor.status().state, UpdateState::Ready);
 }
 
-TEST_F(UpdateMonitorAdoptTest, OlderLocalResultDoesNotOverrideTheOnlineSnapshot) {
-  UpdateMonitor monitor(source_, UpdateMonitorOptions{});
-  monitor.adoptOnline(
-      CheckedSnapshot{.snapshot = snapshot(4, 200), .fetchedAt = system_clock::time_point{seconds{201}}});
-
-  source_->enqueue(snapshot(1, 100));
-  QSignalSpy spy(&monitor, &UpdateMonitor::statusChanged);
-  monitor.refresh();
-  QTest::qWait(100);
-
-  EXPECT_EQ(monitor.status().updateCount, 4);
-}
-
-TEST_F(UpdateMonitorAdoptTest, LocalFailureAfterAdoptionKeepsTheOnlineCounts) {
-  UpdateMonitor monitor(source_, UpdateMonitorOptions{});
-  monitor.adoptOnline(
-      CheckedSnapshot{.snapshot = snapshot(4, 200), .fetchedAt = system_clock::time_point{seconds{201}}});
+TEST_F(UpdateMonitorAdoptTest, HistoricalAdoptionHidesPendingStatusAndFailureRetainsTotals) {
+  source_->setBlocking(true);
   source_->enqueue(std::unexpected(holonight_packages_domain::UpdateSourceError{
       .code = holonight_packages_domain::UpdateSourceErrorCode::DatabaseOpenFailed,
       .message = "boom",
   }));
-  QSignalSpy spy(&monitor, &UpdateMonitor::statusChanged);
-  monitor.refresh();
-  ASSERT_TRUE(spy.wait(kWaitMs));
-
+  UpdateMonitor monitor(source_, {});
+  monitor.adoptOnline({.snapshot = snapshot(5, 200), .fetchedAt = system_clock::time_point{seconds{201}}});
   EXPECT_EQ(monitor.status().state, UpdateState::Error);
-  EXPECT_EQ(monitor.status().updateCount, 4);
+  EXPECT_EQ(monitor.status().updateCount, 5);
+  source_->release();
+  QTRY_COMPARE_WITH_TIMEOUT(monitor.status().lastError, std::string("boom"), kWaitMs);
+  EXPECT_EQ(monitor.status().updateCount, 5);
+  source_->setBlocking(false);
+  source_->enqueue(snapshot(1, 100));
+  monitor.refresh();
+  QTRY_COMPARE_WITH_TIMEOUT(monitor.status().state, UpdateState::Ready, kWaitMs);
+  EXPECT_EQ(monitor.status().updateCount, 1);
+  EXPECT_TRUE(monitor.status().lastError.empty());
 }
 
 }  // namespace

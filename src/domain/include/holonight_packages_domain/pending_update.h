@@ -52,6 +52,7 @@ struct UpdateSnapshot {
   std::vector<RepositoryProvenance> repositories;
   bool evaluated = false;
   bool previously_loaded = false;
+  std::string evaluation_error;
 
   bool operator==(const UpdateSnapshot&) const = default;
 };

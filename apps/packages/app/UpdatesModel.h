@@ -34,6 +34,7 @@ class UpdatesModel : public QAbstractListModel {
   QML_UNCREATABLE("UpdatesModel is provided by the application")
   Q_PROPERTY(QString emptyStateText READ emptyStateText NOTIFY stateChanged)
   Q_PROPERTY(QString sourceText READ sourceText NOTIFY stateChanged)
+  Q_PROPERTY(bool previouslyLoaded READ previouslyLoaded NOTIFY stateChanged)
   Q_PROPERTY(bool checkedData READ checkedData NOTIFY stateChanged)
   Q_PROPERTY(ViewState state READ state NOTIFY stateChanged)
   // Initial-load failure (state Error) only; reload failures with a previous list use reloadErrorMessage.
@@ -89,6 +90,7 @@ class UpdatesModel : public QAbstractListModel {
 
   [[nodiscard]] QString emptyStateText() const;
   [[nodiscard]] QString sourceText() const { return source_text_; }
+  [[nodiscard]] bool previouslyLoaded() const { return previously_loaded_; }
   [[nodiscard]] bool checkedData() const { return checked_data_; }
   [[nodiscard]] ViewState state() const;
   [[nodiscard]] QString errorMessage() const;
@@ -107,9 +109,7 @@ class UpdatesModel : public QAbstractListModel {
   // Single-flight: ignored while a load or reload is in progress. Never retried automatically.
   Q_INVOKABLE void reload();
 
-  // Merges an online snapshot (read from the file holonight-packaged writes) with this model's own local result by
-  // the freshness rule: the online snapshot wins unless the local databases are at least as new. A failed check
-  // never reaches this function, so a failure leaves the list unchanged.
+  // Saved snapshots are historical until the read-only backend reevaluates current installed packages.
   void applyCheckedSnapshot(const holonight_packages_domain::CheckedSnapshot& snapshot);
 
   void invalidateCheckedSnapshot();

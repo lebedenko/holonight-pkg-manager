@@ -24,6 +24,12 @@ TEST(SnapshotSelectionTest, LocalWinsWhenEqualOrNewer) {
   EXPECT_EQ(selectFresherSnapshot(withDataAsOf(300), withDataAsOf(200)), SnapshotChoice::Local);
 }
 
+TEST(SnapshotSelectionTest, EvaluationOutranksNewerLegacyRows) {
+  auto evaluated = withDataAsOf(100);
+  evaluated.evaluated = true;
+  EXPECT_EQ(selectFresherSnapshot(evaluated, withDataAsOf(1000)), SnapshotChoice::Local);
+}
+
 TEST(SnapshotSelectionTest, MissingSidesForceTheChoice) {
   EXPECT_EQ(selectFresherSnapshot(withDataAsOf(100), std::nullopt), SnapshotChoice::Local);
   EXPECT_EQ(selectFresherSnapshot(std::nullopt, withDataAsOf(100)), SnapshotChoice::Online);

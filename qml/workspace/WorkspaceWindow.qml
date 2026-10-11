@@ -35,6 +35,7 @@ Rectangle {
             checkHistoryText: root.updateCheckModel ? root.updateCheckModel.checkHistoryText : qsTr("Not checked yet")
             currentPage: root.currentPage
             updatesBadgeText: root.updateStatusClient && root.updateStatusClient.available
+                              && root.updateStatusClient.state === "ready"
                               && root.updateStatusClient.count > 0 ? String(root.updateStatusClient.count) : ""
             Layout.preferredWidth: 196
             Layout.fillHeight: true

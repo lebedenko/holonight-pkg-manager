@@ -10,7 +10,10 @@
 
 #include <QDBusConnection>
 #include <QDBusConnectionInterface>
+#include <QFile>
+#include <QProcessEnvironment>
 #include <QSignalSpy>
+#include <QTemporaryDir>
 #include <QTest>
 
 #include <gtest/gtest.h>
@@ -33,7 +36,30 @@ constexpr int kWaitMs = 5000;
 class UpdateCheckClientTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    ASSERT_TRUE(bus_.start()) << bus_.error().toStdString();
+    ASSERT_TRUE(environment_.isValid());
+    auto environment = QProcessEnvironment::systemEnvironment();
+    for (const auto* name : {
+             "HOME",
+             "XDG_DATA_HOME",
+             "XDG_DATA_DIRS",
+             "XDG_CONFIG_HOME",
+             "XDG_CACHE_HOME",
+             "XDG_STATE_HOME",
+             "XDG_RUNTIME_DIR",
+         }) {
+      environment.insert(QString::fromLatin1(name), environment_.path());
+    }
+    bus_.setProcessEnvironment(environment);
+    // No service directories: installed activation files must never participate in this fixture.
+    QFile configuration(environment_.filePath(QStringLiteral("bus.conf")));
+    ASSERT_TRUE(configuration.open(QIODevice::WriteOnly));
+    ASSERT_GT(
+        configuration.write("<busconfig><type>session</type><listen>unix:tmpdir=/tmp</listen><auth>EXTERNAL</auth>"
+                            "<policy context=\"default\"><allow send_destination=\"*\" eavesdrop=\"true\"/>"
+                            "<allow eavesdrop=\"true\"/><allow own=\"*\"/></policy></busconfig>"),
+        0);
+    configuration.close();
+    ASSERT_TRUE(bus_.start(configuration.fileName())) << bus_.error().toStdString();
     clientConnection_ = QDBusConnection::connectToBus(bus_.address(), QStringLiteral("check-client-side"));
     ASSERT_TRUE(clientConnection_.isConnected());
   }
@@ -61,6 +87,7 @@ class UpdateCheckClientTest : public ::testing::Test {
     ASSERT_TRUE(service_->registerOn(serviceConnection_)) << service_->error().toStdString();
   }
 
+  QTemporaryDir environment_;
   PrivateBus bus_;
   QDBusConnection clientConnection_{QStringLiteral("")};
   QDBusConnection serviceConnection_{QStringLiteral("")};

@@ -105,7 +105,7 @@ TEST_F(RepositoryCatalogTest, InstalledRemovalRecalculatesWithoutCheckingOrChang
   EXPECT_EQ(store.load()->snapshot, before->snapshot);
 }
 
-TEST_F(RepositoryCatalogTest, CorruptCatalogRemainsReadableAsLegacyRows) {
+TEST_F(RepositoryCatalogTest, CorruptCatalogReevaluatesUsingLocalDatabases) {
   publish();
   auto saved = store.load();
   ASSERT_TRUE(saved && saved->snapshot);
@@ -117,16 +117,93 @@ TEST_F(RepositoryCatalogTest, CorruptCatalogRemainsReadableAsLegacyRows) {
   auto backend = source();
   const auto fallback = backend->loadUpdates();
   ASSERT_TRUE(fallback);
-  EXPECT_TRUE(fallback->previously_loaded);
-  EXPECT_EQ(fallback->updates, saved->snapshot->snapshot.updates);
+  EXPECT_FALSE(fallback->previously_loaded);
+  EXPECT_TRUE(fallback->evaluated);
+  EXPECT_TRUE(fallback->updates.empty());
   UpdatesModel rows(backend);
   holonight_packages_application::UpdateMonitor monitor(backend, {});
   monitor.adoptOnline(*saved->snapshot);
   monitor.start();
   QTRY_VERIFY_WITH_TIMEOUT(!rows.loading(), 3000);
-  QTRY_COMPARE_WITH_TIMEOUT(monitor.status().updateCount, 3, 3000);
-  EXPECT_EQ(rows.updateCount(), 3);
-  EXPECT_EQ(rows.sourceText(), QStringLiteral("Previously loaded data"));
+  QTRY_COMPARE_WITH_TIMEOUT(monitor.status().state, holonight_packages_application::UpdateState::Ready, 3000);
+  EXPECT_EQ(monitor.status().updateCount, 0);
+  EXPECT_EQ(rows.updateCount(), 0);
+  EXPECT_FALSE(rows.previouslyLoaded());
+}
+
+TEST_F(RepositoryCatalogTest, FiveInstalledLegacyUpgradesYieldOnlyCurrentFzfOnStartupAndReload) {
+  holonight_packages_domain::CheckedSnapshot legacy;
+  legacy.fetchedAt = std::chrono::system_clock::now();
+  legacy.snapshot.dataAsOf = legacy.fetchedAt + std::chrono::hours{1};
+  for (const auto* name : {"pending-a", "pending-b", "pending-c", "pending-d", "pending-e"}) {
+    const auto installed = fixture.realDbPath() / "local" / (std::string(name) + "-2.0-1");
+    fs::create_directory(installed);
+    std::ofstream(installed / "desc") << "%NAME%\n" << name << "\n\n%VERSION%\n2.0-1\n\n%SIZE%\n100\n\n";
+    legacy.snapshot.updates.push_back({.name = name, .installedVersion = "1.0-1", .availableVersion = "2.0-1"});
+  }
+  const auto installed = fixture.realDbPath() / "local/fzf-1.0-1";
+  fs::create_directory(installed);
+  std::ofstream(installed / "desc") << "%NAME%\nfzf\n\n%VERSION%\n1.0-1\n\n%SIZE%\n100\n\n";
+  fs::copy_file(fs::path(HOLONIGHT_TEST_FIXTURES_DIR) / "pacman/updates/extra-fzf.db",
+                fixture.realDbPath() / "sync/extra.db", fs::copy_options::overwrite_existing);
+  ASSERT_TRUE(store.save(legacy));
+  auto backend = source();
+  UpdatesModel rows(backend);
+  rows.applyCheckedSnapshot(legacy);
+  holonight_packages_application::UpdateMonitor monitor(backend, {});
+  monitor.adoptOnline(legacy);
+  QTRY_VERIFY_WITH_TIMEOUT(!rows.loading(), 3000);
+  QTRY_COMPARE_WITH_TIMEOUT(monitor.status().state, holonight_packages_application::UpdateState::Ready, 3000);
+  EXPECT_EQ(rows.updateCount(), 1);
+  EXPECT_EQ(rows.data(rows.index(0), UpdatesModel::NameRole).toString(), "fzf");
+  EXPECT_EQ(monitor.status().updateCount, 1);
+  rows.reload();
+  monitor.refresh();
+  QTRY_VERIFY_WITH_TIMEOUT(!rows.loading(), 3000);
+  EXPECT_EQ(rows.updateCount(), 1);
+  EXPECT_EQ(rows.data(rows.index(0), UpdatesModel::NameRole).toString(), "fzf");
+  EXPECT_FALSE(rows.previouslyLoaded());
+  EXPECT_EQ(store.load()->snapshot->snapshot.updates, legacy.snapshot.updates);
+}
+
+TEST_F(RepositoryCatalogTest, LegacyRowsAreReevaluatedAndRetainedOnlyOnFailure) {
+  publish();
+  auto saved = store.load();
+  ASSERT_TRUE(saved && saved->snapshot);
+  auto legacy = *saved->snapshot;
+  legacy.snapshot.repositories.clear();
+  legacy.fetchedAt += std::chrono::hours{1};
+  ASSERT_TRUE(store.save(legacy));
+  ASSERT_TRUE(store.load()->snapshot->snapshot.repositories.empty());
+  auto backend = source();
+  const auto current = backend->loadUpdates();
+  ASSERT_TRUE(current);
+  EXPECT_TRUE(current->evaluated);
+  EXPECT_FALSE(current->previously_loaded);
+  EXPECT_TRUE(current->updates.empty());
+  fs::rename(fixture.realDbPath() / "local", fixture.realDbPath() / "installed-backup");
+  const auto historical = backend->loadUpdates();
+  ASSERT_TRUE(historical);
+  EXPECT_TRUE(historical->previously_loaded);
+  EXPECT_FALSE(historical->evaluated);
+  EXPECT_FALSE(historical->evaluation_error.empty());
+  EXPECT_EQ(historical->updates, legacy.snapshot.updates);
+  EXPECT_EQ(historical->dataAsOf, legacy.snapshot.dataAsOf);
+  UpdatesModel rows(backend);
+  holonight_packages_application::UpdateMonitor monitor(backend, {});
+  monitor.start();
+  QTRY_VERIFY_WITH_TIMEOUT(!rows.loading(), 3000);
+  QTRY_COMPARE_WITH_TIMEOUT(monitor.status().state, holonight_packages_application::UpdateState::Error, 3000);
+  EXPECT_TRUE(rows.previouslyLoaded());
+  EXPECT_FALSE(rows.reloadErrorMessage().isEmpty());
+  EXPECT_EQ(rows.updateCount(), monitor.status().updateCount);
+  fs::rename(fixture.realDbPath() / "installed-backup", fixture.realDbPath() / "local");
+  rows.reload();
+  monitor.refresh();
+  QTRY_VERIFY_WITH_TIMEOUT(!rows.loading(), 3000);
+  QTRY_COMPARE_WITH_TIMEOUT(monitor.status().state, holonight_packages_application::UpdateState::Ready, 3000);
+  EXPECT_FALSE(rows.previouslyLoaded());
+  EXPECT_EQ(rows.updateCount(), 0);
 }
 
 TEST_F(RepositoryCatalogTest, SignaturePolicyChangeRejectsCheckedEntries) {

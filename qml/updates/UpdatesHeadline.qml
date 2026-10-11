@@ -30,8 +30,9 @@ HnSurfaceFrame {
             spacing: 2
 
             HnLabel {
+                objectName: "updatesHeadlineTitle"
                 role: HnTypographyRole.Caption
-                rawText: qsTr("Pending updates")
+                rawText: root.updatesModel.previouslyLoaded ? qsTr("Previously recorded updates") : qsTr("Pending updates")
                 color: HoloniightPalette.textMuted
             }
 
@@ -56,8 +57,9 @@ HnSurfaceFrame {
             spacing: 2
 
             HnLabel {
+                objectName: "updatesHeadlineDownloadTitle"
                 role: HnTypographyRole.Caption
-                rawText: qsTr("Total download")
+                rawText: root.updatesModel.previouslyLoaded ? qsTr("Previously recorded download size") : qsTr("Total download")
                 color: HoloniightPalette.textMuted
             }
 

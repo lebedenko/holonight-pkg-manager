@@ -21,14 +21,15 @@ UpdateStatus buildUpdateStatus(const std::expected<UpdateSnapshot, UpdateSourceE
   }
 
   status.lastError.clear();
-  if (!result->databasesFound) {
+  if (!result->databasesFound && !result->previously_loaded) {
     status = UpdateStatus{};
     status.state = UpdateState::NoDatabases;
     return status;
   }
 
   const UpdateSummary summary = summarizeUpdates(result->updates);
-  status.state = UpdateState::Ready;
+  status.state = result->previously_loaded ? UpdateState::Error : UpdateState::Ready;
+  status.lastError = result->evaluation_error;
   status.updateCount = summary.updateCount;
   status.ignoredCount = summary.ignoredCount;
   status.totalDownloadBytes = summary.totalDownloadBytes;

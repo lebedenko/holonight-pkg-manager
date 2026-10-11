@@ -28,10 +28,13 @@ class PrivateBus {
   void setProcessEnvironment(const QProcessEnvironment& environment) { daemon_.setProcessEnvironment(environment); }
 
   // Returns false (with a remediation message in error()) when dbus-daemon cannot be started.
-  [[nodiscard]] bool start() {
+  [[nodiscard]] bool start(const QString& configuration = {}) {
     daemon_.setProgram(QStringLiteral("dbus-daemon"));
-    daemon_.setArguments(
-        {QStringLiteral("--session"), QStringLiteral("--nofork"), QStringLiteral("--print-address=1")});
+    daemon_.setArguments({
+        configuration.isEmpty() ? QStringLiteral("--session") : QStringLiteral("--config-file=") + configuration,
+        QStringLiteral("--nofork"),
+        QStringLiteral("--print-address=1"),
+    });
     daemon_.start();
     if (!daemon_.waitForStarted(5000)) {
       error_ = QStringLiteral("cannot start dbus-daemon; install the dbus package and make it available on PATH");

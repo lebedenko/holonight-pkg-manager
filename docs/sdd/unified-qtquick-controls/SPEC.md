@@ -31,3 +31,17 @@ Formatting, tidy, QML lint/types, policies, full CTest, staged installation, scr
 ## Exclusions
 
 No package operation, synchronization, external-link or network action; no system installation, public configuration/schema change, production diagnostic/database-path API or other consumer implementation. Preserve the two untracked mockups. Human-operated Hyprland/Sway and ecosystem integration remain UQC-201.
+
+### Cached update evaluation
+
+Startup, Reload, and service refresh compare usable checked catalogs or local repository databases
+against freshly read installed packages. Successful evaluation replaces saved rows regardless of
+aggregate timestamps. Reload remains offline; Check now refreshes repository metadata online.
+
+When current evaluation fails, saved rows, recorded versions, totals, repository timestamp, and
+saved-snapshot age remain historical. The Updates page labels them “Previously recorded updates”
+and “Previously recorded download size” and reports the evaluation reason. Historical empty
+results say “No current update evaluation is available.” The service publishes `error` with
+retained totals and the reason in `LastError`; the sidebar badge requires an available service
+in `ready` state with a positive count. Recovery clears historical labels and evaluation errors
+without changing online-check completion history. Snapshot and D-Bus schemas remain unchanged.

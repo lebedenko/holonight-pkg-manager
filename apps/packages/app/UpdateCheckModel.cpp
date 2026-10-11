@@ -114,10 +114,13 @@ QString UpdateCheckModel::snapshotAgeText() const {
 }
 
 QString UpdateCheckModel::statusLineText() const {
+  if (fetchedAt()) {
+    return snapshotAgeText();
+  }
   if (!hasSnapshot()) {
     return tr("Not checked yet");
   }
-  return fetchedAt() ? snapshotAgeText() : tr("Showing local package data");
+  return tr("Showing local package data");
 }
 
 QString UpdateCheckModel::checkHistoryText() const {
