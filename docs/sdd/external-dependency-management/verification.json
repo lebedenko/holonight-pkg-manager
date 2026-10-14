@@ -1,0 +1,1752 @@
+{
+  "schema_version": 1,
+  "work_package": "EDM-018",
+  "date": "2026-10-14",
+  "implementation_baseline": "8042ed3890fc3bf226dc7d4c991459cd5c5599a2",
+  "audit_baseline": "879bea1f4b71a2ddf185f45fc2d3e153edc46ac5",
+  "declaration_checkpoint": "27540047dad600c72672971e02ba99b2626d9b63",
+  "compatibility_commit": "e35e21739845eadd07792f30cd59654a54c8ad9f",
+  "platform": "linux/amd64",
+  "jobs": 8,
+  "working_tree_acceptance": true,
+  "publication": "not requested; no push, hosted CI query or umbrella pin update",
+  "preparation_identity": {
+    "images": {
+      "build": "ghcr.io/lebedenko/holonight-deps@sha256:37ca051c39d1688d6413c47d94b8c0f221152dac6981ec67d155f2c43ea17b40",
+      "licensing": "docker.io/fsfe/reuse@sha256:85462a75c0f8efda09ddd190b92816b70e7662577c8427429e11e1b9f25a992e"
+    },
+    "platform": "linux/amd64",
+    "providers": {
+      "holonight-config": "0ccd25f323662f50a47bb048be636160f2b7c135",
+      "holonight-qt": "7c3ce074a8c2e02e4ee8cad8cd19eb8627aa4f68"
+    },
+    "inputs": {
+      "tooling/VERSION": "c28fcca53637bc88e124af1725df13cb98c69dedefd62fb3cdbe1cdb6b760624",
+      "tooling/module.json": "b897af49b36b8986d15296b3d3e201e46b2ff8132150217aee0e63a4f033cc9d",
+      "tooling/dependencies.cmake": "495162bdb3d0d1cc3a77bddc905633112f8752fa3c3ff58c565aa2ae42f24c35",
+      "tooling/providers.cmake": "5d6e7aae9f7f6874d9fa3cf5efca17cab8c3df88ea3b312633ece6341b592876",
+      "tooling/external.py": "2e87dc012d7cdda7235d5ea2e311a2a49272ff82eac5cf3ccec7841ec610df27",
+      "tooling/workflow.py": "9d3224f822ad05ecc877dfd511a6a43df3b7ce0e4ef9afe4dfcb1a83d23c1450",
+      "tooling/external-packages.json": "4a1ad8d184dfb778c245ae67bb4599fe58209314b9f86824c66ec1eaa78d01c6",
+      "CMakeLists.txt": "929a3d8a1ee0b9883e23bc0db251076cd552c3b1bc82ac401ada75296ed61d2b",
+      "CMakePresets.json": "f980cdf37a8c4626a382dd08861654e819e6a9394e696ce55ffdd4dd2c220f2e",
+      "Taskfile.yml": "6dd79d92238085c9da7a6600c24f9df5280f22ccef495f666db023d5a71a974d",
+      "scripts/ci/lane.sh": "7be545dfe85b15efb2a9c795dfb0475d2fe4eb2adf91f64e53562af03d839a13",
+      "scripts/ci/run.py": "4dc72d9a3befb59fc9db020738c7ecddae410cd833dd5064eb2c0dba662ccd83"
+    }
+  },
+  "image_ids": {
+    "build": "sha256:51bb1aed43c0ad4e9336ed49962862ec78293f4380fd05e73b954e88c6c479c7",
+    "licensing": "sha256:2575b4ad3a736a14323c7705b708e0027109930a1511cce4e65cd09b9dfc1cc4"
+  },
+  "prepared_manifest_sha256": "62ee78d4b908806decf0a708bcb49090c705fef7d9e00ad32c65cfc9244c08cb",
+  "prepared_file_count": 1481,
+  "providers": {
+    "holonight-config": {
+      "build_type": "Debug",
+      "cmake_subdirectory": "",
+      "content": "0329c0f5df87b1fecde6253a521ad2984a40c2ca89c91c5d72e8926887ec8a05",
+      "external": {
+        "external_prefix": null,
+        "features": {
+          "ENABLE_COVERAGE": false
+        },
+        "module": "holonight-pkg-manager",
+        "package_config_signatures": {
+          "Qt6Concurrent_DIR": "1b6a7d13a129fb928840a1f778799630b93ca96df584f75aa63d294484069130",
+          "Qt6Core_DIR": "0b856954cbd319412757eff8398b521f3c51140050321e37cf78aaabe2ff46f8",
+          "Qt6DBus_DIR": "3ff5cfe87d074134529580bdfbee77488a724af38b4f8779b52fe3f559ea885d",
+          "Qt6Gui_DIR": "19f27bef9e7f6e12c1262b9da0a9d7106a3a72cb6a51019a6bbaefd48c61be54",
+          "Qt6Network_DIR": "5c93186ee709c7c87867899b5046b9cff081e7a9dbed9e39d6fb88fe495ef18d",
+          "Qt6Qml_DIR": "aac462dae222e32644e50eb25ace2ef59540366ab75cc0fa82e861d7bd9ecd1a",
+          "Qt6Quick_DIR": "46d33044f3b263992ec6e9f090cbd4e7a52ebf3932ae6d32089a356c52b15333",
+          "Qt6Sql_DIR": "50d504c955181220f1fe3a6564c153f69f4684a4cd7d457c888dc430bfd1bf58",
+          "Qt6_DIR": "517641c7620c616aae162376ccfb4945ca64053739f344d16b9d9dd5883d17ca"
+        },
+        "requirements": [
+          {
+            "component_packages": {
+              "GuiPrivate": {
+                "arch": [
+                  "qt6-base"
+                ],
+                "debian": [
+                  "qt6-base-private-dev"
+                ]
+              },
+              "Qml": {
+                "arch": [
+                  "qt6-declarative"
+                ],
+                "debian": [
+                  "qt6-declarative-dev"
+                ]
+              },
+              "QmlPrivate": {
+                "arch": [
+                  "qt6-declarative"
+                ],
+                "debian": [
+                  "qt6-declarative-private-dev"
+                ]
+              },
+              "Quick": {
+                "arch": [
+                  "qt6-declarative"
+                ],
+                "debian": [
+                  "qt6-declarative-dev"
+                ]
+              },
+              "QuickControls2": {
+                "arch": [
+                  "qt6-declarative"
+                ],
+                "debian": [
+                  "qt6-declarative-dev"
+                ]
+              },
+              "QuickControls2Private": {
+                "arch": [
+                  "qt6-declarative"
+                ],
+                "debian": [
+                  "qt6-declarative-private-dev"
+                ]
+              },
+              "QuickPrivate": {
+                "arch": [
+                  "qt6-declarative"
+                ],
+                "debian": [
+                  "qt6-declarative-private-dev"
+                ]
+              },
+              "QuickShapes": {
+                "arch": [
+                  "qt6-declarative"
+                ],
+                "debian": [
+                  "qt6-declarative-dev"
+                ]
+              },
+              "QuickTemplates2Private": {
+                "arch": [
+                  "qt6-declarative"
+                ],
+                "debian": [
+                  "qt6-declarative-private-dev"
+                ]
+              },
+              "QuickTest": {
+                "arch": [
+                  "qt6-declarative"
+                ],
+                "debian": [
+                  "qt6-declarative-dev"
+                ]
+              },
+              "Svg": {
+                "arch": [
+                  "qt6-svg"
+                ],
+                "debian": [
+                  "libqt6svg6-dev"
+                ]
+              },
+              "WaylandClient": {
+                "arch": [
+                  "qt6-base"
+                ],
+                "debian": [
+                  "qt6-wayland-dev"
+                ]
+              },
+              "WaylandClientPrivate": {
+                "arch": [
+                  "qt6-base"
+                ],
+                "debian": [
+                  "qt6-wayland-private-dev"
+                ]
+              }
+            },
+            "components": [
+              "Core",
+              "Gui",
+              "Quick",
+              "Qml",
+              "Network",
+              "Sql",
+              "DBus",
+              "Concurrent"
+            ],
+            "discovery": "cmake",
+            "id": "qt",
+            "package": "Qt6",
+            "packages": {
+              "arch": [
+                "qt6-base",
+                "qt6-declarative"
+              ],
+              "debian": [
+                "qt6-base-dev",
+                "qt6-declarative-dev"
+              ]
+            },
+            "scope": [
+              "build"
+            ],
+            "version": "6.11"
+          },
+          {
+            "discovery": "pkg-config",
+            "id": "alpm",
+            "package": "libalpm",
+            "packages": {
+              "arch": [
+                "pacman"
+              ],
+              "debian": [
+                "libalpm-dev"
+              ]
+            },
+            "scope": [
+              "build"
+            ]
+          },
+          {
+            "components": [
+              "uc"
+            ],
+            "discovery": "cmake",
+            "id": "icu",
+            "package": "ICU",
+            "packages": {
+              "arch": [
+                "icu"
+              ],
+              "debian": [
+                "libicu-dev"
+              ]
+            },
+            "scope": [
+              "build"
+            ]
+          },
+          {
+            "discovery": "tool",
+            "id": "compiler",
+            "package": "c++",
+            "packages": {
+              "arch": [
+                "base-devel"
+              ],
+              "debian": [
+                "build-essential"
+              ]
+            },
+            "scope": [
+              "tool"
+            ]
+          },
+          {
+            "discovery": "tool",
+            "id": "cmake",
+            "package": "cmake",
+            "packages": {
+              "arch": [
+                "cmake"
+              ],
+              "debian": [
+                "cmake"
+              ]
+            },
+            "scope": [
+              "tool"
+            ]
+          },
+          {
+            "discovery": "tool",
+            "id": "ninja",
+            "package": "ninja",
+            "packages": {
+              "arch": [
+                "ninja"
+              ],
+              "debian": [
+                "ninja-build"
+              ]
+            },
+            "scope": [
+              "tool"
+            ]
+          },
+          {
+            "discovery": "tool",
+            "id": "pkgconf",
+            "package": "pkg-config",
+            "packages": {
+              "arch": [
+                "pkgconf"
+              ],
+              "debian": [
+                "pkg-config"
+              ]
+            },
+            "scope": [
+              "tool"
+            ]
+          },
+          {
+            "discovery": "tool",
+            "id": "git",
+            "package": "git",
+            "packages": {
+              "arch": [
+                "git"
+              ],
+              "debian": [
+                "git"
+              ]
+            },
+            "scope": [
+              "tool"
+            ]
+          },
+          {
+            "discovery": "tool",
+            "id": "python",
+            "package": "python3",
+            "packages": {
+              "arch": [
+                "python"
+              ],
+              "debian": [
+                "python3"
+              ]
+            },
+            "scope": [
+              "tool"
+            ],
+            "version": "3.10"
+          },
+          {
+            "discovery": "tool",
+            "id": "task",
+            "package": "task",
+            "packages": {
+              "arch": [
+                "go-task"
+              ],
+              "debian": [
+                "go-task"
+              ]
+            },
+            "scope": [
+              "tool"
+            ]
+          },
+          {
+            "discovery": "tool",
+            "id": "clang-format",
+            "package": "clang-format",
+            "packages": {
+              "arch": [
+                "clang"
+              ],
+              "debian": [
+                "clang-format"
+              ]
+            },
+            "scope": [
+              "tool"
+            ]
+          },
+          {
+            "discovery": "tool",
+            "id": "clang",
+            "package": "clang-tidy",
+            "packages": {
+              "arch": [
+                "clang"
+              ],
+              "debian": [
+                "clang",
+                "clang-format",
+                "clang-tidy"
+              ]
+            },
+            "scope": [
+              "tool"
+            ]
+          },
+          {
+            "discovery": "tool",
+            "id": "reuse",
+            "package": "reuse",
+            "packages": {
+              "arch": [
+                "reuse"
+              ],
+              "debian": [
+                "reuse"
+              ]
+            },
+            "scope": [
+              "tool"
+            ]
+          },
+          {
+            "discovery": "tool",
+            "id": "ripgrep",
+            "package": "rg",
+            "packages": {
+              "arch": [
+                "ripgrep"
+              ],
+              "debian": [
+                "ripgrep"
+              ]
+            },
+            "scope": [
+              "tool"
+            ]
+          }
+        ],
+        "resolved": [
+          "CMAKE_CXX_COMPILER=/usr/sbin/c++",
+          "CMAKE_CXX_COMPILER_ID=GNU",
+          "CMAKE_CXX_COMPILER_VERSION=16.2.1",
+          "CMAKE_C_COMPILER=/usr/sbin/cc",
+          "CMAKE_C_COMPILER_ID=GNU",
+          "CMAKE_C_COMPILER_VERSION=16.2.1",
+          "External_1_holonight_pkg_manager_INCLUDE_DIRS=/usr/include",
+          "External_1_holonight_pkg_manager_LIBRARY_DIRS=/usr/lib",
+          "External_1_holonight_pkg_manager_PREFIX=/usr",
+          "External_1_holonight_pkg_manager_VERSION=16.0.1",
+          "ICU_DIR=",
+          "ICU_VERSION=78.3",
+          "ICU_VERSION_STRING=",
+          "ICUuc_DIR=",
+          "ICUuc_VERSION=",
+          "Qt6Concurrent_DIR=/usr/lib/cmake/Qt6Concurrent",
+          "Qt6Concurrent_VERSION=6.11.2",
+          "Qt6Core_DIR=/usr/lib/cmake/Qt6Core",
+          "Qt6Core_VERSION=6.11.2",
+          "Qt6DBus_DIR=/usr/lib/cmake/Qt6DBus",
+          "Qt6DBus_VERSION=6.11.2",
+          "Qt6Gui_DIR=/usr/lib/cmake/Qt6Gui",
+          "Qt6Gui_VERSION=6.11.2",
+          "Qt6Network_DIR=/usr/lib/cmake/Qt6Network",
+          "Qt6Network_VERSION=6.11.2",
+          "Qt6Qml_DIR=/usr/lib/cmake/Qt6Qml",
+          "Qt6Qml_VERSION=6.11.2",
+          "Qt6Quick_DIR=/usr/lib/cmake/Qt6Quick",
+          "Qt6Quick_VERSION=6.11.2",
+          "Qt6Sql_DIR=/usr/lib/cmake/Qt6Sql",
+          "Qt6Sql_VERSION=6.11.2",
+          "Qt6_DIR=/usr/lib/cmake/Qt6",
+          "Qt6_VERSION=6.11.2",
+          "Qt6_VERSION_STRING="
+        ]
+      },
+      "options": [
+        "-DBUILD_TESTING=OFF"
+      ],
+      "prefix": "/work/source/build/deps/prefix",
+      "revision": "0ccd25f323662f50a47bb048be636160f2b7c135",
+      "source": "/prepared/sources/holonight-config",
+      "toolchain": {
+        "bundle_version": "2.0.0",
+        "cc": {
+          "command": [
+            "cc"
+          ],
+          "path": "/usr/bin/gcc",
+          "version": "cc (GCC) 16.2.1 20260810\nCopyright (C) 2026 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+        },
+        "cmake": {
+          "command": [
+            "cmake"
+          ],
+          "path": "/usr/bin/cmake",
+          "version": "cmake version 4.4.3\n\nCMake suite maintained and supported by Kitware (kitware.com/cmake)."
+        },
+        "cxx": {
+          "command": [
+            "c++"
+          ],
+          "path": "/usr/bin/c++",
+          "version": "c++ (GCC) 16.2.1 20260810\nCopyright (C) 2026 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+        },
+        "environment": {},
+        "ninja": {
+          "command": [
+            "ninja"
+          ],
+          "path": "/usr/bin/ninja",
+          "version": "1.13.2"
+        },
+        "preset_context": {}
+      },
+      "wayland": true
+    },
+    "holonight-qt": {
+      "build_type": "Debug",
+      "cmake_subdirectory": "",
+      "content": "423b6042725d32236a574924fd274681ac4f7d482b09b7a302653bc8c3b02053",
+      "external": {
+        "external_prefix": null,
+        "features": {
+          "ENABLE_COVERAGE": false
+        },
+        "module": "holonight-pkg-manager",
+        "package_config_signatures": {
+          "Qt6Concurrent_DIR": "1b6a7d13a129fb928840a1f778799630b93ca96df584f75aa63d294484069130",
+          "Qt6Core_DIR": "0b856954cbd319412757eff8398b521f3c51140050321e37cf78aaabe2ff46f8",
+          "Qt6DBus_DIR": "3ff5cfe87d074134529580bdfbee77488a724af38b4f8779b52fe3f559ea885d",
+          "Qt6Gui_DIR": "19f27bef9e7f6e12c1262b9da0a9d7106a3a72cb6a51019a6bbaefd48c61be54",
+          "Qt6Network_DIR": "5c93186ee709c7c87867899b5046b9cff081e7a9dbed9e39d6fb88fe495ef18d",
+          "Qt6Qml_DIR": "aac462dae222e32644e50eb25ace2ef59540366ab75cc0fa82e861d7bd9ecd1a",
+          "Qt6Quick_DIR": "46d33044f3b263992ec6e9f090cbd4e7a52ebf3932ae6d32089a356c52b15333",
+          "Qt6Sql_DIR": "50d504c955181220f1fe3a6564c153f69f4684a4cd7d457c888dc430bfd1bf58",
+          "Qt6_DIR": "517641c7620c616aae162376ccfb4945ca64053739f344d16b9d9dd5883d17ca"
+        },
+        "requirements": [
+          {
+            "component_packages": {
+              "GuiPrivate": {
+                "arch": [
+                  "qt6-base"
+                ],
+                "debian": [
+                  "qt6-base-private-dev"
+                ]
+              },
+              "Qml": {
+                "arch": [
+                  "qt6-declarative"
+                ],
+                "debian": [
+                  "qt6-declarative-dev"
+                ]
+              },
+              "QmlPrivate": {
+                "arch": [
+                  "qt6-declarative"
+                ],
+                "debian": [
+                  "qt6-declarative-private-dev"
+                ]
+              },
+              "Quick": {
+                "arch": [
+                  "qt6-declarative"
+                ],
+                "debian": [
+                  "qt6-declarative-dev"
+                ]
+              },
+              "QuickControls2": {
+                "arch": [
+                  "qt6-declarative"
+                ],
+                "debian": [
+                  "qt6-declarative-dev"
+                ]
+              },
+              "QuickControls2Private": {
+                "arch": [
+                  "qt6-declarative"
+                ],
+                "debian": [
+                  "qt6-declarative-private-dev"
+                ]
+              },
+              "QuickPrivate": {
+                "arch": [
+                  "qt6-declarative"
+                ],
+                "debian": [
+                  "qt6-declarative-private-dev"
+                ]
+              },
+              "QuickShapes": {
+                "arch": [
+                  "qt6-declarative"
+                ],
+                "debian": [
+                  "qt6-declarative-dev"
+                ]
+              },
+              "QuickTemplates2Private": {
+                "arch": [
+                  "qt6-declarative"
+                ],
+                "debian": [
+                  "qt6-declarative-private-dev"
+                ]
+              },
+              "QuickTest": {
+                "arch": [
+                  "qt6-declarative"
+                ],
+                "debian": [
+                  "qt6-declarative-dev"
+                ]
+              },
+              "Svg": {
+                "arch": [
+                  "qt6-svg"
+                ],
+                "debian": [
+                  "libqt6svg6-dev"
+                ]
+              },
+              "WaylandClient": {
+                "arch": [
+                  "qt6-base"
+                ],
+                "debian": [
+                  "qt6-wayland-dev"
+                ]
+              },
+              "WaylandClientPrivate": {
+                "arch": [
+                  "qt6-base"
+                ],
+                "debian": [
+                  "qt6-wayland-private-dev"
+                ]
+              }
+            },
+            "components": [
+              "Core",
+              "Gui",
+              "Quick",
+              "Qml",
+              "Network",
+              "Sql",
+              "DBus",
+              "Concurrent"
+            ],
+            "discovery": "cmake",
+            "id": "qt",
+            "package": "Qt6",
+            "packages": {
+              "arch": [
+                "qt6-base",
+                "qt6-declarative"
+              ],
+              "debian": [
+                "qt6-base-dev",
+                "qt6-declarative-dev"
+              ]
+            },
+            "scope": [
+              "build"
+            ],
+            "version": "6.11"
+          },
+          {
+            "discovery": "pkg-config",
+            "id": "alpm",
+            "package": "libalpm",
+            "packages": {
+              "arch": [
+                "pacman"
+              ],
+              "debian": [
+                "libalpm-dev"
+              ]
+            },
+            "scope": [
+              "build"
+            ]
+          },
+          {
+            "components": [
+              "uc"
+            ],
+            "discovery": "cmake",
+            "id": "icu",
+            "package": "ICU",
+            "packages": {
+              "arch": [
+                "icu"
+              ],
+              "debian": [
+                "libicu-dev"
+              ]
+            },
+            "scope": [
+              "build"
+            ]
+          },
+          {
+            "discovery": "tool",
+            "id": "compiler",
+            "package": "c++",
+            "packages": {
+              "arch": [
+                "base-devel"
+              ],
+              "debian": [
+                "build-essential"
+              ]
+            },
+            "scope": [
+              "tool"
+            ]
+          },
+          {
+            "discovery": "tool",
+            "id": "cmake",
+            "package": "cmake",
+            "packages": {
+              "arch": [
+                "cmake"
+              ],
+              "debian": [
+                "cmake"
+              ]
+            },
+            "scope": [
+              "tool"
+            ]
+          },
+          {
+            "discovery": "tool",
+            "id": "ninja",
+            "package": "ninja",
+            "packages": {
+              "arch": [
+                "ninja"
+              ],
+              "debian": [
+                "ninja-build"
+              ]
+            },
+            "scope": [
+              "tool"
+            ]
+          },
+          {
+            "discovery": "tool",
+            "id": "pkgconf",
+            "package": "pkg-config",
+            "packages": {
+              "arch": [
+                "pkgconf"
+              ],
+              "debian": [
+                "pkg-config"
+              ]
+            },
+            "scope": [
+              "tool"
+            ]
+          },
+          {
+            "discovery": "tool",
+            "id": "git",
+            "package": "git",
+            "packages": {
+              "arch": [
+                "git"
+              ],
+              "debian": [
+                "git"
+              ]
+            },
+            "scope": [
+              "tool"
+            ]
+          },
+          {
+            "discovery": "tool",
+            "id": "python",
+            "package": "python3",
+            "packages": {
+              "arch": [
+                "python"
+              ],
+              "debian": [
+                "python3"
+              ]
+            },
+            "scope": [
+              "tool"
+            ],
+            "version": "3.10"
+          },
+          {
+            "discovery": "tool",
+            "id": "task",
+            "package": "task",
+            "packages": {
+              "arch": [
+                "go-task"
+              ],
+              "debian": [
+                "go-task"
+              ]
+            },
+            "scope": [
+              "tool"
+            ]
+          },
+          {
+            "discovery": "tool",
+            "id": "clang-format",
+            "package": "clang-format",
+            "packages": {
+              "arch": [
+                "clang"
+              ],
+              "debian": [
+                "clang-format"
+              ]
+            },
+            "scope": [
+              "tool"
+            ]
+          },
+          {
+            "discovery": "tool",
+            "id": "clang",
+            "package": "clang-tidy",
+            "packages": {
+              "arch": [
+                "clang"
+              ],
+              "debian": [
+                "clang",
+                "clang-format",
+                "clang-tidy"
+              ]
+            },
+            "scope": [
+              "tool"
+            ]
+          },
+          {
+            "discovery": "tool",
+            "id": "reuse",
+            "package": "reuse",
+            "packages": {
+              "arch": [
+                "reuse"
+              ],
+              "debian": [
+                "reuse"
+              ]
+            },
+            "scope": [
+              "tool"
+            ]
+          },
+          {
+            "discovery": "tool",
+            "id": "ripgrep",
+            "package": "rg",
+            "packages": {
+              "arch": [
+                "ripgrep"
+              ],
+              "debian": [
+                "ripgrep"
+              ]
+            },
+            "scope": [
+              "tool"
+            ]
+          }
+        ],
+        "resolved": [
+          "CMAKE_CXX_COMPILER=/usr/sbin/c++",
+          "CMAKE_CXX_COMPILER_ID=GNU",
+          "CMAKE_CXX_COMPILER_VERSION=16.2.1",
+          "CMAKE_C_COMPILER=/usr/sbin/cc",
+          "CMAKE_C_COMPILER_ID=GNU",
+          "CMAKE_C_COMPILER_VERSION=16.2.1",
+          "External_1_holonight_pkg_manager_INCLUDE_DIRS=/usr/include",
+          "External_1_holonight_pkg_manager_LIBRARY_DIRS=/usr/lib",
+          "External_1_holonight_pkg_manager_PREFIX=/usr",
+          "External_1_holonight_pkg_manager_VERSION=16.0.1",
+          "ICU_DIR=",
+          "ICU_VERSION=78.3",
+          "ICU_VERSION_STRING=",
+          "ICUuc_DIR=",
+          "ICUuc_VERSION=",
+          "Qt6Concurrent_DIR=/usr/lib/cmake/Qt6Concurrent",
+          "Qt6Concurrent_VERSION=6.11.2",
+          "Qt6Core_DIR=/usr/lib/cmake/Qt6Core",
+          "Qt6Core_VERSION=6.11.2",
+          "Qt6DBus_DIR=/usr/lib/cmake/Qt6DBus",
+          "Qt6DBus_VERSION=6.11.2",
+          "Qt6Gui_DIR=/usr/lib/cmake/Qt6Gui",
+          "Qt6Gui_VERSION=6.11.2",
+          "Qt6Network_DIR=/usr/lib/cmake/Qt6Network",
+          "Qt6Network_VERSION=6.11.2",
+          "Qt6Qml_DIR=/usr/lib/cmake/Qt6Qml",
+          "Qt6Qml_VERSION=6.11.2",
+          "Qt6Quick_DIR=/usr/lib/cmake/Qt6Quick",
+          "Qt6Quick_VERSION=6.11.2",
+          "Qt6Sql_DIR=/usr/lib/cmake/Qt6Sql",
+          "Qt6Sql_VERSION=6.11.2",
+          "Qt6_DIR=/usr/lib/cmake/Qt6",
+          "Qt6_VERSION=6.11.2",
+          "Qt6_VERSION_STRING="
+        ]
+      },
+      "options": [
+        "-DBUILD_TESTS=OFF",
+        "-DBUILD_DEMO=OFF",
+        "-DBUILD_CONTROLS_GALLERY=OFF",
+        "-DBUILD_WAYLAND=ON"
+      ],
+      "prefix": "/work/source/build/deps/prefix",
+      "revision": "7c3ce074a8c2e02e4ee8cad8cd19eb8627aa4f68",
+      "source": "/prepared/sources/holonight-qt",
+      "toolchain": {
+        "bundle_version": "2.0.0",
+        "cc": {
+          "command": [
+            "cc"
+          ],
+          "path": "/usr/bin/gcc",
+          "version": "cc (GCC) 16.2.1 20260810\nCopyright (C) 2026 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+        },
+        "cmake": {
+          "command": [
+            "cmake"
+          ],
+          "path": "/usr/bin/cmake",
+          "version": "cmake version 4.4.3\n\nCMake suite maintained and supported by Kitware (kitware.com/cmake)."
+        },
+        "cxx": {
+          "command": [
+            "c++"
+          ],
+          "path": "/usr/bin/c++",
+          "version": "c++ (GCC) 16.2.1 20260810\nCopyright (C) 2026 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE."
+        },
+        "environment": {},
+        "ninja": {
+          "command": [
+            "ninja"
+          ],
+          "path": "/usr/bin/ninja",
+          "version": "1.13.2"
+        },
+        "preset_context": {}
+      },
+      "wayland": true
+    }
+  },
+  "runs": {
+    "full": "build/ci/20261014T170246Z-0fqpnz5_",
+    "final_static_and_focused": "build/ci/20261014T181833Z-final-static-fqbofy62"
+  },
+  "commands": [
+    "JOBS=8 python3 scripts/ci/run.py --prepare --provider-source-root ..",
+    "JOBS=8 python3 scripts/ci/run.py",
+    [
+      "docker",
+      "run",
+      "--rm",
+      "--pull=never",
+      "--network=none",
+      "--platform",
+      "linux/amd64",
+      "--user",
+      "1000:1000",
+      "--mount",
+      "type=bind,src=/tmp/edm018-final-static-cp_b0sxz/source,dst=/input,readonly",
+      "--mount",
+      "type=bind,src=/home/andrii/Projects/pet/holonight/holonight-pkg-manager/build/ci/20261014T181833Z-final-static-fqbofy62,dst=/output",
+      "--mount",
+      "type=bind,src=/tmp/edm018-final-static-cp_b0sxz/final-static.sh,dst=/final-static.sh,readonly",
+      "--mount",
+      "type=bind,src=/tmp/edm018-final-static-cp_b0sxz/passwd,dst=/etc/passwd,readonly",
+      "--mount",
+      "type=bind,src=/tmp/edm018-final-static-cp_b0sxz/group,dst=/etc/group,readonly",
+      "--mount",
+      "type=bind,src=/home/andrii/Projects/pet/holonight/holonight-pkg-manager/build/ci-prepared/deps/prefix,dst=/prepared/deps/prefix,readonly",
+      "--mount",
+      "type=bind,src=/home/andrii/Projects/pet/holonight/holonight-pkg-manager/build/ci-prepared/provider-revisions.json,dst=/prepared/provider-revisions.json,readonly",
+      "--mount",
+      "type=bind,src=/home/andrii/Projects/pet/holonight/holonight-pkg-manager/build/ci-prepared/deps/provider-revisions.tsv,dst=/prepared/deps/provider-revisions.tsv,readonly",
+      "--tmpfs",
+      "/work:rw,exec,mode=1777",
+      "--workdir",
+      "/work",
+      "--env",
+      "JOBS=8",
+      "--entrypoint",
+      "/bin/sh",
+      "ghcr.io/lebedenko/holonight-deps@sha256:37ca051c39d1688d6413c47d94b8c0f221152dac6981ec67d155f2c43ea17b40",
+      "/final-static.sh"
+    ],
+    "#!/bin/sh\nset -eu\nexport HOME=/work/build/home LC_ALL=C.UTF-8 TZ=UTC\nexport QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software QT_FORCE_STDERR_LOGGING=1\nexport QT_QPA_PLATFORMTHEME= QT_STYLE_OVERRIDE= XDG_RUNTIME_DIR=/work/runtime\ntrap 'status=$?; if [ \"$status\" -ne 0 ] && [ -d /work/source ]; then cp -a /work/source /output/workspace; fi; exit \"$status\"' 0\n/bin/sh /input/scripts/ci/lane.sh static-checks\nexport LD_LIBRARY_PATH=/work/source/build/deps/prefix/lib\nfilter='PackagedProcessTest|PackagedDbusTest|holonight_packages_checks.UpdateCheckServiceTest'\nctest --test-dir /work/source/build/test -R \"$filter\" --show-only=json-v1 > /output/focused-tests.json\ndbus-run-session -- ctest --test-dir /work/source/build/test -R \"$filter\" --output-on-failure --no-tests=error\ncat /work/source/build/test/Testing/Temporary/LastTest.log\ncp -a /work/source/build/test/Testing /output/FocusedTesting\n"
+  ],
+  "lanes": {
+    "build-test": {
+      "image": "ghcr.io/lebedenko/holonight-deps@sha256:37ca051c39d1688d6413c47d94b8c0f221152dac6981ec67d155f2c43ea17b40",
+      "exit_code": 0,
+      "log_sha256": "622ccb4f0bc64cee49f93e1a870de29b4dca58a0cac2e9572b675d7ff14d775f"
+    },
+    "release": {
+      "image": "ghcr.io/lebedenko/holonight-deps@sha256:37ca051c39d1688d6413c47d94b8c0f221152dac6981ec67d155f2c43ea17b40",
+      "exit_code": 0,
+      "log_sha256": "af71f55297a54a3e38985a42b4335a9cfdddcb9d620d4b187c6690486ff74114"
+    },
+    "static-checks": {
+      "exit_code": 0,
+      "run": "build/ci/20261014T181833Z-final-static-fqbofy62",
+      "log_sha256": "cdd5f78f1ea1478fbf5e41ac1aec92d4ef30577c42a4436fd207cc9c233a9055"
+    },
+    "licensing": {
+      "image": "docker.io/fsfe/reuse@sha256:85462a75c0f8efda09ddd190b92816b70e7662577c8427429e11e1b9f25a992e",
+      "exit_code": 0,
+      "log_sha256": "f2606a4f92891169dc18baec33ae0ca5ccd9ad49d11fb1705b92a749fd95817a"
+    }
+  },
+  "initial_full_lane_results": {
+    "build-test": {
+      "image": "ghcr.io/lebedenko/holonight-deps@sha256:37ca051c39d1688d6413c47d94b8c0f221152dac6981ec67d155f2c43ea17b40",
+      "exit_code": 0,
+      "log_sha256": "622ccb4f0bc64cee49f93e1a870de29b4dca58a0cac2e9572b675d7ff14d775f"
+    },
+    "release": {
+      "image": "ghcr.io/lebedenko/holonight-deps@sha256:37ca051c39d1688d6413c47d94b8c0f221152dac6981ec67d155f2c43ea17b40",
+      "exit_code": 0,
+      "log_sha256": "af71f55297a54a3e38985a42b4335a9cfdddcb9d620d4b187c6690486ff74114"
+    },
+    "static-checks": {
+      "image": "ghcr.io/lebedenko/holonight-deps@sha256:37ca051c39d1688d6413c47d94b8c0f221152dac6981ec67d155f2c43ea17b40",
+      "exit_code": 1,
+      "log_sha256": "357d626905e12420f741ae83e79d059da03c51fb1c44c7a98815d608c5edf6db"
+    },
+    "licensing": {
+      "image": "docker.io/fsfe/reuse@sha256:85462a75c0f8efda09ddd190b92816b70e7662577c8427429e11e1b9f25a992e",
+      "exit_code": 0,
+      "log_sha256": "f2606a4f92891169dc18baec33ae0ca5ccd9ad49d11fb1705b92a749fd95817a"
+    }
+  },
+  "snapshot_sha256": {
+    ".clang-format": "b991ca75bf44dabc170e88b4f2cd7d1cf9da964779b235306189fe55e35d95a4",
+    ".clang-tidy": "ec189328cacdea88220f75a842d54652501c7fc56a26402d54466264039403b7",
+    ".clangd": "66f4e0808d6d184566ab049d24b967a8fccd27c28e6f3f36b7d44f20b7239a8b",
+    ".github/workflows/ci.yml": "ac773315da196c9e58325cbf42e253559d4ce62df8905f2a352b321d80cdd27f",
+    ".github/workflows/licensing.yml": "bc59d120a2d02812e33d3990df9dd0d17314ef7d99f7436f9c04fb0d2ec05238",
+    ".gitignore": "ca2a4245c959b512c3c3ca7e0c24030177da619b0b22fda1f59421abeff814f5",
+    ".qmlls.ini": "bbb10f92627c36eb0b7db091bd9c46528fbbe18fe371f77f507291690c27cc0f",
+    ".serena/project.yml": "b799fb8c2b2730dd7e4d5cf54ef7c3872def6d8051f64ecd745c5ad30758df44",
+    "AGENTS.md": "b7fb3a5cae16749e71b8b4948dcdc17b034a77c697de564976732549347c7885",
+    "CHANGELOG.md": "171ce47107610f27c55a8f47d0c84ab913a0723c0b82cda7969fe7587f55e420",
+    "CMakeLists.txt": "929a3d8a1ee0b9883e23bc0db251076cd552c3b1bc82ac401ada75296ed61d2b",
+    "CMakePresets.json": "f980cdf37a8c4626a382dd08861654e819e6a9394e696ce55ffdd4dd2c220f2e",
+    "LICENSE": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    "LICENSES/GPL-3.0-or-later.txt": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    "README.md": "46c56c89e6d303fc082cb54f47f781bad05ac883bfa4621c5bc7050afb3365b1",
+    "REUSE.toml": "b3b9d24e3addd96838056ecc815a2cf9402868ed5cc62ff68e0392ac424b4ae3",
+    "Taskfile.yml": "6dd79d92238085c9da7a6600c24f9df5280f22ccef495f666db023d5a71a974d",
+    "apps/packaged/CMakeLists.txt": "205d02a2c7d2ec61949a1c439e992439ab3209c58abdbb7fcb399b01f5b2e722",
+    "apps/packaged/PackagedConfig.cpp": "e5df062628541ed45bd6d9c269718d940753c4bae7ef8ca63197112de45acda2",
+    "apps/packaged/PackagedConfig.h": "65945223e66bdc9ea9f3ce77eb1bdcb7771c6390f6e0a06b8b9b73ffbaa43a2e",
+    "apps/packaged/SignalHandler.cpp": "3cef5df24658cb1668725ef34e2c6926df2b13eab628960e6451aec77cc3879f",
+    "apps/packaged/SignalHandler.h": "e45658cbd6d3feb92e97df23d9ec6d7a45650bcca05984f158a6782e87a04b49",
+    "apps/packaged/UpdateCheckAdaptor.cpp": "98750a5fd21475d8a433ca49748fc11a8111b09bae13f6874f32fbaec6bf94cc",
+    "apps/packaged/UpdateCheckAdaptor.h": "ef3f519d0db1d971b4ed1bce4b75d8ef4901449644558ccbfaa0497c175fb77b",
+    "apps/packaged/UpdateStatusService.cpp": "bf5aaa1004a6033ef88dad69bd2e65a7331b5eba1a7c18a13398d8549c6f5dff",
+    "apps/packaged/UpdateStatusService.h": "ddd7718b7f40e98fb9dcdce9f5beca1484b53a5b080b80be8564166174f12dcb",
+    "apps/packaged/UpdatesAdaptor.cpp": "06703a73c6b06e9fa50939ef26daa5fe125e17f1f0f2e87f456991b6c10fc650",
+    "apps/packaged/UpdatesAdaptor.h": "c27b9f5be12600ca3d2aa57fa6838bb1afbf17a3f264fa9f3e501a6824aa6dd7",
+    "apps/packaged/data/holonight-packaged.service.in": "26b7c1d456bca9dc9262168412d7d9439021f18aa1e516d41e0d0b2b57dd632f",
+    "apps/packaged/data/org.holonight.Packages1.service.in": "cd3ee41ce17f80df6600c226ed95ab48ef0dce78465efff2b2a9e884d68f27d1",
+    "apps/packaged/dbus/org.holonight.Packages1.Updates.xml": "2fb3f19e95ab1ecbc6784c5cd54e53a09fab8c6e8de1363d5fc76724bc05a8f8",
+    "apps/packaged/main.cpp": "3706bae0ebcc7a1eb612051a7e1ae84793d2975630dc3eb2bf2b0ef5be3adf70",
+    "apps/packages/CMakeLists.txt": "2c92de6300f66fe34124009d0243c0b56c92b59c9db6f51b598b230c7c217b19",
+    "apps/packages/app/DBusUpdateCheckClient.cpp": "9edd38b7542aa031b4b41c20fd9b183ae56f276f04a1e828a3c27da58b21e61e",
+    "apps/packages/app/DBusUpdateCheckClient.h": "520a90e2ace138d7bf73a2344d3ad814516af3a64066eadc8b09b0a123fe2ba8",
+    "apps/packages/app/DataFreshness.cpp": "7398c545be66d4bc5e9e247ca08319a4e185060fe39ad0a95bfb29f1fdba5a30",
+    "apps/packages/app/DataFreshness.h": "5c6ea9cc92e50a6a9922e127e29dc157197276eaf5198800d1b42b33c2409354",
+    "apps/packages/app/ExploreModel.cpp": "5480ef3714fafec19419ad34a16576cfe35e522fc36d61abcfd94c37a8a47dac",
+    "apps/packages/app/ExploreModel.h": "80211aa5904d56d1c191df72870a99fd76d04da04a80fd2fe2e415f5417c2091",
+    "apps/packages/app/InstalledPackagesFilterModel.cpp": "3428d2fcf1d4e9c51f8af03357e76d507623c71fd3211d3c2d2b49cd1a94b711",
+    "apps/packages/app/InstalledPackagesFilterModel.h": "feaf9877e89ebae8e11e71b2ef2c678077adb710c586a25c91059c77fc6eac72",
+    "apps/packages/app/InstalledPackagesModel.cpp": "3d56e6d9629efcef5b756e85fff4786cf82800214010e68dfc1c196b2ea5ae22",
+    "apps/packages/app/InstalledPackagesModel.h": "e3dbaf93ac88039aee336953230572ca33b803eb832916fae58e5c5fe136035f",
+    "apps/packages/app/PackagesApplication.cpp": "24b3d2cfb05bcb5f3f938e5cec594ac5d313d6c78d2e1ca504e45fe18fe9852e",
+    "apps/packages/app/PackagesApplication.h": "2ead9d30d80582a9b942cfb5f08fcaf5e0f30fbfdee8248b28645182725fe62f",
+    "apps/packages/app/SnapshotFileReader.cpp": "419098c4743b87894b4d0dc207a89c8291f168aff523b9b2aa7184fd5c62e010",
+    "apps/packages/app/SnapshotFileReader.h": "c553fe3cb88cfab364e7d543eb36a6221412410db4f539fb997cb7796490fc02",
+    "apps/packages/app/UpdateCheckClient.cpp": "893609be4e3e37b06e547279ece31b9e64e15ff5d0edb5c261039f80fe33b2c3",
+    "apps/packages/app/UpdateCheckClient.h": "1bdb7103013780ad67a27ec1b44361e9fb44d4516fb26c0b1709aab9c89649d9",
+    "apps/packages/app/UpdateCheckModel.cpp": "c39b36719c9ac05ffe363ed27d01718161c457b06deb477f004d9e9abeae8c13",
+    "apps/packages/app/UpdateCheckModel.h": "88dab8950152af6ce54e1348cd282910fefbcb0670459ce38746020fb8e69b58",
+    "apps/packages/app/UpdateStatusClient.cpp": "9b6e0237951f547edc8649e4758c8f3ac22580bc371cf801196835d8e3768f9a",
+    "apps/packages/app/UpdateStatusClient.h": "66c1c56530713029c90e253bc274eb0645440206996f0bde02baa7caafb784a6",
+    "apps/packages/app/UpdatesModel.cpp": "fe59da4c8370ac480f5e27413d13bf44c4d2cebc56acf313310b79e5e0ac3432",
+    "apps/packages/app/UpdatesModel.h": "874a3e7823d5aeeebe9e7521215f1174bd32d4382b973352c741d3293e4d17c1",
+    "apps/packages/main.cpp": "1bcd12462f28a060a2bc3ebf6505d65cf5944161b462ee3c4cf3722939252537",
+    "apps/packages/qtquickcontrols2.conf": "a1649301f019e95245aaef654f5e05b9e36a26f567a26a33543f733765bc1ad0",
+    "assets/holonight-pkg-manager.svg": "29b9351df2fec9e6fab6cf0372766151cea4fac603d24bd868527a554b1b9891",
+    "data/applications/org.holonight.Packages.desktop": "4ae5bdaad85aef0997a712ddaf4651684efd84d2a8d448e167d454f1867ed393",
+    "docs/ideas/01-high-level-project-idea.md": "a065de94aa29b236f80459042f13b17ea779fb98189d3416031bdb0b0f3618ab",
+    "docs/known-issues/qmlcachegen-enum-binding-crash.md": "395f80b74e4a0ac46ddcd555382b88206445dc85fb573ed32031242f6a47510d",
+    "docs/known-issues/qmllint-does-not-enforce-internal-types.md": "b0f95a9d877ae8429a9576e8cb43c3096e229e1eeb5872bc99baa7cb39513beb",
+    "docs/mockups/explore.png": "5bef2cd1eaaaab6112d512343e56c8ea11e07921e60e3d8a73d867619582bf27",
+    "docs/mockups/history.png": "ee0aa045baeb79b24bd075b44c0e30a55935dadd131ba15a4daf48765fb2bcb5",
+    "docs/mockups/installed.png": "622e9dcded3e7c892ad9d94b33a6e786538f63f76387fa4b4fd80aa4ab83142f",
+    "docs/mockups/popup.png": "8f326cd259abbd4d86a7fbb883f2c4dc5e89768ebf4b9c55ba5026ec41414ecb",
+    "docs/mockups/updates-review.png": "44a9fbdb16d84b1a327b40e82cbadf60e9ed5a9335fa5a27ae7192ffa8f37e2e",
+    "docs/mockups/updates.png": "f68a126b4dda4eed8d1de3c55d58eb28dc016835eee8648395bda8e5abb5af6c",
+    "docs/sdd/alpm-sync-db-cache/DESIGN.md": "fb04b76239e36cd93997206edd9f57d250752cb5a7c459a93a79c853ed7668a5",
+    "docs/sdd/alpm-sync-db-cache/SPEC.md": "dd60ba909f72f9373eee87831c0728836644945d906ac5e2d34ddae0ecff1259",
+    "docs/sdd/alpm-sync-db-cache/TASKS.md": "a745658750cf8002c41965bd9096289effd203353e02bc4a35e0c04738e3e3e1",
+    "docs/sdd/application-icon-refresh/SPEC.md": "135edec76ab3452541a3e3e2492fe7bcb94fbcf4f47a73ecd67e67684d0a3a17",
+    "docs/sdd/crisp-separator-joins/DESIGN.md": "0b3cfc56e7cec04a8c2e39cf7c6e678265cc64be7e8da090eae94a30e7364c0a",
+    "docs/sdd/crisp-separator-joins/SPEC.md": "3c4d06315221f4bfc69e86c7882d826603a695eb7c26feb8f40ef8d9d314661b",
+    "docs/sdd/crisp-separator-joins/TASKS.md": "b2b7e3029079cc71d3dabd79a2c81f22c4cf32ad9e313bbb6d05e8f08f954bf7",
+    "docs/sdd/ecosystem-maintainability-standardization/README.md": "6ad6315e8a5dc94622669f6eaf8b1266e1478bd77b81f2d4ccde9f85d4b63269",
+    "docs/sdd/ecosystem-maintainability-standardization/TASKS.md": "fffdc2efed7b837ba629e43a48b8ba00c4fbad6f89bb9af250590e1639dbaf5f",
+    "docs/sdd/explore-page/ACCEPTANCE.md": "520e0978e9233f26445c8478249332da17683dbb91df97ea962978698af505aa",
+    "docs/sdd/explore-page/DESIGN.md": "5b4ffeb491d49121fd45d73cec4353ea4482ad4dbf81602d6779392e195ea13d",
+    "docs/sdd/explore-page/SPEC.md": "7d2747f6148a9d7d8d4874f75bb234a55eb5d59ba628a1e79d5e84195882afad",
+    "docs/sdd/explore-page/TASKS.md": "51ecb11041b127e1990fad118cecf575640e24b65f2c963dee4dbb72156868be",
+    "docs/sdd/external-dependency-management/SPEC.md": "b7952d2ca9ddcf5153fa76b79176b7d2e9236a5c8b082f7f586f1fa7d1760ad4",
+    "docs/sdd/installation-completeness/SPEC.md": "cbc855eee1ae45072355ab06f9e44c8997bd4bb0197519b0bf749a992eed3fdc",
+    "docs/sdd/installed-packages-list/DESIGN.md": "65a30021eafcbd5a1fdf7652ea93094edde08eea7cfc95817e33f4fc17a4aa16",
+    "docs/sdd/installed-packages-list/SPEC.md": "bb9ca6acd5ce8e507d5bed8a4290b3d0b2887e7bfe72796ec779783f6204b0c2",
+    "docs/sdd/installed-packages-list/TASKS.md": "18806e6611f158863c2f6b7cc8c01da90a7aacf1f26a61ad40f81bd117bafd14",
+    "docs/sdd/installed-page-ui/ACCEPTANCE.md": "c0be39619f350ea82c352d04ae8fceed860756d4e0021600669cf0e349160037",
+    "docs/sdd/installed-page-ui/DESIGN.md": "ac10074355452ce9b7052a1838dec51eb7fdac045a2c3664517ef124c9ce5be2",
+    "docs/sdd/installed-page-ui/SPEC.md": "a64f0b5ad0067a04c65c546ce070449b4338609b034ab4ff436bdfa068040eda",
+    "docs/sdd/installed-page-ui/TASKS.md": "b67bab3726b38019a206dd0b31b54b4963aa3a91b785aa507c5b13b21b1384b7",
+    "docs/sdd/local-ci/README.md": "fbd3bd5fd33b94f96f5afdf054ec8aa1710714c72149296a88d6cbdc53e886ab",
+    "docs/sdd/local-ci/TASKS.md": "be6ed449cf1ddd9f3fd57c9de6ffa591107f50b2ec7e9848835c652e34d44b47",
+    "docs/sdd/online-update-check/DESIGN.md": "1d6c1e747e5cf26ce090aa72e0e1ab37a5f4cd67a5e8689b4c621b4edcdc4bbb",
+    "docs/sdd/online-update-check/SPEC.md": "f4672069cfc0e500461300d4ffaa0c13ae1511fcb8f84c8bca0005bd7031e437",
+    "docs/sdd/online-update-check/SPIKES.md": "c4f67995196d29941b6870bc6789fef3494d79856c18ea9a2217c8a21f9db362",
+    "docs/sdd/online-update-check/TASKS.md": "f16f4045e1c1bfd33a3aa1fb63c6896a02e0527a0d46cff915a8c55befdbaaac",
+    "docs/sdd/pending-updates/ACCEPTANCE.md": "8b3f26337136ac6898f031d772a79a7c2c35aa7c5759ee80821696aaace4cca2",
+    "docs/sdd/pending-updates/DESIGN.md": "da2916203f9ae0b59ada3f0361dff1615a750d5426f127870794804403089595",
+    "docs/sdd/pending-updates/SPEC.md": "9f6a98688f9c089cfc18661d890618a25eaa61bdd8c70d1eeff4f8c53b7e3761",
+    "docs/sdd/pending-updates/TASKS.md": "4e9b9e3d086a7836d13cc2ea471ad50feab8fe8c321386ff78ca1725f2906efc",
+    "docs/sdd/size-aware-icons/README.md": "c817bccaba1d49724d0ea4a97d9b090e80ce41fca12aa6418b9855b9222dab12",
+    "docs/sdd/unified-qtquick-controls/DESIGN.md": "d75e10643e5d2361f2095a6c388b54049cd1d25a3101817de6b98f3b5bafa9b9",
+    "docs/sdd/unified-qtquick-controls/IMPLEMENTATION.md": "2b8f9c8da72da404bd76a3cd3c77c2e7c6367f05997ec8073b970eeeb2ae6747",
+    "docs/sdd/unified-qtquick-controls/SPEC.md": "90a98f29bdc42c837b4e586664a33f39dda4e6d4ece2c959e97a3dee2f0a69a5",
+    "docs/sdd/unified-qtquick-controls/TASKS.md": "08b746f0a7fe1660069150ee5539deee2ffc1d106067343f078fce7892736457",
+    "docs/sdd/user-service-update-count/ACCEPTANCE.md": "ecd2698621a996af5eb543089fc345bda20d190d6feb3f20b24110ca14fa8a3f",
+    "docs/sdd/user-service-update-count/DESIGN.md": "c34560fd3b8c056f53c667d63131c978b6de8f625b9517fc6fa23cbaa5fc8326",
+    "docs/sdd/user-service-update-count/SPEC.md": "4402c7039aa658f093e4d0380c9cfad88c2573f87c7adb0ce497407996c7540d",
+    "docs/sdd/user-service-update-count/TASKS.md": "3c8bc95556c2cb75af7ddfd724e3ac2122a87f81baac85e79a835cbe7afcb4ea",
+    "docs/tech-debt.md": "4cb984dbfe597d4873147513869cb1069ae8361d1642f67d39d448fbc05124ef",
+    "qml/explore/ExploreColumns.qml": "9ba84d547d556c7404108b6fa1aa05a68b62bfeadb58f14daa8c32416ff8f679",
+    "qml/explore/ExploreDetailPanel.qml": "1fe1c474a5680c92a9537b3542058824a8df8d512d69467828ae94ca77dca189",
+    "qml/explore/ExploreHeadline.qml": "6f787178575172c5dd673dd352317363b9efd961a16b248a492fb378494df434",
+    "qml/explore/ExploreRow.qml": "f63da0f8894a39242a792f704a3fa5b77cc66f3cd0d99f4255eb7a75ef232d7f",
+    "qml/explore/ExploreTable.qml": "0cec04a13523b05d55efd90f470c65d019ed2192307ccae6b95acc3fd085f6a7",
+    "qml/explore/ExploreView.qml": "41efde2028d7a41381a167fe771ed35fe15bfea364696836d7a3c49e6a6d8bb7",
+    "qml/packages/InstalledFilterTabs.qml": "a39a578a671ff71fac163feefaf4e8f10de01794670b45191ffdef1875549dd4",
+    "qml/packages/InstalledPackagesView.qml": "7b13548123de8b8071065005c2ed5b7a597c52aba467f0d78ca6981fb6102350",
+    "qml/packages/InstalledToolbar.qml": "0d01f88cb08f507d9b8156f9809d9e2989152d23b45d3b2fbb430c5985895de6",
+    "qml/packages/OrphanFooterBar.qml": "05cd00f864f29e24893eee03915ca32c7dac18ffd23e9b8113d7319133205507",
+    "qml/packages/PackageChipList.qml": "f922e88c71bdfcba2c353e283adfe142dac01118be36db6f3d79467d67cd5d24",
+    "qml/packages/PackageDetailContent.qml": "32174024ea0caa1793a4f40b363f76dd265b3be4ce65556add81ab11e7dda70c",
+    "qml/packages/PackageDetailDependencySections.qml": "856019f542405fe519f74692bde31ad41fad19bfcfedbb53d61c7113ccc6f493",
+    "qml/packages/PackageDetailDescription.qml": "145f9aa75f395f20dcfd0f7ef4825f35679bf9f22193c6ebf5fc0a1f26639e17",
+    "qml/packages/PackageDetailFooterLinks.qml": "9f0a84f38854b504d58112069e7f52ca5c5c4354b1bfffdce582846e442a7347",
+    "qml/packages/PackageDetailFrame.qml": "a3e1b2af17feecc4914b40944986de9b55f573cd36854c1243a6a91433426dd3",
+    "qml/packages/PackageDetailHeader.qml": "b47551a0f22d0299b9c836d9757af4619457b8eb2af2e27c17c9cf8cc4abc40e",
+    "qml/packages/PackageDetailMetadataRows.qml": "5d6bbf65ecfa4bc31cdb76dc3bac51f40b74658274514589db5c704319ef568c",
+    "qml/packages/PackageDetailPanel.qml": "09fc4d2ebdb2dd260c49c7e268cbde6311d0703558f88412686b1234667b89a4",
+    "qml/packages/PackageOriginBadge.qml": "95d848943adb8c803aac203d5ff54f3cff63368607c1f6a9bccef1ac64aa8ee9",
+    "qml/packages/PackageTable.qml": "83f905aef93acbe7e3368548a480d2d8842082a7cf42c463d5b03f9443401f60",
+    "qml/packages/PackageTableColumns.qml": "0200907c6135d5446a23a08cc1fb3599cf5ac39858c1bf8c54147e3d464081c3",
+    "qml/packages/PackageTableHeader.qml": "bfe421832a4f5d351e0eb290ee25ccc522c3197d3e7ab99abb29b78abbcd8ac7",
+    "qml/packages/PackageTableRow.qml": "674fb326d6b6229b705e84ef24647b82d2751a1dcb8aba92f1615397a7c55c7c",
+    "qml/updates/UpdateRow.qml": "284e9c3cb13188d81a1cfe805c3089156a01b4b3ed55a3a347f4f211caa35003",
+    "qml/updates/UpdatesCheckBar.qml": "1173327b9fa722301ff0b5854a6ed9c4aa7b1fe4a2ef69bd432bcbfa524365ad",
+    "qml/updates/UpdatesColumns.qml": "a60f904f337d17c97e1541e16a0b74525ccfc872a0b4f39f19490d90dd962b9b",
+    "qml/updates/UpdatesHeadline.qml": "184a86a1c9d470cb7339a07711964deeecf846ec73f55e9ecfced7bdc01af1e4",
+    "qml/updates/UpdatesInlineNotice.qml": "4fa2a862cc50fc3bbcc7f67aee09e6a71541c0bb9e2a355e015a9607a82212d0",
+    "qml/updates/UpdatesTable.qml": "763e1da2dcf0527eab6ed6476af3503ab39975f1dbe88134ce5b4038451f756b",
+    "qml/updates/UpdatesView.qml": "f50e144af9b45de9b6acd6199a2017328679334201a7e5ecacdfcae7ccad291d",
+    "qml/workspace/Sidebar.qml": "684733a558af4416aab8a16c4fe7509063d18ee760f12512d0695f866ab992f7",
+    "qml/workspace/WorkspaceWindow.qml": "2e1f6054422f13894829c7d598cb0cd0bad2721a9045ef241369f139436e68de",
+    "scripts/check-layering.py": "681156e8dd80f789f0e2fd7214adb64bafc43167dbb503b0ed4bf94a58f0c927",
+    "scripts/check-qmltypes.sh": "40fbf8ea7b35ed4566df46738b9e1ca7eaff282999e4f0dbf0c8d6c77bd97388",
+    "scripts/check-runtime-launches.py": "c4560dae1b0b4109395bd269946aa4fe467934fb6240b6c229c6a2415c9339db",
+    "scripts/check-runtime-qml-imports.sh": "4f510d3d36f2a92ddc9603e0a707c03722bbf6c7b51f74abd935ef52adf4ea31",
+    "scripts/ci/images.json": "971449c5da542cf20eb134eddf0abbbcdec1ea9f8d1edc517d980b21127aa5a7",
+    "scripts/ci/lane.sh": "7be545dfe85b15efb2a9c795dfb0475d2fe4eb2adf91f64e53562af03d839a13",
+    "scripts/ci/run.py": "4dc72d9a3befb59fc9db020738c7ecddae410cd833dd5064eb2c0dba662ccd83",
+    "scripts/ci/test_dependencies.py": "099b7beb05c27ef939c9d4de866afcfcaa51f3b46644d250a1d0039b86e2aac4",
+    "scripts/ci/test_launcher.py": "4f924fb5174b587b5371632b78acaf8e6723964e6c81d8578f9f7d9fbc6e3e2c",
+    "src/advisor/CMakeLists.txt": "89af1bf429b97858574dcc38e7bcb5d05cc4d1b46399f342668ef3b7c15f5899",
+    "src/advisor/include/holonight_packages_advisor/holonight_packages_advisor.h": "3fa5285d35f61931c6398ca3621f9faa13ddab267531cfa682375a3bdd53d1e1",
+    "src/application/CMakeLists.txt": "7196086cdaf3063f864afcdfe0b063a3f28223b41add68912cfb27f73634ff25",
+    "src/application/include/holonight_packages_application/data_freshness.h": "9bc0c325c0744bda936feab376ef2e6ba0dbdcac5dae98b675eb22ebf50475bd",
+    "src/application/include/holonight_packages_application/explore_search.h": "1b270a43d8ee05302eee3dfc2b7c6f8bdc4d7b30ee35a1dc6459b12c79ca0165",
+    "src/application/include/holonight_packages_application/holonight_packages_application.h": "14510b2e149da20fe312993f7c2ebdac6f8db0d9b58f81494b4c7ee89e2fc3a4",
+    "src/application/include/holonight_packages_application/orphan_package_filter.h": "bec3eda54eaf3ef1b83b0728d4dcffabb58550ecc1fac6baa26570d3ce71fe7d",
+    "src/application/include/holonight_packages_application/package_list_use_case.h": "b01bb0ce41bc7dbb5fc86a31e70dda46fe6b413331ef5c940d0935bfaaaed6ae",
+    "src/application/include/holonight_packages_application/package_size_formatter.h": "dd1f7c0ae831d8accb89f73af2a11e50c91e5834af6759709c4469e7c3c672b6",
+    "src/application/include/holonight_packages_application/snapshot_selection.h": "1e9859b8057a0f6d8d66fd7508c2afa4effeaa93bbbd0e469bdbc4b3025fae23",
+    "src/application/include/holonight_packages_application/update_age_format.h": "1df7a681a80d39f4c88bc8e59dfab5d8ffde7da446d8b6713237f813a4a5a2c7",
+    "src/application/include/holonight_packages_application/update_check_policy.h": "81b9ae98a571447cc625f8751611c59f34247a632498b3eea2ca30370409a999",
+    "src/application/include/holonight_packages_application/update_check_ports.h": "53d5b3caccc8163ad4a86feba37628ff0a611617d0079e7ac5efc7d093edfbfb",
+    "src/application/include/holonight_packages_application/update_check_runtime.h": "4c30a070c6723584a22e00c83ca380ddebb8e655cee0bc778bdc98bc0274f5bc",
+    "src/application/include/holonight_packages_application/update_check_scheduler.h": "d323e9bfb858dfa07c0338deb493ec4cc668f609c38a6609e910ac8f089e2c6d",
+    "src/application/include/holonight_packages_application/update_check_service.h": "69ade8f578d18f851aa9e3dc013d62be0fdef943e626f1ee3fee44730051ebca",
+    "src/application/include/holonight_packages_application/update_check_status.h": "445f8c5809c767856ae59179b9215c1bbe9707ffc94a65a5ccafcec978c0003c",
+    "src/application/include/holonight_packages_application/update_monitor.h": "12b7e597fafff93d3b10dc3c5ced75ae64e215004db179a16877b3974cb7d674",
+    "src/application/include/holonight_packages_application/update_status.h": "83271eb7c3b753bedc7b98811c6973494a64d4e59d2166040595a2f0a1a94162",
+    "src/application/include/holonight_packages_application/update_summary.h": "615082c53b1cb67279e164f43a434c0f1eb5c8733fd4b0a18ab730a9ca4654e3",
+    "src/application/src/explore_search.cpp": "7e7458b11a9555e25f69a2a5b2543fbeafbacae77b4b9c6f3387e99a176ee49c",
+    "src/application/src/orphan_package_filter.cpp": "3fd7a3931a31b7548320f66e0385aebe4865926506b0c8b2d09001c46aa7a3e1",
+    "src/application/src/package_list_use_case.cpp": "7800495d3a1edbd047faacc741c47da7c728c118eea29772dc179e40c8d09508",
+    "src/application/src/package_size_formatter.cpp": "09a23c69bcb007b1ba0b086909e0116fad9df0944aa6f6176785702f9a24a171",
+    "src/application/src/snapshot_selection.cpp": "5acab145c375836f8bdbc959164e69cc811256cd594a203cf14fc9a3f35c8931",
+    "src/application/src/update_age_format.cpp": "ae5f525b34625449b62f23b3cf100d45b81cde1ba3fda97277bbb04684ae7273",
+    "src/application/src/update_check_policy.cpp": "1d20c7e1269ba043947111c36d221ad59887ea71c67ae6d53535045500a1cc60",
+    "src/application/src/update_check_ports.cpp": "d2975425230bbe6b586f88e9d94795789be04fd0e85a8858db09a4dbc9c973ad",
+    "src/application/src/update_check_runtime.cpp": "4f6f69cec6c0f3f1cac3b9bdaece60116394658e02ff2700935d2b6fb2664026",
+    "src/application/src/update_check_scheduler.cpp": "d18802dca1c5cc36ff70c6c46d96de4490b6e4b1a0442168cf03c9c8d80ba74b",
+    "src/application/src/update_check_service.cpp": "09f369b150acbb870fd2941ac3ead5ab4f57d69c4aedc493432c9b9217d4f34b",
+    "src/application/src/update_monitor.cpp": "d763fdcccb3662e4d1d585167fbd698f6a81b7493675c66b8b9ae7b086eaa120",
+    "src/application/src/update_status.cpp": "4abfc2f9a3b873c49a147cb7c50abf74e974d8ade988978c464f066d9076615e",
+    "src/application/src/update_summary.cpp": "df8a778836d4451f8e2057bb980da39788bb8d87d55016709a9095099aa7a935",
+    "src/backends/CMakeLists.txt": "d7f77dcfe4ed6964bca013f86ec39d48944abe4d0551121444515b9cb52471a8",
+    "src/backends/include/holonight_packages_backends/alpm_explore_source.h": "2d0029fc7736d9e835a0b302ab242636fcbc79578e14d81a859c725059accaf2",
+    "src/backends/include/holonight_packages_backends/alpm_package_source.h": "56a6c8fb3d25cf7867d4a69c1be2ac1e07be166b29913799d30e1ed98cca3078",
+    "src/backends/include/holonight_packages_backends/alpm_update_checker.h": "b3b4130031dcaf3ada18678020e594b96398af4510151c34561f50652ec9b35e",
+    "src/backends/include/holonight_packages_backends/alpm_update_source.h": "764141f868b5a8f57a3526aa29efa2c85856280746b573a3c1e598b886b201a5",
+    "src/backends/include/holonight_packages_backends/backend_capabilities_alpm.h": "c36ef622c623661962e2752901404895f0919949ea6e8d65010c11ea29ad5049",
+    "src/backends/include/holonight_packages_backends/holonight_packages_backends.h": "c1e47986eaecf3040b9dd2bac6836361eb6b9ec4dd77780a8ee2a05f6b6b9d09",
+    "src/backends/include/holonight_packages_backends/pacman_defaults.h": "d2a3b701a2ccc9ddb54c0ded85c336d6155be951408fd22181479542b9ada040",
+    "src/backends/src/alpm_error_mapping.cpp": "36c0323a38bce0f1c4338c4252632306518ab457a9138a905a2cff14c93d7da5",
+    "src/backends/src/alpm_error_mapping.h": "fcec1610fd8bfca1613b4a5313b5bf9b6ec1a7692f5ece8cb8d0ca1c1b4f46fd",
+    "src/backends/src/alpm_explore_source.cpp": "2879d2119a0e5d214a65d567d9a94ea3b9ae45f0ad26f9a3e94c95743e71ffa0",
+    "src/backends/src/alpm_package_conversion.h": "49f5b74cc30875329a901a910d7c45c7a6932348f4d0a8ce80f00b66bc91a216",
+    "src/backends/src/alpm_package_source.cpp": "cf8f361463e76b91b7bb8913df240dec791ab8ef463981188af4ccde9df88e30",
+    "src/backends/src/alpm_update_checker.cpp": "ee489aa3eb0da4c5af4b1c057e0fa010f9ec25f2b42f4b12653a8432499a347b",
+    "src/backends/src/alpm_update_source.cpp": "96e3cb4c7ec9aaebef2460c2639d88e76e4a7adcd3bb4a8cbd6913bc57e61b54",
+    "src/backends/src/pacman_config.cpp": "3c9c90e1481c75db88acfe2d53874ef325c72d24cfd983c879e79bf7a47650cb",
+    "src/backends/src/pacman_config.h": "0d455d1965c26728fab5cd26d73defb0c4b3c3bb5b4712cc9938daff7b41faba",
+    "src/backends/src/pacman_repositories.cpp": "978cca38f5967f156ea5a13c8f028d6bbfcb139b5309492c2d1eb596bf91b7ce",
+    "src/backends/src/pacman_repositories.h": "f69bc68c33c1ca7cbade9d8bebbf4456171029f1b3646265eb34b83885a0404f",
+    "src/backends/src/pending_update_computation.cpp": "0ec246268094f5fb235f7c67d4111c834549fa51686b98dfccd9bf34931423e4",
+    "src/backends/src/pending_update_computation.h": "a519174d82565ebdb05ca88c5f6733a0481928d3b1907204b9a26456189f0dcf",
+    "src/backends/src/repository_catalog.h": "223f044e21bbc2d0172fe078f4f7d9263e8465a176323f764360d24caca28107",
+    "src/backends/src/scratch_dir.cpp": "2884a6cb86a7161a1699c4c25a22cbe7cc41be031fbd5d68af7ccf4fb355264c",
+    "src/backends/src/scratch_dir.h": "b7f732650799fdeba10354afae6fbebb41636d75a7c3e90a2e388a43a7adf26a",
+    "src/backends/src/sync_database_files.cpp": "d7fb7a21c883c007e97dd576caf1f1c2853ff6e2436afac8575785d00c1e910d",
+    "src/backends/src/sync_database_files.h": "8ad13222d3df43840ab98156e3d702dbbad29d2f51167ff756c7cc8e30f5a665",
+    "src/backends/src/update_matching.cpp": "d5be2b3e17319470e7af5111bccf906723eccd7b65c5f6729a3c3a6a85c2be82",
+    "src/backends/src/update_matching.h": "4b8e1b85ee2134f635ba819fc35540542962fce0b2dadee3fc41b5c9812e8564",
+    "src/domain/CMakeLists.txt": "fafb9b99f2f7fdbbc9c23249a4cf09e33a5174411db103061c6011445cc22e88",
+    "src/domain/include/holonight_packages_domain/backend_capabilities.h": "2e094c1385006fcb281c685c46ca466a1a380624094a44f8f6fac6cf01bc1997",
+    "src/domain/include/holonight_packages_domain/explore_source.h": "a0f6dd434c8a195953248d962524be19b3314478043ab192debb53a7f5f3ea42",
+    "src/domain/include/holonight_packages_domain/holonight_packages_domain.h": "b247558d193198fa6a24989df7d3b2607bb3af5ec7ad98d8c5b40369eb13a6d5",
+    "src/domain/include/holonight_packages_domain/package.h": "e937497956e37018c603abeb09e4e3eea7e3a5d58267b36aa0da3438075e2655",
+    "src/domain/include/holonight_packages_domain/package_source.h": "e547f6f91af7c4d12598e1f0db8f304c41b31db7926192b8b1bc9bc30fd0e4ae",
+    "src/domain/include/holonight_packages_domain/pending_update.h": "a19d99f078c6faa22c78f1a00f692c7ea105667da1986541b0aa864125fbf197",
+    "src/domain/include/holonight_packages_domain/require_non_null.h": "d3da5d7d63fed8c5e859eb5fff383f6d9b83fb52960980abad7b13019cc3c5be",
+    "src/domain/include/holonight_packages_domain/sync_package.h": "acf5f9eefbce79abd3468d9bd75d037f506f8ff7d50bf3fb88734e944aabc14a",
+    "src/domain/include/holonight_packages_domain/update_checker.h": "d0edbe58353af10619de611a001ffbfa3b05ed3fad4d42016a02f238b8385557",
+    "src/domain/include/holonight_packages_domain/update_snapshot_store.h": "81d2d751d3628c6db31381ba141313d1701667b5ab45c8fc957cd0729d57d48d",
+    "src/domain/include/holonight_packages_domain/update_source.h": "eb5fb838a905925ad2fa1e13816db16079367b02da441205ee9d485dd13fae36",
+    "src/domain/src/explore_source.cpp": "e0efa1d9ceede466133c7f6e6b589dd6dfb189822fc23bc0b8a2768036a4b820",
+    "src/domain/src/package_source.cpp": "d96aa85ab5d8aa8a7c1c58a3bc446d79a3cad7882c72440a94656fec89ccf21f",
+    "src/domain/src/update_checker.cpp": "15c967beee564d35e7a63036ac697da2e3b0413ddfa37c0242998cdc2ab41b4c",
+    "src/domain/src/update_snapshot_store.cpp": "88a0bd4b9b9b3fd9d32b07a7d505b418e2f016b0bcb6b5b648f9bdc27fe5e807",
+    "src/domain/src/update_source.cpp": "be9f0079541e57bc4868969fe5dea6013e08850dc9edeb23fa114cde32621265",
+    "src/persistence/CMakeLists.txt": "2c58d46237d8c14b8a5860e8577a14fcad5391998286f11941521cb3d3654c1f",
+    "src/persistence/include/holonight_packages_persistence/alpm_connection_cache.h": "560dcb76fc8c912128a5d6b7e3a8903877a7075fc6bbfbeaac91b8ba92752048",
+    "src/persistence/include/holonight_packages_persistence/cache_locations.h": "dbeac6cab3d8c74b5ceaed5da0c8d5bb5f6605fec278cd0dd7ef5523ac96b472",
+    "src/persistence/include/holonight_packages_persistence/catalog_lock.h": "3db4b87204eebe4f2a5e4268c790f795e7d61518901d17184d7ee89a0c54f723",
+    "src/persistence/include/holonight_packages_persistence/holonight_packages_persistence.h": "b3fa498b4620e09411c5ecf3ff49bff13fec8cbdcd749cd08e9d63dfb5b98f15",
+    "src/persistence/include/holonight_packages_persistence/json_update_snapshot_store.h": "ca749e995a898afc80b0ce39220b0b6c84458547e92275026799c4dfa7be6974",
+    "src/persistence/src/alpm_connection_cache.cpp": "f7dfaf2a8d032e3a2b8a71d4a578b4fccb4d3a2eaf875bf759b9d229e3e4e22b",
+    "src/persistence/src/cache_locations.cpp": "1e4d77f9d87d5adf5ebda75bf755ae595bcd3d2c3be7a67a5a7f248379efaed6",
+    "src/persistence/src/json_update_snapshot_store.cpp": "7e60678668427deaba54a362de3c7a6638cad5f328d5f72d7a16d79c2608054e",
+    "src/platform/CMakeLists.txt": "bf350cbd3622b74abcea051f85c77bf26e6a6f0ad223143021aef38a783e1cb2",
+    "src/platform/include/holonight_packages_platform/holonight_packages_platform.h": "ad6a9dcec21a60cd096cefbc1bc84b38650882cf7bc9f65eee811ee63f4f9e10",
+    "tests/.clang-tidy": "bdf8f59f42ef23e0c0277847d491e00d3297be9629e7e65b20569b9b6d0121f9",
+    "tests/CMakeLists.txt": "9385bd9af8d781cb2e5a8b539862805958c509a11c31ba59f0d1024e3745ca46",
+    "tests/application/data_freshness_test.cpp": "349cb23c916ec818fa4c31f2b8a95e28ce1788a95ad9511984c39c2aa963b40e",
+    "tests/application/explore_search_test.cpp": "0ed1fbe7e4e20b98a1e282fdab7490aa3b3c8eab3d23fe5cbbc493156783a2d9",
+    "tests/application/fake_clock.h": "0e490ded39a0f5c67613e4a5c40509b5386d20fd391e7f3e2cba62298ef94a89",
+    "tests/application/fake_clock_test.cpp": "f9e3bb3e59931eaf45bee9c5259d6894b3ea4401a3e0cdf5034ffdc2d707a5d6",
+    "tests/application/fake_random.h": "f4fa2bdbd1b12987385bae9e5e25d86eb815eb4f648d82b3b1cdc1cb3dcd813a",
+    "tests/application/fake_snapshot_store.h": "5251b02318666f8b2d6285ccb726f3372e669b768ee945389a0e02edf6b7cb1e",
+    "tests/application/fake_update_checker.h": "9626415e467ffc4c74dd86f7ad606f686277345a4f261c116a7936f05019b29c",
+    "tests/application/mock_package_source.h": "25f90a0e89f8d5f1b40e6f553a90d7079e0cb16775e9017b6f8d0b2e3a5ae289",
+    "tests/application/orphan_package_filter_test.cpp": "58819d143bc22e8798d759c5086351066d2b035395b14ba1df4ba26f579c771e",
+    "tests/application/package_list_use_case_test.cpp": "dc55c52d086a3a181b9f6a83bde0dfd31bc7d7670bdb12558e03ddaa0e175095",
+    "tests/application/package_size_formatter_test.cpp": "4457aef99c3f7efc83f27eb763f8085eeb54e1d5651afc8b5fa5605245aace2b",
+    "tests/application/snapshot_selection_test.cpp": "a999e80bc2962df3351e18046535a2ba3c45666195c2158d0f343e3e9414cbc5",
+    "tests/application/update_age_format_test.cpp": "202c2b05e9e8f30eeb6e45c100a1df4726f019f945572edecd1577c6a65fb3fd",
+    "tests/application/update_check_policy_test.cpp": "ec3d0783db31775b87a1918e10f787bec4af776a143091638d2927a162da2376",
+    "tests/application/update_check_scheduler_test.cpp": "e77a694f2c0811bac2b11b59d7253c04a89e453863f8c08440c89477e1f2e608",
+    "tests/application/update_check_service_test.cpp": "695e0be90210e5b6f7587c0c860ebd3409b2016d4b9004965b06b1295bff74a3",
+    "tests/application/update_check_test_support.h": "b8c535ecf0d9090b493fe718258cef1b1966e6a3c873bfed2c3ed869abc1bc68",
+    "tests/application/update_monitor_adopt_test.cpp": "392b489a394fd9843aed3238c6289715c0682fd3578c9d855afb100bb0b391aa",
+    "tests/application/update_monitor_integration_test.cpp": "291f6411fca49a7e0e0fd988b7f2885545d34a273302d2f6c3da0bfbe2622541",
+    "tests/application/update_monitor_test.cpp": "7bde34443448839c6fe9f8eb5324eca08db46ed9990c5d6e904ac9d979b04ebc",
+    "tests/application/update_status_test.cpp": "4ea099eb73ba31531e067905bce5003bac0102f97c8605405488c3b59649d2d4",
+    "tests/application/update_summary_test.cpp": "5ab85ad9b3db1c300c995ae396b15ee6087fdb003d72bd78ec0bd25bfa374785",
+    "tests/apps/explore_model_test.cpp": "ff2479e7fe7b9a408ddae23e47e57a7b806cdf2a1394f732c703c3428413123d",
+    "tests/apps/explore_view_test.cpp": "ea74834b6fccc4403c3b0bce9834a7fdb75b2df869f58f17aff2bc939fa933da",
+    "tests/apps/fake_explore_source.h": "226a70da9326513009ae58f4071e0359c10193f738de8820483cded490c904e4",
+    "tests/apps/fake_update_check_client.h": "cb336dfc29e6ecd17577f7f82f3f5c03444cbc500a0ebc2f2644b8160362a8ee",
+    "tests/apps/fake_update_source.h": "08a80176c25ac7599ce8ad35300d5e510bb4ae953ba327a01cd31d264154f908",
+    "tests/apps/installed_packages_filter_model_test.cpp": "e25623d289aa535654f83796fc198275f890c0e5952e4d1ff42d762903310b74",
+    "tests/apps/installed_packages_model_test.cpp": "512fd2bb44193af9bae73a73ae2d95bc1cac6ea9ef3924ef1c7b8cb99c4eefe5",
+    "tests/apps/installed_packages_view_test.cpp": "1378d3db9e557bae413a0c497d82761ef7c9da1f2a18ebd90aba540524e337cd",
+    "tests/apps/snapshot_file_reader_test.cpp": "d3fd338147f9cda2ceecc6e960c916d306f545f08ba8e7e53548f957b6db19e3",
+    "tests/apps/update_check_client_test.cpp": "c31afb2d2576b1d94dcce4bfc9b829e490cc89861d342ff5142913619914ef93",
+    "tests/apps/update_check_model_test.cpp": "1e4cd549e260c1a864b67f7e187dd2bfe64758fe7d0df244d7981db6c4c2b8d1",
+    "tests/apps/updates_model_checked_snapshot_test.cpp": "854ad0f989ef8a697fe34c79fe728e5da28fe5ad076a3dd293ef16fce3930349",
+    "tests/apps/updates_model_test.cpp": "ab796b391f1bc5e13a855e718242cfcd7e4b8786d9449853d480931ee033e81e",
+    "tests/apps/updates_view_test.cpp": "8acc3d9f3e9622fdf251e07880a66bb943f7e42bf66e5811b734717a1cce5351",
+    "tests/backends/alpm_error_mapping_test.cpp": "2c8f77920ce99238f688b3941038252e627b9680fecb0e52351a530769026fa8",
+    "tests/backends/alpm_explore_source_test.cpp": "8eaa574e04c623602255cf335a98950523afe2b7b9e0fe0be0f71e04eff3096d",
+    "tests/backends/alpm_package_source_test.cpp": "f2ba15162ad9e4117fbc7e0a952c73d66fab2a1c2e4833594f8ba725b0b2834a",
+    "tests/backends/alpm_update_checker_test.cpp": "2c7d98fd2b56b148b7ca0398a0251518ed21b18db272b89ba1b293fdc000d793",
+    "tests/backends/alpm_update_source_test.cpp": "404d945050c03cbeef55a29ee5c549d7da1eca63e3426390d9d78066261b187a",
+    "tests/backends/file_repo_fixture.h": "e243bff28847a47de7490998994cf2674d2766b01cb82f64d3bfbbf2378cf2c6",
+    "tests/backends/file_repo_fixture_test.cpp": "e8d652e921ddcae694d3a894b299bcceb9a43830d3441f226b545213dde00330",
+    "tests/backends/pacman_config_test.cpp": "a6cbb2617214d07f078794ee8bb2bf0f806853477893e45c611738e996eaedbc",
+    "tests/backends/pacman_repositories_test.cpp": "85de373d703a5ee232808cc940d0ed44de06755ff9c8e2a9a312d48e281460c2",
+    "tests/backends/pending_update_computation_test.cpp": "7bf4a1590a9fe6203dafeac4d73af6f1984dff6714f011148827dab8928794c9",
+    "tests/backends/repository_catalog_test.cpp": "0d9639d08022d3569fbcd82eb1f090d4da4dd4ed0d1895543b40983ddfe48122",
+    "tests/backends/scratch_dir_test.cpp": "085f2e204208288a2abe4ef2800470378ed5ac989d4bc0d6a405a14733281ac4",
+    "tests/backends/sync_database_files_test.cpp": "35c756d038b9da0989524128265e7ecbda1048f3be66fe2062b6b2218ac520f8",
+    "tests/backends/update_matching_test.cpp": "bb5af04840e078911fb7045072789f2b4e3ca26e1f5bb5449f339e2f6fd4006a",
+    "tests/checks_main.cpp": "25e0ff5a5e4f9aa5ce530d888fb53ce1500212dc0a0b1780057069fa86122e41",
+    "tests/domain/package_test.cpp": "4214827abe2b8ec494d47c0d556106ae1ffab32df11b332192dbeecc4f0ca710",
+    "tests/domain/update_checker_test.cpp": "d5fd069b4429ad63d7f188435aa701d5ab9057d1790d57bacfb3192d0dea0a04",
+    "tests/fixtures/pacman/README.md": "288cbb5e2afb59b776f70dda2bc7742eb6be6b0ae464601d98bdb775f2ed9e55",
+    "tests/fixtures/pacman/empty/local/ALPM_DB_VERSION": "2e6d31a5983a91251bfae5aefa1c0a19d8ba3cf601d0e8a706b4cfa9661a6b8a",
+    "tests/fixtures/pacman/explore/README.md": "3f56d34146c14fe163dae9b99a4459792fab17ff4ffd729b0f4e412f978b19af",
+    "tests/fixtures/pacman/explore/generate.sh": "a116a0cce672a4347a687c419d0aff7dc629434534afc76304d03f4b6a2b8169",
+    "tests/fixtures/pacman/explore/local/ALPM_DB_VERSION": "2e6d31a5983a91251bfae5aefa1c0a19d8ba3cf601d0e8a706b4cfa9661a6b8a",
+    "tests/fixtures/pacman/explore/local/foreign-tool-1.0-1/desc": "713062bed7d61050c5ebe453947e8c4847da3877ce572f21883341d275c1d0ba",
+    "tests/fixtures/pacman/explore/local/foreign-tool-1.0-1/files": "5a754a192ec04d0c0df9785533ca222f313578f217f055c947d67a10a8cdadab",
+    "tests/fixtures/pacman/explore/local/vim-9.0-1/desc": "e171e8f0b019fab43698eb3462e5c7c359f483b412c8c41c43190f80a093bebb",
+    "tests/fixtures/pacman/explore/local/vim-9.0-1/files": "e94f9d60444b7e299b89bd3eff219b928fd70ccffd33c8a625ffbbc706b382cd",
+    "tests/fixtures/pacman/explore/local/vim-runtime-9.1-1/desc": "1a98bb5179868c430d3aaced35490dc666fc06d5bd9d3b8ae20b4ab1edc47772",
+    "tests/fixtures/pacman/explore/local/vim-runtime-9.1-1/files": "ba9fda8da1aa364cfb6ab1e568d04e5b1f6e5ab36aea70aeb72a39d7c315fa2b",
+    "tests/fixtures/pacman/explore/sync/core.db": "9d4a6e4389c2e804841d8b3e4571c5ff8638e7c1c0a5c6cc3a6c2071d8b2d496",
+    "tests/fixtures/pacman/explore/sync/extra.db": "d34e217c378597739c7b2f30e35d1ec835000334584b55d398c9ca15615ebfc3",
+    "tests/fixtures/pacman/populated/local/ALPM_DB_VERSION": "2e6d31a5983a91251bfae5aefa1c0a19d8ba3cf601d0e8a706b4cfa9661a6b8a",
+    "tests/fixtures/pacman/populated/local/apple-2.3-4/desc": "7fda948587f3258cbe2d6f8f45f5fb00f5a91c8ed3ca48b85ec01145fb6d68c6",
+    "tests/fixtures/pacman/populated/local/apple-2.3-4/files": "2a21224410309c27f17aa6443f5627d573ed2007ad3b92ee8c25d16df4d6c839",
+    "tests/fixtures/pacman/populated/local/foreign-tool-9.9-1/desc": "76cf4d143e0ef2095e9797ef297dabf929641d1369759f72d55297e465a7f598",
+    "tests/fixtures/pacman/populated/local/foreign-tool-9.9-1/files": "5a754a192ec04d0c0df9785533ca222f313578f217f055c947d67a10a8cdadab",
+    "tests/fixtures/pacman/populated/local/zebra-1.0-1/desc": "14fb130384e9c253196a49c80c66cf87ada36e01b3a94fd1e114d56e9e9ba20c",
+    "tests/fixtures/pacman/populated/local/zebra-1.0-1/files": "b9fc18fcdd145246ac1b5e0dc7199f49d589a174453a9f0427be046d0162da7c",
+    "tests/fixtures/pacman/populated/sync/core.db": "8899655622c8c3631f4164c0a154db19e8154cde38f0b9dc2416bd81d266bb67",
+    "tests/fixtures/pacman/updates/README.md": "87e8e0ad078d2d5f7604a00643851739c1b4b689fb5fff4bffd43c89fc7f8683",
+    "tests/fixtures/pacman/updates/extra-five.db": "a6745ac9312612375d1d0e5a709b2615b06ccbc99fb10e0de039c81d5039cf14",
+    "tests/fixtures/pacman/updates/extra-fzf.db": "ffeafa78410ff34c596e11983ddb87db5d09de70aae2d886c7ede26a58a2b46a",
+    "tests/fixtures/pacman/updates/generate.sh": "f17e7272b130596103b0ee32d78ac2fba8b35f1e50f206b9e398272eed0dae17",
+    "tests/fixtures/pacman/updates/generate_checked_extra.py": "35c2640212133adf358c1952b0ea0eb63a8a825fb0b555ac9e903feea5f1d84b",
+    "tests/fixtures/pacman/updates/local/ALPM_DB_VERSION": "2e6d31a5983a91251bfae5aefa1c0a19d8ba3cf601d0e8a706b4cfa9661a6b8a",
+    "tests/fixtures/pacman/updates/local/alpha-1.0-1/desc": "3308911cba1ad22ca90765502a87978579d89ca038206b43f979f905a03e5a0d",
+    "tests/fixtures/pacman/updates/local/alpha-1.0-1/files": "db402b4a7405e964d77852250d3ac894a5872c0eee1b637e759c8e52eec163c1",
+    "tests/fixtures/pacman/updates/local/banana-1.0-1/desc": "315b784acf8342bf3aa4cd189a46e6c1616264cb5fc8952d4119d98a232084a8",
+    "tests/fixtures/pacman/updates/local/banana-1.0-1/files": "6bc7f09c7b1ca1b8f0667a4f9cdc9b4b48b4245ce60bcae9718ec2ce1617bbc7",
+    "tests/fixtures/pacman/updates/local/beta-1.0-1/desc": "4c181e6ef16c55ea937e79b81ac945120eff7d808a7e9cd050ed5309215c5c9b",
+    "tests/fixtures/pacman/updates/local/beta-1.0-1/files": "cfe6111dd10eaf81f9ca27fc5dce79efe27972d4fee7ddb433a1ad6dc645cf7e",
+    "tests/fixtures/pacman/updates/local/delta-2.0-1/desc": "e9bc0758fce4492b62458b016786ffd2122cfc505027a0c2ad52e1db1ac85ee5",
+    "tests/fixtures/pacman/updates/local/delta-2.0-1/files": "4bfcc25d7bcd2b10c5cf33c95b498b7e8839f923e5f90b8d7fa82b0cda35a650",
+    "tests/fixtures/pacman/updates/local/dup-1.0-1/desc": "44159ed280b0ee891905b95c31eb7edf639bf50b52c55a476a492a67aa195485",
+    "tests/fixtures/pacman/updates/local/dup-1.0-1/files": "c266a59e2a46accc4139e1df464bc89f9c787461f86391f14bfa92d6e7c5565a",
+    "tests/fixtures/pacman/updates/local/gamma-1.0-1/desc": "12e1b4508391e68ea4862081d45eaaf1beed03d0f07bfa9dbc2442b94d38cb53",
+    "tests/fixtures/pacman/updates/local/gamma-1.0-1/files": "dd7ccae46441ab8bf1db091789197adddd21c3ca9087ec78d42b92dad55657fd",
+    "tests/fixtures/pacman/updates/local/ignoreme-1.0-1/desc": "2d4e730cacde2c789887c2d92905d91856f9873e31807d33c8429c15afd07af1",
+    "tests/fixtures/pacman/updates/local/ignoreme-1.0-1/files": "ecc544e22f0f3db7cb4382a183ebf047ab8cdaa350155a6431ffaf8f59e9c87a",
+    "tests/fixtures/pacman/updates/local/omega-1.0-1/desc": "bb71cad9149e628da0eeb4d0b62b556e9d59fe2e8df67c786baae357e4ea3a4c",
+    "tests/fixtures/pacman/updates/local/omega-1.0-1/files": "9a30ce27903f590c0d45a60b66124f1b98e2f022f1acd101619b1fa016657e99",
+    "tests/fixtures/pacman/updates/pacman.conf": "87db6e832fd3a91cfd4545cc9d39af4fe997e868664dea56e63ffeaeaaa5cda4",
+    "tests/fixtures/pacman/updates/sync/core.db": "e51037476fcebd9b261ccfd8ed0a5db5e04587536e9cca40f54a7a6a877c83d9",
+    "tests/fixtures/pacman/updates/sync/extra.db": "93a2a2c5bd4907d3432ca8e2c71c42e094515f6e47514338d697feeb51f5bffe",
+    "tests/fixtures/pacman/updates/sync-old/core.db": "5569251d87adb9e6b7d43b9636dd885c9f0a8513c94ec5f364484bb2b527aaa8",
+    "tests/fixtures/pacman/updates/sync-old/extra.db": "7e16617144ecdcdb2597e584bf89348b7531978ca26e78874d28a246dcf58c9f",
+    "tests/main.cpp": "0e140cb61334c59e6d2a6fedfbca7c989629575e73243d22c890af391910209a",
+    "tests/packaged/check_install.cmake": "c212dd87c3d24da55d3d9df648447b89b59e1fd487577c93111c76658be6101a",
+    "tests/packaged/packaged_config_test.cpp": "6c2d2f62dc48e48f4e8f1b3fd17c898d879c23d424d5e528f2e89beccf05982e",
+    "tests/packaged/packaged_dbus_test.cpp": "d93a9c92a02263e5c30dac6081a5849a4862e835ba0eda16d820b5bc9ee05877",
+    "tests/packaged/packaged_process_test.cpp": "0edd91d06f2bd3500b7f2a000fad6afd28f4a36cfc549370572a45aca0f48c63",
+    "tests/packaged/packaged_update_check_dbus_test.cpp": "7e518c3ff88c695ff3f125dfb2f6a780a6c00dd655552ad92eb4a05d2d41fe0b",
+    "tests/packaged/private_bus.h": "39ac65b918a4cb9d8cd2a19a2c179d049864e50b858b8c23b8818483538a8f08",
+    "tests/packaged/update_status_client_test.cpp": "9d56593d3462e2452a2b17d12aa41b00a315e27db72d06e4acd2111c4de6502b",
+    "tests/persistence/alpm_connection_cache_test.cpp": "374cffee7c4a5751cf97f185a6a2ef3f31da7e45dbc58b734f3c16b342062bfa",
+    "tests/persistence/check_history_test.cpp": "8d1690b86dc3087ceb52f3cd781488d7d8f968eb43e3748319af4558c7a33d2e",
+    "tests/persistence/json_update_snapshot_store_test.cpp": "98dac38b06264d6507021dda04db070a40016b2777ca12dda3c8506728366a03",
+    "tests/policy/test_layering_policy.py": "1773850ecd72e37ce7707efedb28edf5d33a1412bb191a81b01f8a4b10063ea8",
+    "tests/runtime/main.cpp": "ced2ddbe5a9b05709c9ecaa2a1397135dcdff73f8b970717b3725dcc3f25a6c7",
+    "tests/runtime/test_import_policy.py": "82a73f5d77ca65580485e7eac2668bffc1a1f71275c579081fd1d3465b13773a",
+    "tests/runtime/test_runtime_controls.cpp": "5ec3d6b466498a4f01b7ca7062d3f6366fc7bbe16bd7387faee2e1cfd96cc756",
+    "tests/test_placeholder.cpp": "6ca30742ffdb1996cb6f830616795ce75298757205c23fd9f1df967c37d341f4",
+    "tooling/README.md": "884413a3d13d55a0e6b13f3748e2a9ca6d05626d65b96dbe45c1064fdcf398f7",
+    "tooling/VERSION": "c28fcca53637bc88e124af1725df13cb98c69dedefd62fb3cdbe1cdb6b760624",
+    "tooling/clang-format": "b991ca75bf44dabc170e88b4f2cd7d1cf9da964779b235306189fe55e35d95a4",
+    "tooling/clang-tidy-cpp": "635d244a257646d170c194322d4ba76c38e1f7f0b592673b47c6b5888c69f539",
+    "tooling/clang-tidy-qt": "ec189328cacdea88220f75a842d54652501c7fc56a26402d54466264039403b7",
+    "tooling/clang-tidy-tests": "bdf8f59f42ef23e0c0277847d491e00d3297be9629e7e65b20569b9b6d0121f9",
+    "tooling/clangd": "66f4e0808d6d184566ab049d24b967a8fccd27c28e6f3f36b7d44f20b7239a8b",
+    "tooling/compilation.py": "f28c63e566889f81d35b1bb25c9e05dc2771c5781eb17c73b824b4aff079c846",
+    "tooling/dependencies.cmake": "495162bdb3d0d1cc3a77bddc905633112f8752fa3c3ff58c565aa2ae42f24c35",
+    "tooling/external-packages.json": "4a1ad8d184dfb778c245ae67bb4599fe58209314b9f86824c66ec1eaa78d01c6",
+    "tooling/external.py": "2e87dc012d7cdda7235d5ea2e311a2a49272ff82eac5cf3ccec7841ec610df27",
+    "tooling/module.json": "b897af49b36b8986d15296b3d3e201e46b2ff8132150217aee0e63a4f033cc9d",
+    "tooling/providers.cmake": "5d6e7aae9f7f6874d9fa3cf5efca17cab8c3df88ea3b312633ece6341b592876",
+    "tooling/qml_policy.py": "b262e848d3b7fb3c7e6c63362a652b24957bf497ab901e5e2008352958ce6131",
+    "tooling/workflow.py": "9d3224f822ad05ecc877dfd511a6a43df3b7ce0e4ef9afe4dfcb1a83d23c1450"
+  },
+  "non_documentation_inputs_match": true,
+  "acceptance": {
+    "ctest": {
+      "passed": 481,
+      "failed": 0,
+      "skipped": 0
+    },
+    "style_subsets": {
+      "Holonight": 13,
+      "Fusion": 13
+    },
+    "runtime_controls": [
+      "Holonight",
+      "Fusion"
+    ],
+    "startup": {
+      "build": [
+        "default",
+        "environment",
+        "command-line",
+        "external-config"
+      ],
+      "installed": [
+        "default",
+        "environment",
+        "command-line",
+        "external-config"
+      ]
+    },
+    "release_tests_off": true,
+    "installed_path_isolation": true,
+    "activation_paths": true,
+    "fixture_exclusion": true,
+    "qml_enum_quint8_types": 5,
+    "strict_tidy_units": 105,
+    "qml_lint_types_imports_layering": true
+  },
+  "focused": {
+    "launcher": 12,
+    "real_cmake": 17,
+    "canonical": 32,
+    "installer": 68,
+    "final_fixture_cases": 25,
+    "final_fixture_inputs": [
+      "tests/application/update_check_service_test.cpp",
+      "tests/packaged/packaged_dbus_test.cpp",
+      "tests/packaged/packaged_process_test.cpp"
+    ],
+    "coverage_configuration_and_instrumented_main_compilation": true,
+    "yaml_python_json_shell_task_syntax_and_whitespace": true,
+    "canonical_declarations_bundle_and_generated_profile_consistency": true
+  },
+  "warnings": [
+    "Qt QmlPrivate version-coupling notices retained with exact public/private Qt 6.11.2.",
+    "Optional WrapVulkanHeaders absence retained; offscreen software acceptance passes.",
+    "Expected failures in negative launcher/package fixtures are retained; enclosing suites pass.",
+    "No compiler or QML metadata warnings in accepted build/release/static logs; no runtime QML diagnostics or skips."
+  ],
+  "corrections": [
+    "Initial private-Qt negative fixture allowed system fallback; isolated fixture passes.",
+    "Canonical strict tidy exposed protected state in 14 fixtures; state made public without removing assertions.",
+    "Three access sections formatted; four helpers in three fixture files made const, query results marked nodiscard, and their 25 cases rerun.",
+    "Five Q_ENUM backing types now use equivalent quint8; generated metadata resolves all five."
+  ],
+  "limitations": [
+    "No native desktop/session review, package transactions, host deployment/restart, Debian qualification, publication or pinning.",
+    "Final static/focused run uses the unchanged qualified image, provider manifest and offline/caller-UID contract. Full runtime/release remains valid; only fixture const/nodiscard declarations changed afterward, verified by focused recompilation/tests."
+  ],
+  "provenance_hashes": {
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/Testing/Temporary/CTestCostData.txt": "b2c1252c606ceb381529e639efdaa561ad70293d396f1a352b696f8056977b33",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/Testing/Temporary/LastTest.log": "c19f23a1b3bb8603fb18a414e47800ce5664653b8aedaafd0c15f87fa1a5ddea",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/build-launch/command-line.log": "c50a8f0546a5ddb9d45d09b99f4643b688f558622eccdc09b8ae07955eb7666a",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/build-launch/command-line.maps": "28a38cb6b09b61596ac86923e4fce102347b2e1dd0ded8128d70a6547c742d35",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/build-launch/default.log": "2b19a6c0e7be32e1fd35ffd51304299c5c854425f653a0db513fb333df112ab6",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/build-launch/default.maps": "007eb519c2496a6693c3d17fee8def73e520ee95a8b28337a9e3d46546b6f861",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/build-launch/environment.log": "c6f9c5266f4eb9f3a70eaa9945be82a5a0269dfa926877166f978dca01610e49",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/build-launch/environment.maps": "572b739683afbf1b5482da0ed60c794489380ddc53eee103014b94d8557e57e7",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/build-launch/external-config.log": "60aa050a5806a5b2687d48889327d58a9bc8a247d973e88e625db721ab2647a8",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/build-launch/external-config.maps": "3ce9bff9529ef4c3d871f3d509b3c0bc29abd76a821373c68e9b897eaa45c582",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/ci-provenance/cmake.txt": "f46066af33a13476fb604a1a1a24bb8d4dbddb6eb5855e0c24f9f7132784c9f0",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/ci-provenance/compiler.txt": "0b52fa36f98d1a1ff3f77256f64c13ac7e2264cf7f072ea7943756a0ef378028",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/ci-provenance/packages.txt": "34ec39510e95051a6fde615c2105b2eb5d3d816fe5d09dfa51e25bc1d50a1ffd",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/ci-provenance/provider-revisions.json": "e1e7e748cdd38ef54627fa78365f8b99aa24896f47936935e924b1560141279d",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/ci-provenance/provider-revisions.tsv": "66e83291ef41e27c41af604d5c8be59d6c2aea1469d34c23dc77c37833c96a72",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/ci-provenance/test/CMakeCache.txt": "8ed9c7e4decd849a3e01cc7de921374e67e6f5ea2a31948b603fc16672b2f005",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/ci-provenance/test/holonight-packages.qmltypes": "2428238ccbf44f8decc96e52dfd7ccdd2862df003e60276e97a1a996a510bb0a",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/ci-provenance/test/test_runtime_controls.qmltypes": "a966b44e909366e1a5de14a7778d79f4d59a0c9f00b6eb450526e64720dfdc31",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/ci-provenance/versions.txt": "9a13048ed7959515c6ac326d1d230e69beca699807ab9f68a4f566dd608cfeda",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/compile_commands.json": "d6aea9086e2bf20043a05540bd06575862f55dc0232f911e412bf59d218b502f",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/tests.json": "f2c20b79a9b3f3db7b9d8e82fd44c89bf5d382cfecdd214fe12dc72dc7086a37",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/tooling/coverage.json": "712342544295940392523b053bcfc556c038e68c591c30817bc5a343812a5696",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/tooling/qml-paths.json": "58981ad35da6a23e34a73a725fb952a7814a2ae4e795c9d3eb4e39e7f30633fe",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/build-test/tooling/qmlls/.qmlls.ini": "bc9938c89d89f203c92b68fc24bb55134a9ac6d262227f70c5346e2c9c867300",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/ci-provenance/cmake.txt": "f46066af33a13476fb604a1a1a24bb8d4dbddb6eb5855e0c24f9f7132784c9f0",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/ci-provenance/compiler.txt": "0b52fa36f98d1a1ff3f77256f64c13ac7e2264cf7f072ea7943756a0ef378028",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/ci-provenance/packages.txt": "34ec39510e95051a6fde615c2105b2eb5d3d816fe5d09dfa51e25bc1d50a1ffd",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/ci-provenance/provider-revisions.json": "e1e7e748cdd38ef54627fa78365f8b99aa24896f47936935e924b1560141279d",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/ci-provenance/provider-revisions.tsv": "66e83291ef41e27c41af604d5c8be59d6c2aea1469d34c23dc77c37833c96a72",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/ci-provenance/release/CMakeCache.txt": "b91a3cfe379ad1a3b04cf5fe5b1b1647357b843c538f1d8ef2967b148e8dfbbc",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/ci-provenance/release/holonight-packages.qmltypes": "2428238ccbf44f8decc96e52dfd7ccdd2862df003e60276e97a1a996a510bb0a",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/ci-provenance/versions.txt": "9a13048ed7959515c6ac326d1d230e69beca699807ab9f68a4f566dd608cfeda",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/install-launch/command-line.log": "28284782dad69fc3e12b7dd5dea5cd2046285fbac97f146a1ea186c62a10e239",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/install-launch/command-line.maps": "8e742c13166e58ce5cfe29cffef6cc9776590ea91a26da6e90958b8d9607b16c",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/install-launch/default.log": "aedd0fa621e1493c96db890e5eb76537ef9eafe8fbb5cc238dd8e17af6a5b0ac",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/install-launch/default.maps": "0e8f96b3c97ea3ed7e4c1a8efc9b944f80c71efa11a3691028c3935cf2fb62b1",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/install-launch/environment.log": "937a259a5c977fe9b10ba45bd771efff3434f1ac6fd0aacf4161bcdd1794aba2",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/install-launch/environment.maps": "42a46d47a47b29b33814ff1ba4050b1d615e7b6abead69db3e5f286e99b3e834",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/install-launch/external-config.log": "d48cf87a40b2e8b7e15862e944a9d91a8f5ee338c5c59cae53520647a870f62a",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/install-launch/external-config.maps": "8b879e909c8433f19cd779d9a2b614bb1de1ba6836cbdab16a079fbf69e89a57",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/bin/holonight-packaged": "a487ef3ddf42ab6e4775ad6ab93693d3072b7f0add5307384ff90b40aeb6d233",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/bin/holonight-packages": "01c10f2b3a274011fcdff44f28b5b8a1f05781fe2237395d540988a9a8e5592e",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/appearance.h": "c84506beb90f5590de582bbd63caf853121d40b3e73dc779a56346600e37f8bf",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/appearance_reader.h": "34333fc299fd2f82e6d8647bcfca4639d859397e7f70f46917122ea6f750e039",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/config/appearance.h": "b1853839a3b7dcbcf8fbd3baa8402f36007834b94adbe7e3d3975c93e94f8fed",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/config/appearance_document.h": "819396e1969121a5199a42c025247e49c97e82afffcb93efd295d1560fd488a4",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/config/codec.h": "69799c7a0dce356bd125c85350668a07656dcc7a81d11247a94a9394f4a6aca0",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/config/config.h": "6cf49adf9495a1c0e5acb9f5f706f145af49783d8c35c3fa8be003535e338780",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/config/diagnostic.h": "dd1b5a33dbe22feff2be3bb5f46d21f5a2f85bf41ef9d2f5c221a8205c935dca",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/config/document.h": "55479263dd77b8bcfd8f50af6ccdf50273339b30a422da2ec0422db944c1de0d",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/config/path.h": "a733ec0a94601eeddcc2d89fb34a87beba1a358ae28f6a54f5ff7223183be380",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/config/result.h": "19ba4934a8ba71246e8ce730356e40f6024cb7c740960222b6192982626738cd",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/config/store.h": "e995bea4f447f02f42ec22b48e048d6e62bd5bfbd070df834bcdf775e507de02",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/document_watcher.h": "d29c582bf3f6154452ee328d0a31a496e356f6864f8b22c2d2052e0eb52443ea",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/metrics.h": "b21c7e1683bd2e64bddf4a6d23f5f2ecccd4f5a1e0509126caa0084c1e2b6a14",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/palette.h": "0c4dc3c1f7bc53101cdecc0a5f94e9447052738e9083edce24967338de973666",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/theme/semanticappearance.h": "89f2b537f811b82f0062c8aae0a55cc7434a63039f06fcd710b3b7258a6300cb",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/theme/shaperesolver.h": "3d8d2523cfe07628d60b5834b08192067748eeb279129ce4e864cc2f412145a3",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/theme/themeresolver.h": "68b8ce08dbdc57d1eeb495721e3700c857a7215247b983c17e9d78ae8c477e43",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/theme_catalog.h": "7538781df384fa953b4c0699b4a42d36f587f36028f932530970bfe63a52f552",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/wayland/layershellcontext.h": "7045b8bad12dff2fafdca3cd3aa6efd9ea5d4efecc0ab133943039d61466c0f5",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/wayland/layersurfacehost.h": "f4dcec4f57448f09f9c241db1c3b961a47e25809468beac1fe3b936408afcfe4",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/wayland/layersurfacespec.h": "291aaabcd5b7d69044be93b185e895b077a6db5c104f71c1c10369c82bb0793f",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/include/holonight/wayland/wayland.h": "665fb9f09b1e5fb972bd816cad11e5baeec889d8b70fa31aa106f081526e97c8",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/cmake/HoloNightConfig/HoloNightConfigConfig.cmake": "25032e804098cd7d8a55e1365f957eef7227a3261147df5edb9c929d017817a5",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/cmake/HoloNightConfig/HoloNightConfigConfigVersion.cmake": "4440cdfab7c7e4e4fffcf0d81d698fcd80290c4f2a8d32c4f8242993b0af951d",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/cmake/HoloNightConfig/HoloNightConfigTargets-debug.cmake": "40fe2f81041f8689f6584b472e4cb55cf43a9e7763ae1b346e81b59614235db2",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/cmake/HoloNightConfig/HoloNightConfigTargets.cmake": "147e00a85436396ff8b94e97f20fbeb20371ee173beebca64bb850280c5a2aff",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/cmake/HolonightQt/HolonightQtConfig.cmake": "f135fa706e1e1201b1e38b6f13bc7e268c11d858f652658bd5be7aa6d40b9dc1",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/cmake/HolonightQt/HolonightQtConfigVersion.cmake": "522063399bb1b4bf4d214442c3e4099aab356902c068b6560cb13a3be7ed4cb0",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/cmake/HolonightQt/HolonightQtTargets-debug.cmake": "d0c65d7f6af8c17948338a106801c8da804b13485f34dde908a32e6605f857d3",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/cmake/HolonightQt/HolonightQtTargets.cmake": "5e464987203e524dd759ec270aaa73365198516fc53f2868d73f25c6da76020e",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/cmake/HolonightQt/HolonightQtWaylandTargets-debug.cmake": "1a9c5a823f0227f873e1a75470dfb28e4e99f7145ec89ab5f5b0372f02380400",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/cmake/HolonightQt/HolonightQtWaylandTargets.cmake": "3072f2e5cce22e3fad4c48c066201fab6edc34c4a84497b2655b064bbb605eea",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/libholonight_appearance.a": "99344092333d3aba046b9a7f45e841f6d6372a0fefd030582a8c1b917af72ed8",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/libholonight_config.so": "92f7b7bf48003f80898126241d224f3b549432a7e5b1d6ee727e87cf4486ff40",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/libholonight_metrics.a": "1d9a31e490c6439faf79b63692d03e3c5fbc6ef8ec87602858fd51c6a3fd4164",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/libholonight_palette.a": "7cb3bc1f9d00c8f5914d052099d2d7d43b5aaebbb1acfef0f2d9bf9506cdc646",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/libholonight_theme.a": "4be6bdbc5240c97463565bf5e6571b11dd01afb368b0b50a90cc29d6d2d9769f",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/libholonight_theme_catalog.a": "cfe21ebbc2ffc3c2a767ab5ca926cc44bb87241d321c69d78deee9a0a463e52e",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/libholonight_wayland.a": "071adf9258280791120e4c6ea7a96ddf397dbc3ecbf489b908c1596a4e8c1522",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/plugins/platformthemes/libqholonight.so": "95e33d434095fead73cc27b5be654acd785e32b65ad2ce8ffe25ff615b2978bf",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/plugins/styles/libholonight.so": "caf5edefd481ba914d9f25765402d8b42fed1aa14f0834c8174510f5c27ff9b4",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/ApplicationWindow.qml": "b39f0fce27cfdac7d835d2bf91e828d597e0af0ae975717e219a83bf9920c7e3",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Button.qml": "f295bc9af1b10bf9a78948a8928b53de5379368c917e6c491d22e8e4bb85eba7",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/CheckBox.qml": "06321ba14be735c571c8f099299258e13a242012bc1bafb479a05c21bf88a7e5",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/ComboBox.qml": "ac909f505f86b5cfefd16a4de934ae2576f9c8452452cccf5ef1d3b874322385",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnActionBar.qml": "9373624bd0fa680a2735830bd67e862d6e25eeed87aa3442d239da2f5e5276fa",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnActionDelegate.qml": "758850eb5e10e4efbd572a5fab6b481f266dc5afb813bfa2842ecd82a85f53fc",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnAppTitle.qml": "5b7cb7b3130673b5766d513a8905cee575453c27bb12a07d24e43c0036f34e92",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnApplicationWindow.qml": "de6220badd2a97074e0ea0d23a5f359b00371a8927e004b33da66a97d3c75e9c",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnAvatar.qml": "31586c0cc65541b1a08c9c0e795beebbf9aff3319d304cb45c75d0bfa9853b5f",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnCardDelegate.qml": "ceaae8eb0110f612d9d19d36d8e1d3fb181c071ef77293673151a7806c241fa2",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnChoiceCard.qml": "3907b41343ed2a857aa707be3bed92232467eac9f3c47ef012d1bf36c825d7ad",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnColorPicker.qml": "f350bd65f57731c50d3f66bf8e436f016f63475da1243d9c7ab4488620c2e2d3",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnEmptyState.qml": "a1bdaf8f21d2dbe61a8f27c051f51c1c0f69eed641b239708e5523af341a9719",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnFormField.qml": "43ccc6b875267feba45909aebd89f262750ebb7df6fa63f95e8296aa36e63936",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnHeaderBar.qml": "40d4054320a931287972385393c202b2a3c43e365865e06ac33e79843c59178f",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnIconButton.qml": "4d8b1a836cd1fb2287768d7ac809812bcb4ad6ee76f1b490fd9b8186054fa241",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnIconComboBox.qml": "e022fa2dade4c148ca213d78a5986b3db0c6f9f721644637a2ac45eb67fc9b14",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnKeyHint.qml": "2e8eb46d4200a8366066afa5b138d0cda8d8813ab6e2de990f45df8b2c442d5c",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnKeySequenceLabel.qml": "609dbd5b3bf01535fef1e86c9181facae6776a871c11181410e36599f8bc4203",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnListDelegate.qml": "79148831ab5328d89804fca12d043c0e58708389f5d6b486c60674124538074e",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnLoadingState.qml": "fb945efdee59e72c53eab4ea9277f4d533db7e72f11ab46f73f973232d4f46a2",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnNavigationDelegate.qml": "b1f6c481230b41a83947e505040002a4f302f9e5d81f37e7d5bfe001918cfeda",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnPanelHeader.qml": "3f825c1891db899e9dee41b1bc06381ba8365fc738d713b4675218ea02722ac3",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnPopupCard.qml": "c4b756048cd2eea7bb76d89c178eda1c63650a38883a08f4f62717850dbcd169",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnPopupCloseButton.qml": "7b99e167837a941118d7126125b56e3e964b160af0e864a6bf3b41a584ec676f",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnSearchField.qml": "00cf7aeead28b0ec2128129b467617899db9af0b4b2b830776707b37a666fae1",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnSectionHeader.qml": "332d92624006817df0ab320ef5a7e3e79ab40c150048b0f21c9046b5d37866e1",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnSegmentedControl.qml": "52b2e4a020251795bd9b06b31a836031699115f915767a4f7a38143f6a54ae1c",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnSelectableDelegate.qml": "cf0756d89755d4187082fe1d5604ba506534e990d70f93563457b4de69166d52",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnSeparator.qml": "2bf22ad0971bad0210544c1661a7edc960608ae257f0214c4a9b340dfb920faf",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnSettingsRow.qml": "94703d16ef07be490d07f0c76581dcff71457c9125258b439cecb015ca8c6152",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnStatusIndicator.qml": "b36145b680fd2b3e5026eec7e7146ea17fe7fd8d8e2c8cd12d316f26cc9768d3",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnSurfaceFrame.qml": "5b1fbfdf01c92612777f9d35f5083bd5859e25d59958a0807e78972081fc5743",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/HnTextArea.qml": "dfb22dd3802e100693578fb0c5ad58f1b4972064adebbb33d198311c42e3ea31",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/assets/clear.svg": "016d6143728072f52a351f3c7df3c6a0517de050d4361b3fb27dec38dddbcccb",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/assets/close.svg": "09bf71f32aafcb5572faf414e569b3a720e4e909ed347654dc066351faa98d6d",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/assets/delete.svg": "6c2426225d5f97b1f8d594a88a6c064535106213d9cef76509f355737de00f6a",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/assets/edit.svg": "38342bdc79e99ab924e2f0606d87a7fb67c5ccc72d49c2bf6372038265dab927",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/assets/folder.svg": "3850efad3e49aaf7a9961b514b55d599b480de5a961029b90435a46b4a606a41",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/assets/more-vertical.svg": "490f90a4de825c4e3a3866a39b2a9dc087a7d7fabd85eea837a250b9760d8b01",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/assets/paperclip.svg": "e87c8aae1c9e6dc343eb45e7303b90cb703eb08e5620fa99c56ca488331c47f6",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/assets/search.svg": "82b57fccbd0c75829f4bb6f6ac1b49683ae0f8739bd276dfa021bdcf9854bf1d",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/assets/send.svg": "c8c53888992f589f1f75610bcbf47d9d505e95a61f6d20279648c3e6dafe3e91",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/assets/wrench.svg": "cd2d35660535d687006973bf91dded3f33a4fe77272c85c402c497cdbc5b9a9b",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/holonight_controls_qml.qmltypes": "162285eb52305a78d7acf6a702631fa06b8587b35de363ae06029c8ecf745baf",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/libholonight_controls_qml.so": "25ad12c8a78c471a4693c839b08fb26ac2eabee42c4b903a4ba9c70e3ae390f0",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Controls/qmldir": "9723ed51a1b6dc11664707e168e5aa17a898f8195ec77f4c2290a90048b0c91e",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Core/HnButtonSurface.qml": "23a7077dbf9717fad91903c52eab779aeea3d5dab10b888abe96c392d3c696a0",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Core/HnControlSize.qml": "f3f05f45323e52159dba69d5711a2b4ee66c36927f2731b09970d59872109f22",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Core/HnIcon.qml": "e7c514f08ce4ff0e8d2bb1903ad93a938424e41d0c92ba700979e6502d6eec90",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Core/HnLabel.qml": "237a84663ed2e0c76ffac6fb73f85c18be6cbefcbcb08742b70f075914200a45",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Core/HnTypographyRole.qml": "c5d833d0425becbf5b2446df4db9e3e950fc651a87d322deaffc646439f352a5",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Core/holonight_core_qml.qmltypes": "7be892b44da3dbfd3ca572e5f4898786e8a2ad004bf9b28572c78c308c0ef9f5",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Core/libholonight_core_qml.so": "425fbf41a857ec023a522435d4a021fc3d0075309fcf20e279f0cd1a9b10ab2c",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Core/qmldir": "f48608617dbed5f48c07b2590a07a733fefe9b579733d125cfed3551085bcb49",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/ItemDelegate.qml": "faf81d70ddaeee8d976f562f54a385385b24860fac502a5a2047a6f2a63d330a",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Label.qml": "9111c87f70d0ed069398d92085f9117e7bded879a71e8c7cf57feb8876c3e13b",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Menu.qml": "93d54306a2d9aad7079cb47b431f86c4472fca5c47578a84f639dcd7e9f0a006",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/MenuBar.qml": "c5e652ba64a47d32e7442fa7f5bbac8a2acae70ce2268d39f1d64a65ef163664",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/MenuBarItem.qml": "4520d310fadc9799a9e796ae9b4ea8a3e067b51d4189601aee3eb3fa2ef0cf55",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/MenuItem.qml": "9fad1221d3a1caeaee3647525fb54b7ebe67514b742e4aa88a5e497fbaa04b89",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/MenuSeparator.qml": "600dc839396b4665d9bfa99adcb39eb753e70221d5f934401a2eb74c750d569c",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Popup.qml": "b7a202d3fdc2c8f557b82fac62cb0c916d2a58945df761b8e3422cec64c008c4",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/ProgressBar.qml": "d612419bfd30374a27b34d8b4b61221d716b8d58c2048bdf18a2359c556cbf02",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/RadioButton.qml": "d5664f130f7112f94e08f73fab3411a1470159d1622f39a8b15bfdab93177b63",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/ScrollBar.qml": "6334679a83a5213ca45a52dd39fd8e00ea741004a3d85be5fad41fa5b4bb1fed",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/ScrollView.qml": "ffa44cc49e0cecf6c99ca45d5a00f7cc67b3709e3a0223bd2a9ac29be1e8d6ab",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Slider.qml": "946b8d0dba37067c5c4c33c0e2381e99cd54d69cdb28d3627c14b0885fd22f24",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/SpinBox.qml": "794709792bea02b7fe2d650631dca22608a8bfc7fdc9e82b5bba4aa4bc9b69fc",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/Switch.qml": "942c7c42f703cde0220242669031b6564de509eacc317921472daa36d1af2f51",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/TabBar.qml": "c645f09fae370ee5a9e64f32426659f1ff363f39d7fc3a9b11f20a32851ddbe6",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/TabButton.qml": "d32a19550443a5b31e39d1120d2a6491b61cbb95b7b4d73df85cf1fb58454f09",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/TextArea.qml": "58e42bac198f045d010dd50b1a6088f20c69a4164fd00d003cffd07326d6b02b",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/TextField.qml": "ed027bebf491d82837b6e87f51011fbfefae73154fca8b5167741c3f9f10168c",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/ToolBar.qml": "d01c9bc6615fafbb539124d1d2a87401b717360d44b3fd409c63513ce9ff7b15",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/ToolButton.qml": "cbe6519899aacf35492beff997dc3e6ffd151f63dbacf6d853bd34209de00c4f",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/ToolSeparator.qml": "73510dffa2adaf76120aa6b68c2a943cfa2cfaf2b984c8ce8e5b87531df48de8",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/ToolTip.qml": "46a1c09bc90dffae9a09f59be255354a88584ab4006fc9365692427d70971389",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/holonight_qml.qmltypes": "a96c7bf5832767bdc9d91e2290a3920aec3abfbf2e3814bce38b49483f16f84a",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/impl/ComboBoxPopupGeometry.qml": "a17e2150c034fe51488fc23c87b7b6ff54ceed3ade8b92b04675cf6e6fcf8bb2",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/impl/holonight_impl_qml.qmltypes": "32e3e5b72f3a7281d410a21a8b2f93d15b04f1d1b3d70cd0b29a6623a288e5e2",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/impl/libholonight_impl_qml.so": "05999febf7d62e34f10afc91b6a7968a303e5c0218f5f6eaabf47710cf55870c",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/impl/qmldir": "c00523752b12f1b2bc1ba922b08fb432fd24a91a3325a640c9edc3fd5aa50d38",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/libholonight_qml.so": "f468d5d30bedbf7b6949e6eeca9251733afcd8dde09ccb2e3ffc7b9c15685c97",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/qt6/qml/Holonight/qmldir": "4a6c043851097c1700b815ac966d74c5396d63819fde471773e35a91f70c41db",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/lib/systemd/user/holonight-packaged.service": "6b456deaaf8f699153d6497f6e450a269247740f7e08db3775e2d54631df5b99",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/applications/org.holonight.Packages.desktop": "4ae5bdaad85aef0997a712ddaf4651684efd84d2a8d448e167d454f1867ed393",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/color-schemes/holonight-alucard.colors": "489585b3e030f73dadaedad7f63ae588a2aee8531520ceb0aa7c76e17912ef24",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/color-schemes/holonight-canopy.colors": "a7130bd6d2512e7bcd57e3e908cfa13d6ffbcd8ba3737643899bb8dffd9f05ab",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/color-schemes/holonight-cyber-d.colors": "a7a3e6525ff9506b7de6bfb8bfd3a705552e446ae3cf2b1ef7b307c9eb66c3d4",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/color-schemes/holonight-cyber-l.colors": "2f6f81598329aaa267cd1e062d582718f5147038e016782fd512b546c5398dc2",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/color-schemes/holonight-dark.colors": "d241a52b8c1069ba474f6ce7c2475fc08c753435cf4c3a3271661c6ae44b0362",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/color-schemes/holonight-day.colors": "62432f835e99a3ee1f8610deeb5fc4b603440475507284abe73759277638eace",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/color-schemes/holonight-dracula.colors": "5e7823c4142cea097474f96778f89f440fb30415924e8e40a38b3e2baf896dc0",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/color-schemes/holonight-ember.colors": "334a2a68b567c28d5f50c6375f2c1af92aaa7bbc491d23223d82ee264bca6d6f",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/color-schemes/holonight-frost.colors": "d9ec34206e1bdb9ec0fa938b86deb4de2de09f3747a9cc7edc81953343c7f646",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/color-schemes/holonight-glade.colors": "d0831398876dd54f49d04e8c35b8a373a6b0fda87709979cd0f7e8cf6c126038",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/color-schemes/holonight-latte.colors": "50a0cf1939589c8ff70838664fc91677fa56e056b8207df1ab080107344fbc51",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/color-schemes/holonight-light.colors": "abd7373f059d24164155341afcbdf42bf83e0a44a310e64239322e495a91d06a",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/color-schemes/holonight-mocha.colors": "726a51527de25917ef5980a353ae562cc6073d342b49bb0f3baf66bfe5025ad1",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/color-schemes/holonight-snow.colors": "f79a1267dadb3d085e3f3044057ba0016c759a3811e08b5a7fd398a2ccdcd81b",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/color-schemes/holonight-sol.colors": "2ad007b07891f11d61ba5921012dd458ae844810f0491f35cf3efa87f7373c9f",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/color-schemes/holonight-storm.colors": "5490a66b76732ea712c33bb1eaa12a334b25c56917e4ff0f11f27b83a06f26f7",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/dbus-1/interfaces/org.holonight.Packages1.Updates.xml": "2fb3f19e95ab1ecbc6784c5cd54e53a09fab8c6e8de1363d5fc76724bc05a8f8",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/dbus-1/services/org.holonight.Packages1.service": "cc4d7b9d56b6a7714db570d2665f8e2a08ab50eb52f18985e2fbaf973d8bc885",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/holonight/themes/holonight-alucard.theme": "257a202cd0c74a8263b12a03f1fbb9bddc876f0d2676f0227ed05936116c7d04",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/holonight/themes/holonight-canopy.theme": "a4243dd380c1d8df5ff21705da2ec5bac22307e8af712e44152d86e56c110a9d",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/holonight/themes/holonight-cyber-d.theme": "3cfc1fd602104aec7e9c4ad7f54cc647d4bd710efff807ea104ed95f3ecf558a",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/holonight/themes/holonight-cyber-l.theme": "582f464ef34cd5f8cde7dfbae2d520e51c2295d2ebdfa7f7fcfa30262b211db0",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/holonight/themes/holonight-dark.theme": "1715694cd1eebf4c0c5741d59569231291d4b580fe6133f32fa82386053d3090",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/holonight/themes/holonight-day.theme": "003445702ba725df34e3e1e9cf9822abfd0a7e6a4aa7388cd1d360d213e81a46",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/holonight/themes/holonight-dracula.theme": "dd46435275031068727585c57ccddb82b6836b61c06aa19560ebae19280c8243",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/holonight/themes/holonight-ember.theme": "82f719c57a09e7748f630cf736f2f1980656a62d9523270c1e6ef2c949f6bdae",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/holonight/themes/holonight-frost.theme": "ab51a2b9697ba3e5b0fb99b41092aacf2e2ea48d4e8cb7b70e5ae42be9c5a8da",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/holonight/themes/holonight-glade.theme": "2659d658fdb3619de44fb9bfd4e4e067b07d45cc5f3a5512acce2a1eaf85e6ae",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/holonight/themes/holonight-latte.theme": "bbd02a2888a2b1c7998f00a40658dd9eff20d89f523e258ed65b6b3ba04c75c4",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/holonight/themes/holonight-light.theme": "856d0386ddd9c5d7d639483c6cbd0a388d60d5cf44177282f32c528daf656b26",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/holonight/themes/holonight-mocha.theme": "8c9031aa33812e2bb1a92e5d62967078c41689925fb71b439661de881455cc35",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/holonight/themes/holonight-snow.theme": "7d5c525d49d9e68992ba3253588b8986ee8cf416caa1ccfb653ef10acff886c2",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/holonight/themes/holonight-sol.theme": "4e348910de622b2bc864517f70e7848ce55a77d3e1bacb732dab499cdafb6cc8",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/holonight/themes/holonight-storm.theme": "ec8b923bc294b1f9b3bfa82bda1313d27d0e2767719373e20dd8cde43b53b104",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/icons/hicolor/scalable/apps/holonight-pkg-manager.svg": "29b9351df2fec9e6fab6cf0372766151cea4fac603d24bd868527a554b1b9891",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/licenses/HoloNightConfig/GPL-3.0-or-later.txt": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/licenses/HoloNightConfig/LICENSE": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/licenses/holonight/GPL-3.0-or-later.txt": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/licenses/holonight/LICENSE": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/licenses/holonight/MIT.txt": "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/licenses/holonight/THIRD_PARTY_NOTICES.md": "0083d611a0331b75be6f28229f900771806442c405bbd03cb274b4412611c14f",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/licenses/holonight-pkg-manager/GPL-3.0-or-later.txt": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/stage/share/licenses/holonight-pkg-manager/LICENSE": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/tooling/coverage.json": "1cc54f225892a34123ef345eabd5382652f64ba3534e491ec1e7f4e99fc11767",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/tooling/qml-paths.json": "20764c8791f6de9b924c5df79d7af6727e81ea390b477890ee4ea8383f4c6446",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/release/tooling/qmlls/.qmlls.ini": "bf8c2ba2f2529fb1039cff1e261791b033f535609bb96cc2190fb6fce0af063b",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/static-checks/ci-provenance/cmake.txt": "f46066af33a13476fb604a1a1a24bb8d4dbddb6eb5855e0c24f9f7132784c9f0",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/static-checks/ci-provenance/compiler.txt": "0b52fa36f98d1a1ff3f77256f64c13ac7e2264cf7f072ea7943756a0ef378028",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/static-checks/ci-provenance/packages.txt": "34ec39510e95051a6fde615c2105b2eb5d3d816fe5d09dfa51e25bc1d50a1ffd",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/static-checks/ci-provenance/provider-revisions.json": "e1e7e748cdd38ef54627fa78365f8b99aa24896f47936935e924b1560141279d",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/static-checks/ci-provenance/provider-revisions.tsv": "66e83291ef41e27c41af604d5c8be59d6c2aea1469d34c23dc77c37833c96a72",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/static-checks/ci-provenance/test/CMakeCache.txt": "9e7bc65fcd0b3a860cdba79b0ee2f452b8e0ce933c59e726979b0ffb80ed3af4",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/static-checks/ci-provenance/test/holonight-packages.qmltypes": "2428238ccbf44f8decc96e52dfd7ccdd2862df003e60276e97a1a996a510bb0a",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/static-checks/ci-provenance/test/test_runtime_controls.qmltypes": "a966b44e909366e1a5de14a7778d79f4d59a0c9f00b6eb450526e64720dfdc31",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/static-checks/ci-provenance/versions.txt": "9a13048ed7959515c6ac326d1d230e69beca699807ab9f68a4f566dd608cfeda",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/static-checks/compile_commands.json": "d6aea9086e2bf20043a05540bd06575862f55dc0232f911e412bf59d218b502f",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/static-checks/tooling/coverage.json": "712342544295940392523b053bcfc556c038e68c591c30817bc5a343812a5696",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/static-checks/tooling/qml-paths.json": "58981ad35da6a23e34a73a725fb952a7814a2ae4e795c9d3eb4e39e7f30633fe",
+    "build/ci/20261014T170246Z-0fqpnz5_/artifacts/static-checks/tooling/qmlls/.qmlls.ini": "bc9938c89d89f203c92b68fc24bb55134a9ac6d262227f70c5346e2c9c867300",
+    "build/ci/20261014T170246Z-0fqpnz5_/build-test.log": "622ccb4f0bc64cee49f93e1a870de29b4dca58a0cac2e9572b675d7ff14d775f",
+    "build/ci/20261014T170246Z-0fqpnz5_/licensing.log": "f2606a4f92891169dc18baec33ae0ca5ccd9ad49d11fb1705b92a749fd95817a",
+    "build/ci/20261014T170246Z-0fqpnz5_/release.log": "af71f55297a54a3e38985a42b4335a9cfdddcb9d620d4b187c6690486ff74114",
+    "build/ci/20261014T170246Z-0fqpnz5_/results.json": "0ff90aa1d41dc131826d5f8c786526450455648d8d097ce8da1af97ca44750d7",
+    "build/ci/20261014T170246Z-0fqpnz5_/static-checks.log": "357d626905e12420f741ae83e79d059da03c51fb1c44c7a98815d608c5edf6db",
+    "build/ci/20261014T181833Z-final-static-fqbofy62/FocusedTesting/Temporary/CTestCostData.txt": "f716c38731239b283eddf36929ca9c6f9b00e47686f3c3daf8370c9ee84806a9",
+    "build/ci/20261014T181833Z-final-static-fqbofy62/FocusedTesting/Temporary/LastTest.log": "12efba3816a9f081d0fd2d852fcae183bb9afe666968315ea38e15ff1f19679a",
+    "build/ci/20261014T181833Z-final-static-fqbofy62/ci-provenance/cmake.txt": "f46066af33a13476fb604a1a1a24bb8d4dbddb6eb5855e0c24f9f7132784c9f0",
+    "build/ci/20261014T181833Z-final-static-fqbofy62/ci-provenance/compiler.txt": "0b52fa36f98d1a1ff3f77256f64c13ac7e2264cf7f072ea7943756a0ef378028",
+    "build/ci/20261014T181833Z-final-static-fqbofy62/ci-provenance/packages.txt": "34ec39510e95051a6fde615c2105b2eb5d3d816fe5d09dfa51e25bc1d50a1ffd",
+    "build/ci/20261014T181833Z-final-static-fqbofy62/ci-provenance/provider-revisions.json": "e1e7e748cdd38ef54627fa78365f8b99aa24896f47936935e924b1560141279d",
+    "build/ci/20261014T181833Z-final-static-fqbofy62/ci-provenance/provider-revisions.tsv": "66e83291ef41e27c41af604d5c8be59d6c2aea1469d34c23dc77c37833c96a72",
+    "build/ci/20261014T181833Z-final-static-fqbofy62/ci-provenance/test/CMakeCache.txt": "9e7bc65fcd0b3a860cdba79b0ee2f452b8e0ce933c59e726979b0ffb80ed3af4",
+    "build/ci/20261014T181833Z-final-static-fqbofy62/ci-provenance/test/holonight-packages.qmltypes": "2428238ccbf44f8decc96e52dfd7ccdd2862df003e60276e97a1a996a510bb0a",
+    "build/ci/20261014T181833Z-final-static-fqbofy62/ci-provenance/test/test_runtime_controls.qmltypes": "a966b44e909366e1a5de14a7778d79f4d59a0c9f00b6eb450526e64720dfdc31",
+    "build/ci/20261014T181833Z-final-static-fqbofy62/ci-provenance/versions.txt": "9a13048ed7959515c6ac326d1d230e69beca699807ab9f68a4f566dd608cfeda",
+    "build/ci/20261014T181833Z-final-static-fqbofy62/compile_commands.json": "d6aea9086e2bf20043a05540bd06575862f55dc0232f911e412bf59d218b502f",
+    "build/ci/20261014T181833Z-final-static-fqbofy62/focused-tests.json": "af5d7a0ae52baa5181f8a7502eaf01a844be3a203e4be078e0e2f81f3be5a28e",
+    "build/ci/20261014T181833Z-final-static-fqbofy62/results.json": "2c42d2b3b5b974a619ed93cfe3e29e3f1ff4360f751b586a337b788c9d4992af",
+    "build/ci/20261014T181833Z-final-static-fqbofy62/static-checks.log": "cdd5f78f1ea1478fbf5e41ac1aec92d4ef30577c42a4436fd207cc9c233a9055",
+    "build/ci/20261014T181833Z-final-static-fqbofy62/tooling/coverage.json": "712342544295940392523b053bcfc556c038e68c591c30817bc5a343812a5696",
+    "build/ci/20261014T181833Z-final-static-fqbofy62/tooling/qml-paths.json": "58981ad35da6a23e34a73a725fb952a7814a2ae4e795c9d3eb4e39e7f30633fe",
+    "build/ci/20261014T181833Z-final-static-fqbofy62/tooling/qmlls/.qmlls.ini": "bc9938c89d89f203c92b68fc24bb55134a9ac6d262227f70c5346e2c9c867300"
+  },
+  "supplemental_logs": {
+    "/tmp/edm018-canonical.log": "d9823f36645bab866cfaadbc532a94acb77083b274286eefca04abfa7f7dcbc9",
+    "/tmp/edm018-installer.log": "aa02f69d51c301e7dbbd9119e1369ef9addad3111f3c56bd4cd9d3a66f3137f6",
+    "/tmp/edm018-launcher.log": "2046942401e4c7cae9b199552a0f8334e73a6db49cc47fc53034cad847baec03"
+  },
+  "documentation_checks": {
+    "command": "JOBS=8 python3 scripts/ci/run.py --lane licensing",
+    "run": "build/ci/20261014T182312Z-0nf7fedh",
+    "exit_code": 0,
+    "licensed_files": 373,
+    "log_sha256": "432da540da78bd3183bf3f7a07e7895a371ddd91e86c2974da17f6a101a09c4b",
+    "note": "Only SDD/evidence metadata changes after acceptance; all files retain the same aggregate REUSE annotation."
+  }
+}

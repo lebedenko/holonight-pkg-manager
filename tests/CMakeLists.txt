@@ -146,7 +146,7 @@ add_test(NAME layering_policy_fixtures
 add_test(NAME runtime_qml_import_policy_fixtures
   COMMAND python3 "${CMAKE_CURRENT_SOURCE_DIR}/runtime/test_import_policy.py")
 
-find_package(Qt6 REQUIRED COMPONENTS QmlPrivate)
+find_package(Qt6 ${Qt6_VERSION} EXACT REQUIRED COMPONENTS QmlPrivate)
 qt_add_executable(test_runtime_controls
   runtime/main.cpp runtime/test_runtime_controls.cpp
   apps/installed_packages_view_test.cpp

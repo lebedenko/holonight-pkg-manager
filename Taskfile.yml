@@ -5,9 +5,9 @@ vars:
   HOLONIGHT_QT_DIR: '{{.TASKFILE_DIR}}/build/deps/prefix/lib/cmake/HolonightQt'
   HOLONIGHT_CONFIG_DIR: '{{.TASKFILE_DIR}}/build/deps/prefix/lib/cmake/HoloNightConfig'
   HOLONIGHT_QT_SOURCE: '{{default "../holonight-qt" .HOLONIGHT_QT_SOURCE}}'
-  HOLONIGHT_QT_REVISION: 0d5bdf094e6e759210531c4babdd2023e5d56485
+  HOLONIGHT_QT_REVISION: 7c3ce074a8c2e02e4ee8cad8cd19eb8627aa4f68
   HOLONIGHT_CONFIG_SOURCE: '{{default "../holonight-config" .HOLONIGHT_CONFIG_SOURCE}}'
-  HOLONIGHT_CONFIG_REVISION: 03fa635cedc506e101a148fc54f7eb46d17c6de5
+  HOLONIGHT_CONFIG_REVISION: 0ccd25f323662f50a47bb048be636160f2b7c135
   NPROC:
     sh: nproc
   PRESET: '{{default "debug" .PRESET}}'
@@ -16,18 +16,22 @@ tasks:
     desc: Rehearse all push validation in pinned isolated containers
     cmds:
     - python3 scripts/ci/run.py
+  ci:prepare:
+    desc: Explicitly acquire CI images and exact provider sources, then prepare providers offline
+    cmds:
+    - python3 scripts/ci/run.py --prepare {{.CLI_ARGS}}
   license-check:
     desc: Validate REUSE licensing metadata
     cmds:
     - reuse lint
   build:config-dependency:
-    desc: deps using standalone tooling
+    desc: Explicit alias for task deps
     cmds:
-    - python3 tooling/workflow.py deps
+    - task: deps
   build:qt-dependency:
-    desc: deps using standalone tooling
+    desc: Explicit alias for task deps
     cmds:
-    - python3 tooling/workflow.py deps
+    - task: deps
   configure:
     desc: configure using standalone tooling
     cmds:
@@ -49,7 +53,7 @@ tasks:
     deps:
     - build
     cmds:
-    - env LD_LIBRARY_PATH={{.HOLONIGHT_QT_PREFIX}}/lib ./{{.BUILD_DIR}}/holonight-packages
+    - env LD_LIBRARY_PATH="{{.HOLONIGHT_QT_PREFIX}}/lib" "./{{.BUILD_DIR}}/holonight-packages"
   run:packaged:
     desc: Build and run the session update service without installing it
     deps:

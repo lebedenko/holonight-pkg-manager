@@ -15,7 +15,7 @@ the per-user service, the privileged helper, and desktop/D-Bus integration are n
 
 ## Requirements
 
-- Qt 6 (`Core`, `Gui`, `Quick`, `Qml`, `Network`, `Sql`, `DBus`, `Concurrent`, and `QuickControls2`)
+- Qt >=6.11 (`Core`, `Gui`, `Quick`, `Qml`, `Network`, `Sql`, `DBus`, `Concurrent`, and `QuickControls2`)
 - libalpm (ships with `pacman` on Arch Linux; no separate `-dev` package needed)
 - ICU (`uc`, for Unicode case-insensitive Explore search)
 - CMake 3.25+
@@ -23,11 +23,13 @@ the per-user service, the privileged helper, and desktop/D-Bus integration are n
 - [Task](https://taskfile.dev/)
 - [`holonight-qt`](../holonight-qt) and [`holonight-config`](../holonight-config) checked out at the revisions in Taskfile.yml
 - Python 3 and ripgrep for acceptance/policy checks
-- GTest (optional; fetched automatically when tests are enabled and it is not installed)
+- Installed GTest >=1.14 CONFIG with GMock and Qt Test/QmlPrivate (only when tests are enabled); private Qt must match public Qt exactly
+- clang-format, clang-tidy, REUSE and dbus/ldd test helpers; gcovr only for coverage
 
 ## Development
 
 ```bash
+task deps
 task configure
 task build
 task run
@@ -37,11 +39,15 @@ task tidy
 task qml-lint
 ```
 
-Most commands validate the pinned sibling revisions, build configuration and provider in
-`build/dependencies`, and stage them into `build/deps/prefix`. Provider examples/tests are disabled;
-Wayland support remains enabled. Set `BUILD_DIR`, `HOLONIGHT_QT_SOURCE`, `HOLONIGHT_CONFIG_SOURCE`, or `NPROC`
-as Task variables when needed. `task run` supplies the staged native configuration-library path; CTest and
-qmllint derive it from the configured dependency target. Configure `-DTIDY_JOBS=2` (default 4) to limit analysis workers.
+Only `task deps` prepares supplied local Config and Qt sources under `build/deps`, installing into
+`build/deps/prefix`; it never downloads source. Provider examples/tests are disabled and Controls/Wayland
+remain enabled. Normal configure/build/test/static commands validate installed prerequisites and prepared
+providers without acquisition or preparation. Use environment variables `HOLONIGHT_CONFIG_SOURCE` and
+`HOLONIGHT_QT_SOURCE` for local source overrides, `HOLONIGHT_DEPENDENCY_PREFIX` for existing internal
+providers, and `HOLONIGHT_EXTERNAL_PREFIX` for installed external packages. Paths with spaces are supported;
+external/system prefixes cannot satisfy internal provider requirements. Incompatible caches are archived.
+`JOBS` controls preparation/build parallelism. `task run` supplies the prepared configuration-library path;
+CTest and qmllint derive it from configured targets. `TIDY_JOBS` controls CMake's analysis workers.
 
 Application standard controls use `import QtQuick.Controls as Controls`; Core and composites retain their
 explicit HoloNight appearance. The executable embeds a Holonight default. Set `QT_QUICK_CONTROLS_STYLE=Fusion`,
@@ -92,17 +98,21 @@ See [tooling/README.md](tooling/README.md) for presets, local dependency overrid
 
 ## Local CI rehearsal
 
-Run `task ci` with Python 3, Git and Docker (or Podman) installed. It rehearses
-build/test, independent static checks and licensing in the same pinned environments
-and provider revisions as GitHub CI. Registry and GitHub access are required.
+Run `task ci:prepare` explicitly with Python 3, Git and Docker (or Podman). It acquires the pinned
+qualified Arch and REUSE images and exact provider sources, then prepares Config/Qt offline. To clone the
+accepted commits from local sibling repositories instead of GitHub, run
+`task ci:prepare -- --provider-source-root ..`. Source contents, installed artifacts, toolchain, features,
+images and preparation inputs are hash-validated; stale/tampered preparation is rejected and archived on
+explicit re-preparation. Only compatible provider state is reused.
 
-Each lane receives a disposable snapshot of tracked edits and non-ignored new files,
-with a fresh application/provider build. Source is mounted read-only; existing
-development builds are preserved. Add reported untracked inputs before pushing.
-Logs, source state, image/tool identities, lane results and runtime evidence are
-saved under ignored `build/ci/`. A failed or unavailable required check returns
-nonzero and prints its full log. Container layers may be cached. Publication,
-releases and remote artifact uploads are outside this command.
+Then run `JOBS=8 task ci` for clean build/test, Release/tests-OFF staging, strict static checks and licensing.
+Acceptance runs with `--pull=never --network=none`, caller UID/GID, read-only source/prepared inputs, and
+private HOME/XDG/runtime directories. Consumers see only installed providers and provenance. Existing
+development builds are preserved. Licensing alone needs only its explicit pinned image pull, not providers.
+Logs, complete test output, source hashes, image/tool identities, lane results and runtime evidence are
+saved under ignored `build/ci/`. Add reported untracked inputs before committing. Publication, host installation
+and application/package transactions are outside these commands. The old project-specific CI image and
+package bootstrap have been retired; their historical package records remain in the umbrella audit.
 
 ## Online update check
 

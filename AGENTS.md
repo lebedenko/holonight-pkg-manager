@@ -14,7 +14,9 @@ C++ targets live in `src/domain/`, `src/application/`, `src/backends/`, `src/adv
 ## Commands
 
 Use `task` as the primary workflow: `task configure`, `task build`, `task run`, `task test`, `task format-check`,
-`task tidy`, and `task qml-lint`. These commands validate and stage pinned sibling configuration/provider dependencies in `build/deps` first.
+`task tidy`, and `task qml-lint`. Run `task deps` explicitly first to prepare local Config/Qt sources in
+`build/deps`. Normal commands validate installed prerequisites and prepared providers without preparing or
+downloading dependencies.
 
 ## Style and tests
 

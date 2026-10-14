@@ -11,7 +11,7 @@ install(FILES LICENSE LICENSES/GPL-3.0-or-later.txt
   DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/${PROJECT_NAME}")
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/tooling/dependencies.cmake")
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick Qml Network Sql DBus Concurrent)
+find_package(Qt6 6.11 REQUIRED COMPONENTS Core Gui Quick Qml Network Sql DBus Concurrent)
 find_package(HolonightQt REQUIRED COMPONENTS Controls)
 unset(HOLONIGHT_QML_IMPORT_PATH CACHE)
 find_path(HOLONIGHT_QML_IMPORT_PATH
@@ -37,18 +37,12 @@ option(ENABLE_COVERAGE "Instrument for gcov/gcovr coverage reporting" OFF)
 if(BUILD_TESTS)
   enable_testing()
   find_package(Qt6 REQUIRED COMPONENTS Test)
-  find_package(GTest CONFIG QUIET)
-  if(NOT GTest_FOUND OR NOT TARGET GTest::gtest OR NOT TARGET GTest::gmock)
-    include(FetchContent)
-    FetchContent_Declare(
-      googletest
-      URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz
-      URL_HASH SHA256=8ad598c73ad796e0d8280b082cebd82a630d73e73cd3c70057938a6501bba5d7
-    )
-    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-    set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(googletest)
-  endif()
+  find_package(GTest 1.14 CONFIG REQUIRED)
+  foreach(target IN ITEMS GTest::gtest GTest::gmock)
+    if(NOT TARGET ${target})
+      message(FATAL_ERROR "Installed GTest must export ${target}; install GTest/GMock >=1.14.")
+    endif()
+  endforeach()
   if(ENABLE_COVERAGE)
     find_program(GCOVR gcovr REQUIRED)
     target_compile_options(holonight-packages PRIVATE --coverage)
