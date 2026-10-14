@@ -58,7 +58,7 @@ class ExploreModel : public QAbstractListModel {
 
  public:
   // Loading is used only while there is no index to keep searching.
-  enum class ViewState : std::uint8_t { Loading, NoDatabases, Error, Hint, NoMatches, Results };
+  enum class ViewState : quint8 { Loading, NoDatabases, Error, Hint, NoMatches, Results };
   Q_ENUM(ViewState)
 
   // NOLINTNEXTLINE(cppcoreguidelines-use-enum-class): preserve Qt model role constants.

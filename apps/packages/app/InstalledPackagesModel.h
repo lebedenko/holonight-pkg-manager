@@ -34,7 +34,7 @@ class InstalledPackagesModel : public QAbstractListModel {
   Q_PROPERTY(quint64 reclaimableSizeBytes READ reclaimableSizeBytes NOTIFY statusChanged)
 
  public:
-  enum class Status : std::uint8_t { Loading, Loaded, Error };
+  enum class Status : quint8 { Loading, Loaded, Error };
   Q_ENUM(Status)
 
   // NOLINTNEXTLINE(cppcoreguidelines-use-enum-class): preserve Qt model role constants.

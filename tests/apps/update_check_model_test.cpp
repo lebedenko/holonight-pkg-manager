@@ -53,6 +53,7 @@ class UpdateCheckModelTest : public ::testing::Test {
     return std::chrono::duration_cast<seconds>((clock_.now() - age).time_since_epoch()).count();
   }
 
+ public:
   QTemporaryDir dir_;
   std::filesystem::path file_;
   FakeClock clock_;

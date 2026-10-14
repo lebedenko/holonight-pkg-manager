@@ -62,11 +62,12 @@ class UpdateCheckServiceTest : public ::testing::Test {
         UpdateCheckPolicy{});
   }
 
-  void runCheck(CheckOrigin origin = CheckOrigin::Automatic) {
+  void runCheck(CheckOrigin origin = CheckOrigin::Automatic) const {
     service_->requestCheck(origin);
     ASSERT_TRUE(waitIdle(*service_));
   }
 
+ public:
   std::shared_ptr<FakeUpdateChecker> checker_ = std::make_shared<FakeUpdateChecker>();
   std::shared_ptr<FakeSnapshotStore> store_ = std::make_shared<FakeSnapshotStore>();
   std::shared_ptr<FakeClock> clock_ = std::make_shared<FakeClock>();

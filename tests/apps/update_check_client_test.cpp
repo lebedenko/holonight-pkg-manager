@@ -87,6 +87,7 @@ class UpdateCheckClientTest : public ::testing::Test {
     ASSERT_TRUE(service_->registerOn(serviceConnection_)) << service_->error().toStdString();
   }
 
+ public:
   QTemporaryDir environment_;
   PrivateBus bus_;
   QDBusConnection clientConnection_{QStringLiteral("")};

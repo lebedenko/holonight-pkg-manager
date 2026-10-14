@@ -140,6 +140,7 @@ class UpdateMonitorWatchTest : public UpdateMonitorTest {
     return UpdateMonitorOptions{.watchPaths = {syncDir()}, .debounce = debounce};
   }
 
+ public:
   QTemporaryDir dir_;
 };
 

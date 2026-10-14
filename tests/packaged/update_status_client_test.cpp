@@ -57,6 +57,7 @@ class UpdateStatusClientTest : public ::testing::Test {
     monitor_->start();
   }
 
+ public:
   PrivateBus bus_;
   QDBusConnection client_connection_{QStringLiteral("")};
   QDBusConnection service_connection_{QStringLiteral("")};

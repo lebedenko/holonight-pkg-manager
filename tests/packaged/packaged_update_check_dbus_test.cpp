@@ -166,6 +166,7 @@ class PackagedUpdateCheckTest : public ::testing::Test {
     ASSERT_TRUE(QTest::qWaitFor([&] { return monitor_->status().updateCount == 7; }, kWaitMs));
   }
 
+ public:
   PrivateBus bus_;
   QDBusConnection serviceConnection_{QStringLiteral("")};
   QDBusConnection client_{QStringLiteral("")};

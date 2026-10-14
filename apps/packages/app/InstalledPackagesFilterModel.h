@@ -8,8 +8,6 @@
 #include <QVariantMap>
 #include <QtQmlIntegration/qqmlintegration.h>
 
-#include <cstdint>
-
 class InstalledPackagesFilterModel : public QSortFilterProxyModel {
   Q_OBJECT
   QML_ELEMENT
@@ -23,9 +21,9 @@ class InstalledPackagesFilterModel : public QSortFilterProxyModel {
   Q_PROPERTY(QStringList availableRepositories READ availableRepositories NOTIFY availableRepositoriesChanged)
 
  public:
-  enum class TabFilter : std::uint8_t { Explicit, Dependencies, Foreign, Orphans };
+  enum class TabFilter : quint8 { Explicit, Dependencies, Foreign, Orphans };
   Q_ENUM(TabFilter)
-  enum class SortField : std::uint8_t { Name, Size };
+  enum class SortField : quint8 { Name, Size };
   Q_ENUM(SortField)
 
   explicit InstalledPackagesFilterModel(QObject* parent = nullptr);

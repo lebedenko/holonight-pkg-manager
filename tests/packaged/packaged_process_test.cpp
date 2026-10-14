@@ -65,11 +65,12 @@ class PackagedProcessTest : public ::testing::Test {
     return process;
   }
 
-  bool serviceOwned() {
+  [[nodiscard]] bool serviceOwned() const {
     const auto* interface = client_.interface();
     return interface != nullptr && interface->isServiceRegistered(kService);
   }
 
+ public:
   PrivateBus bus_;
   QTemporaryDir home_;
   QString db_root_;

@@ -77,6 +77,7 @@ class UpdateCheckSchedulerTest : public ::testing::Test {
     return result;
   }
 
+ public:
   UpdateCheckPolicy policy_;
   std::shared_ptr<FakeUpdateChecker> checker_ = std::make_shared<FakeUpdateChecker>();
   std::shared_ptr<FakeSnapshotStore> store_ = std::make_shared<FakeSnapshotStore>();

@@ -18,7 +18,7 @@ namespace fs = std::filesystem;
 using holonight_packages_testing::FileRepoFixture;
 
 class RepositoryCatalogTest : public ::testing::Test {
- protected:
+ public:
   FileRepoFixture fixture;
   fs::path snapshot = fixture.cacheHome() / "updates.json";
   AlpmUpdateChecker checker{{

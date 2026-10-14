@@ -23,6 +23,8 @@ class PackagedConfigTest : public ::testing::Test {
     std::ofstream(path) << contents;
     return path;
   }
+
+ public:
   QTemporaryDir dir_;
   fs::path root_;
   holonight_packages_application::UpdateCheckPolicy policy_;

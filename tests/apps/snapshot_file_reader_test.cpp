@@ -72,6 +72,8 @@ class SnapshotFileReaderTest : public ::testing::Test {
     store_ = std::make_shared<WriterCallCountingStore>(file_);
     reader_ = std::make_unique<SnapshotFileReader>(store_, file_, milliseconds{30});
   }
+
+ public:
   QTemporaryDir dir_;
   fs::path file_;
   std::shared_ptr<WriterCallCountingStore> store_;

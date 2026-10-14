@@ -49,6 +49,8 @@ class ScratchDirTest : public ::testing::Test {
     base_ = fs::path(dir_.path().toStdString());
     root_ = base_ / "cache" / "checkdb";
   }
+
+ public:
   QTemporaryDir dir_;
   fs::path base_;
   fs::path root_;

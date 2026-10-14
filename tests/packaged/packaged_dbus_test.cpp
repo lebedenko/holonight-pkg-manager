@@ -119,7 +119,8 @@ class PackagedDbusTest : public ::testing::Test {
     QDBusConnection::disconnectFromBus(QStringLiteral("test-client"));
   }
 
-  QDBusMessage call(const QString& interface_name, const QString& method, const QVariantList& args = {}) {
+  [[nodiscard]] QDBusMessage call(const QString& interface_name, const QString& method,
+                                  const QVariantList& args = {}) const {
     // Service and client share this thread's event loop, so the call is asynchronous and the loop is spun here.
     QDBusMessage message = QDBusMessage::createMethodCall(kService, kPath, interface_name, method);
     message.setArguments(args);
@@ -132,13 +133,14 @@ class PackagedDbusTest : public ::testing::Test {
     return pending.reply();
   }
 
-  QVariant property(const QString& name) {
+  [[nodiscard]] QVariant property(const QString& name) const {
     const QDBusMessage reply =
         call(QStringLiteral("org.freedesktop.DBus.Properties"), QStringLiteral("Get"), {kInterface, name});
     EXPECT_EQ(reply.type(), QDBusMessage::ReplyMessage) << reply.errorMessage().toStdString();
     return reply.arguments().isEmpty() ? QVariant{} : reply.arguments().first().value<QDBusVariant>().variant();
   }
 
+ public:
   PrivateBus bus_;
   QDBusConnection service_connection_{QStringLiteral("")};
   QDBusConnection client_{QStringLiteral("")};

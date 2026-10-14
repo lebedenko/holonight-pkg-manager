@@ -75,6 +75,7 @@ class JsonUpdateSnapshotStoreTest : public ::testing::Test {
     fs::permissions(root_ / "cache", fs::perms::owner_all, fs::perm_options::replace, ignored);
   }
 
+ public:
   QTemporaryDir dir_;
   fs::path root_;
   fs::path file_;

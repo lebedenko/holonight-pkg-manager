@@ -56,7 +56,7 @@ class UpdatesModel : public QAbstractListModel {
 
  public:
   // Loading is used only when there is no previous result to keep showing.
-  enum class ViewState : std::uint8_t { Loading, Updates, UpToDate, NoDatabases, Error };
+  enum class ViewState : quint8 { Loading, Updates, UpToDate, NoDatabases, Error };
   Q_ENUM(ViewState)
 
   // NOLINTNEXTLINE(cppcoreguidelines-use-enum-class): preserve Qt model role constants.
