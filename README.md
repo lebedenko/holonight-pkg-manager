@@ -1,5 +1,7 @@
 # HoloNight Packages
 
+For current build, test, container acceptance and provider workflows, see [DEVELOPMENT.md](DEVELOPMENT.md).
+
 A standalone C++23/Qt 6 package-management application for the HoloNight desktop.
 
 The application currently shows a read-only, filterable Installed page for Arch Linux packages, loaded
@@ -28,26 +30,7 @@ the per-user service, the privileged helper, and desktop/D-Bus integration are n
 
 ## Development
 
-```bash
-task deps
-task configure
-task build
-task run
-task test
-task format-check
-task tidy
-task qml-lint
-```
-
-Only `task deps` prepares supplied local Config and Qt sources under `build/deps`, installing into
-`build/deps/prefix`; it never downloads source. Provider examples/tests are disabled and Controls/Wayland
-remain enabled. Normal configure/build/test/static commands validate installed prerequisites and prepared
-providers without acquisition or preparation. Use environment variables `HOLONIGHT_CONFIG_SOURCE` and
-`HOLONIGHT_QT_SOURCE` for local source overrides, `HOLONIGHT_DEPENDENCY_PREFIX` for existing internal
-providers, and `HOLONIGHT_EXTERNAL_PREFIX` for installed external packages. Paths with spaces are supported;
-external/system prefixes cannot satisfy internal provider requirements. Incompatible caches are archived.
-`JOBS` controls preparation/build parallelism. `task run` supplies the prepared configuration-library path;
-CTest and qmllint derive it from configured targets. `TIDY_JOBS` controls CMake's analysis workers.
+See [DEVELOPMENT.md](DEVELOPMENT.md) for current native and container commands.
 
 Application standard controls use `import QtQuick.Controls as Controls`; Core and composites retain their
 explicit HoloNight appearance. The executable embeds a Holonight default. Set `QT_QUICK_CONTROLS_STYLE=Fusion`,
@@ -59,10 +42,10 @@ The [UQC-105 acceptance](docs/sdd/unified-qtquick-controls/SPEC.md) covers both 
 independent policy fixtures, and eight isolated executable launches. Useful focused commands after building:
 
 ```bash
-ctest --test-dir build/test -R 'runtime_controls|runtime_qml_import' --output-on-failure
-QT_QUICK_CONTROLS_STYLE=Fusion ctest --test-dir build/test -R InstalledPackagesViewTest --output-on-failure
+ctest --test-dir build/dev -R 'runtime_controls|runtime_qml_import' --output-on-failure
+QT_QUICK_CONTROLS_STYLE=Fusion ctest --test-dir build/dev -R InstalledPackagesViewTest --output-on-failure
 bash scripts/check-qmltypes.sh build
-python3 scripts/check-runtime-launches.py build/debug/holonight-packages build/deps/prefix --logs build/uqc105/build-launch
+python3 scripts/check-runtime-launches.py build/dev/holonight-packages build/deps/prefix --logs build/uqc105/build-launch
 ```
 
 Launch acceptance isolates HOME/XDG and desktop activation, observes only existing read-only ALPM enumeration,
@@ -90,29 +73,6 @@ The code is a modular monolith with dependency direction toward the domain:
 interfaces should be designed before executable stubs are introduced.
 
 See [the high-level project idea](docs/ideas/01-high-level-project-idea.md) for the product and security model.
-
-## Standalone developer tooling
-
-See [tooling/README.md](tooling/README.md) for presets, local dependency overrides, editor refresh,
-`task tooling:doctor`, and the independent Serena project.
-
-## Local CI rehearsal
-
-Run `task ci:prepare` explicitly with Python 3, Git and Docker (or Podman). It acquires the pinned
-qualified Arch and REUSE images and exact provider sources, then prepares Config/Qt offline. To clone the
-accepted commits from local sibling repositories instead of GitHub, run
-`task ci:prepare -- --provider-source-root ..`. Source contents, installed artifacts, toolchain, features,
-images and preparation inputs are hash-validated; stale/tampered preparation is rejected and archived on
-explicit re-preparation. Only compatible provider state is reused.
-
-Then run `JOBS=8 task ci` for clean build/test, Release/tests-OFF staging, strict static checks and licensing.
-Acceptance runs with `--pull=never --network=none`, caller UID/GID, read-only source/prepared inputs, and
-private HOME/XDG/runtime directories. Consumers see only installed providers and provenance. Existing
-development builds are preserved. Licensing alone needs only its explicit pinned image pull, not providers.
-Logs, complete test output, source hashes, image/tool identities, lane results and runtime evidence are
-saved under ignored `build/ci/`. Add reported untracked inputs before committing. Publication, host installation
-and application/package transactions are outside these commands. The old project-specific CI image and
-package bootstrap have been retired; their historical package records remain in the umbrella audit.
 
 ## Online update check
 

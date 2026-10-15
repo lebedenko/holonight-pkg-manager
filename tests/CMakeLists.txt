@@ -135,8 +135,8 @@ if(ENABLE_COVERAGE)
 endif()
 
 add_test(NAME packaged_install_layout
-  COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${CMAKE_BINARY_DIR} -DSTAGE_DIR=${CMAKE_CURRENT_BINARY_DIR}/install-stage
-    -P "${CMAKE_CURRENT_SOURCE_DIR}/packaged/check_install.cmake")
+  COMMAND ${CMAKE_COMMAND} "-DBUILD_DIR=${CMAKE_BINARY_DIR}" "-DSTAGE_DIR=${CMAKE_CURRENT_BINARY_DIR}/install-stage"
+    "-DINSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}" -P "${CMAKE_CURRENT_SOURCE_DIR}/packaged/check_install.cmake")
 add_test(NAME runtime_qml_import_policy
   COMMAND bash "${PROJECT_SOURCE_DIR}/scripts/check-runtime-qml-imports.sh" "${PROJECT_SOURCE_DIR}")
 add_test(NAME layering_policy

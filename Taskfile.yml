@@ -1,138 +1,42 @@
 version: '3'
 vars:
-  BUILD_DIR: build/debug
-  HOLONIGHT_QT_PREFIX: '{{default (printf "%s/build/deps/prefix" .TASKFILE_DIR) .HOLONIGHT_DEPENDENCY_PREFIX}}'
-  HOLONIGHT_QT_DIR: '{{.TASKFILE_DIR}}/build/deps/prefix/lib/cmake/HolonightQt'
-  HOLONIGHT_CONFIG_DIR: '{{.TASKFILE_DIR}}/build/deps/prefix/lib/cmake/HoloNightConfig'
-  HOLONIGHT_QT_SOURCE: '{{default "../holonight-qt" .HOLONIGHT_QT_SOURCE}}'
-  HOLONIGHT_QT_REVISION: 7c3ce074a8c2e02e4ee8cad8cd19eb8627aa4f68
-  HOLONIGHT_CONFIG_SOURCE: '{{default "../holonight-config" .HOLONIGHT_CONFIG_SOURCE}}'
-  HOLONIGHT_CONFIG_REVISION: 0ccd25f323662f50a47bb048be636160f2b7c135
-  NPROC:
-    sh: nproc
-  PRESET: '{{default "debug" .PRESET}}'
+  PRESET: '{{default "dev" .PRESET}}'
+  BUILD_DIR: build/{{.PRESET}}
 tasks:
-  ci:
-    desc: Rehearse all push validation in pinned isolated containers
-    cmds:
-    - python3 scripts/ci/run.py
-  ci:prepare:
-    desc: Explicitly acquire CI images and exact provider sources, then prepare providers offline
-    cmds:
-    - python3 scripts/ci/run.py --prepare {{.CLI_ARGS}}
   license-check:
     desc: Validate REUSE licensing metadata
     cmds:
     - reuse lint
-  build:config-dependency:
-    desc: Explicit alias for task deps
-    cmds:
-    - task: deps
-  build:qt-dependency:
-    desc: Explicit alias for task deps
-    cmds:
-    - task: deps
-  configure:
-    desc: configure using standalone tooling
-    cmds:
-    - python3 tooling/workflow.py configure --preset {{.PRESET}}
-  configure-tests:
-    desc: configure using standalone tooling
-    cmds:
-    - python3 tooling/workflow.py configure --preset test
-  configure-coverage:
-    desc: Configure coverage preset
-    cmds:
-    - python3 tooling/workflow.py configure --preset coverage
-  build:
-    desc: build using standalone tooling
-    cmds:
-    - python3 tooling/workflow.py build --preset {{.PRESET}}
   run:
     desc: Build and run HoloNight Packages
     deps:
     - build
     cmds:
-    - env LD_LIBRARY_PATH="{{.HOLONIGHT_QT_PREFIX}}/lib" "./{{.BUILD_DIR}}/holonight-packages"
+    - '"./{{.BUILD_DIR}}/holonight-packages"'
   run:packaged:
     desc: Build and run the session update service without installing it
     deps:
     - build
     cmds:
-    - env LD_LIBRARY_PATH="{{.HOLONIGHT_QT_PREFIX}}/lib" "./build/{{.PRESET}}/holonight-packaged" {{.CLI_ARGS}}
-  test:
-    desc: test using standalone tooling
-    cmds:
-    - python3 tooling/workflow.py test --preset {{.PRESET}}
+    - '"./build/{{.PRESET}}/holonight-packaged" {{.CLI_ARGS}}'
   coverage:
     desc: Build coverage report
     cmds:
-    - task: configure-coverage
+    - cmake --preset dev -B build/coverage -DENABLE_COVERAGE=ON
     - cmake --build build/coverage --target coverage
-  format:
-    desc: format using standalone tooling
-    cmds:
-    - python3 tooling/workflow.py format
-  format-check:
-    desc: format-check using standalone tooling
-    cmds:
-    - python3 tooling/workflow.py format-check
-  tidy:
-    desc: tidy using standalone tooling
-    cmds:
-    - python3 tooling/workflow.py tidy --scope all
   qml-lint:
-    desc: Build and check QML with configured Qt installation
+    desc: qml-lint
     cmds:
-    - task: build
-      vars:
-        PRESET: test
-    - cmake --build build/test --target qml-lint
+    - cmake --build build/{{.PRESET}} --target qml-lint
   clean:
     desc: Remove the build directory
     cmds:
     - rm -rf {{.BUILD_DIR}}
     prompt: Remove {{.BUILD_DIR}}/ entirely?
-  tooling:doctor:
-    desc: doctor using standalone tooling
-    cmds:
-    - python3 tooling/workflow.py doctor
-  tooling:refresh:
-    desc: refresh using standalone tooling
-    cmds:
-    - python3 tooling/workflow.py refresh --preset {{default "test" .EDITOR_PRESET}}
-  serena:serve:
-    desc: Start independent Serena server in codex context
-    cmds:
-    - serena start-mcp-server --project "{{.TASKFILE_DIR}}" --context codex
-  serena:index:
-    desc: Explicitly index this module
-    cmds:
-    - serena project index "{{.TASKFILE_DIR}}"
-  deps:
-    desc: deps using standalone tooling
-    cmds:
-    - python3 tooling/workflow.py deps --preset {{.PRESET}}
-  configure:release:
-    desc: configure using standalone tooling
-    cmds:
-    - python3 tooling/workflow.py configure --preset release
-  build:release:
-    desc: build using standalone tooling
-    cmds:
-    - python3 tooling/workflow.py build --preset release
-  tidy-src:
-    desc: tidy using standalone tooling
-    cmds:
-    - python3 tooling/workflow.py tidy --scope src
-  tidy-tests:
-    desc: tidy using standalone tooling
-    cmds:
-    - python3 tooling/workflow.py tidy --scope tests
   qml-import-check:
-    desc: Check QML runtime import contracts
+    desc: qml-import-check
     cmds:
-    - python3 tooling/qml_policy.py
+    - python3 scripts/check-runtime-imports.py
   layering-check:
     desc: Check layering and safety policy (libalpm, processes, transactions, GUI/service split, test sync carve-out)
     cmds:
@@ -144,22 +48,48 @@ tasks:
     - bash scripts/check-qmltypes.sh build/{{.PRESET}}
     deps:
     - build
-  tooling:qmlls:
-    desc: Start configured Qt language server with resolved import paths
-    cmds:
-    - python3 tooling/workflow.py qmlls
-  lint:
-    desc: Run C++ and QML lint
-    cmds:
-    - task: tidy
-    - task: qml-lint
   check:
-    desc: Run build, tests and static checks
+    desc: Authoritative container acceptance
+    cmds:
+    - python3 scripts/ci/container.py check {{.CLI_ARGS}}
+  configure:
+    desc: configure
+    cmds:
+    - cmake --preset {{.PRESET}} {{.CLI_ARGS}}
+  build:
+    desc: build
+    cmds:
+    - cmake --preset {{.PRESET}}
+    - cmake --build --preset {{.PRESET}}
+  test:
+    desc: test
     cmds:
     - task: build
-    - task: test
-    - task: format-check
-    - task: lint
-    - task: qml-import-check
-    - task: layering-check
-    - task: qmltypes-check
+      vars:
+        PRESET: dev
+    - dbus-run-session -- ctest --preset dev {{.CLI_ARGS}}
+  configure:release:
+    desc: configure:release
+    cmds:
+    - cmake --preset release {{.CLI_ARGS}}
+  build:release:
+    desc: build:release
+    cmds:
+    - cmake --preset release
+    - cmake --build --preset release
+  format:
+    desc: Format with the pinned container tools
+    cmds:
+    - python3 scripts/ci/container.py format
+  format-check:
+    desc: format-check
+    cmds:
+    - python3 scripts/quality.py format-check
+  tidy:
+    desc: tidy
+    cmds:
+    - python3 scripts/quality.py tidy --build build/{{.PRESET}}
+  check:integration:
+    desc: Container acceptance plus Release staging and runtime checks
+    cmds:
+    - python3 scripts/ci/container.py integration {{.CLI_ARGS}}

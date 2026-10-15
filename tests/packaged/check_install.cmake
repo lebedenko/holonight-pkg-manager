@@ -1,18 +1,21 @@
 # Installs the build into a temporary DESTDIR and checks the holonight-packaged activation files.
-# Usage: cmake -DBUILD_DIR=<dir> -DSTAGE_DIR=<dir> -P check_install.cmake
+# Usage: cmake -DBUILD_DIR=<dir> -DSTAGE_DIR=<dir> -DINSTALL_PREFIX=<configured-prefix> -P check_install.cmake
+if(NOT DEFINED INSTALL_PREFIX)
+  message(FATAL_ERROR "INSTALL_PREFIX must match the configured build prefix")
+endif()
 file(REMOVE_RECURSE "${STAGE_DIR}")
 file(MAKE_DIRECTORY "${STAGE_DIR}")
 execute_process(
-  COMMAND ${CMAKE_COMMAND} -E env "DESTDIR=${STAGE_DIR}" ${CMAKE_COMMAND} --install "${BUILD_DIR}" --prefix /usr
+  COMMAND ${CMAKE_COMMAND} -E env "DESTDIR=${STAGE_DIR}" ${CMAKE_COMMAND} --install "${BUILD_DIR}" --prefix "${INSTALL_PREFIX}"
   RESULT_VARIABLE install_result OUTPUT_QUIET ERROR_VARIABLE install_error)
 if(NOT install_result EQUAL 0)
   message(FATAL_ERROR "install into DESTDIR failed: ${install_error}")
 endif()
 
-set(binary "${STAGE_DIR}/usr/bin/holonight-packaged")
-set(dbus_service "${STAGE_DIR}/usr/share/dbus-1/services/org.holonight.Packages1.service")
-set(unit "${STAGE_DIR}/usr/lib/systemd/user/holonight-packaged.service")
-set(interface_xml "${STAGE_DIR}/usr/share/dbus-1/interfaces/org.holonight.Packages1.Updates.xml")
+set(binary "${STAGE_DIR}${INSTALL_PREFIX}/bin/holonight-packaged")
+set(dbus_service "${STAGE_DIR}${INSTALL_PREFIX}/share/dbus-1/services/org.holonight.Packages1.service")
+set(unit "${STAGE_DIR}${INSTALL_PREFIX}/lib/systemd/user/holonight-packaged.service")
+set(interface_xml "${STAGE_DIR}${INSTALL_PREFIX}/share/dbus-1/interfaces/org.holonight.Packages1.Updates.xml")
 foreach(path IN ITEMS "${binary}" "${dbus_service}" "${unit}" "${interface_xml}")
   if(NOT EXISTS "${path}")
     message(FATAL_ERROR "missing from install stage: ${path}")
@@ -35,10 +38,12 @@ if(NOT dbus_text MATCHES "SystemdService=holonight-packaged.service")
   message(FATAL_ERROR "D-Bus service does not point at the systemd unit")
 endif()
 foreach(text IN ITEMS "${dbus_text}" "${unit_text}")
-  if(NOT text MATCHES "/usr/bin/holonight-packaged")
+  string(FIND "${text}" "${INSTALL_PREFIX}/bin/holonight-packaged" executable_offset)
+  if(executable_offset EQUAL -1)
     message(FATAL_ERROR "activation file does not execute the installed binary under the prefix")
   endif()
-  if(text MATCHES "${STAGE_DIR}")
+  string(FIND "${text}" "${STAGE_DIR}" stage_offset)
+  if(NOT stage_offset EQUAL -1)
     message(FATAL_ERROR "activation file leaks the staging directory")
   endif()
 endforeach()
