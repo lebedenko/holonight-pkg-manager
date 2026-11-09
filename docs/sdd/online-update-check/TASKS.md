@@ -152,7 +152,7 @@
   - REQs: REQ-C-001, REQ-C-002, REQ-C-005, REQ-C-006, REQ-C-007, REQ-C-009, REQ-C-010
   - Check: `ctest -R 'layering_policy|layering_policy_fixtures'` passes; the script fails on the fixtures for a libalpm include or dbpath name outside src/backends and the composition roots, QProcess, system, popen or exec in checker sources, `alpm_trans_` calls, checker names under apps/packages, QTest mouse or keyClick in tests, a notifications or NetworkManager string, and a missing carve-out line in AGENTS.md or CLAUDE.md; the script exits 0 on the repository.
 
-- [ ] T-039: Final verification: task check, task ci rehearsal, existing tests unmodified, and the 10 s budget and no-libalpm link for the checks executable
+- [x] T-039: Final verification: task check, task ci rehearsal, existing tests unmodified, and the 10 s budget and no-libalpm link for the checks executable
   - REQs: REQ-F-040, REQ-F-046, REQ-F-047, REQ-F-048, REQ-F-049, REQ-NF-007, REQ-C-008
   - Check: `task check` and `task ci` exit 0; `git diff --stat main` shows no change to tests/packaged/packaged_dbus_test.cpp or tests/packaged/update_status_client_test.cpp, and only additions to existing backend tests; `ctest -R holonight_packages_checks` finishes within its 10 s TIMEOUT; `ldd` of test_holonight_packages_checks shows no libalpm.
   - Additional acceptance: regress recursive/options/nested includes and repeated signature settings; verify invalidation retains rows but clears provenance, local reload notifications, property-only hand-off, persisted age despite newer service metadata, and successful no-op acknowledgement. Verify interval cap and timestamp boundaries with UBSan, precise production timers, and reentrant completion with distinct run callbacks. Run dual-style local-data, no-snapshot, failure and busy acceptance.
@@ -176,3 +176,7 @@ Verification evidence (2026-10-09):
 - Two prior regression expectations were corrected: failed snapshot persistence must preserve the published result rather than advance the in-memory count.
 - Final correction regressions: 480/480 tests passed, including the five-upgrade repository selection, offline installed-package changes, publication leases, cache recovery, nanosecond timestamp preservation, policy fixtures and Holonight/Fusion runtime acceptance. The libalpm-free checks executable passed in 0.476 s; editor metadata refresh passed.
 - Final `task check PRESET=test` passed, including formatting, full C++ lint, QML lint, import/layering policy checks and generated QML metadata. T-039 remains open because the full CI rehearsal is blocked by the dependency download described above.
+
+### Final closure (2026-11-09)
+
+- `task ci` no longer exists; the shared container acceptance (`task check`) replaced the CI rehearsal. `task check` ran in the pinned container and exited 0, including the Release-independent runtime launch checks (Holonight and Fusion). T-039 is closed.
