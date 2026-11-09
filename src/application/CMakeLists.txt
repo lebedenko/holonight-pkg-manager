@@ -1,10 +1,14 @@
 add_library(holonight_packages_application STATIC
   src/explore_search.cpp
   src/package_list_use_case.cpp
+  src/idle_monitor.cpp
   src/orphan_package_filter.cpp
+  src/plan_service.cpp
+  src/plan_store.cpp
   src/package_size_formatter.cpp
   include/holonight_packages_application/update_monitor.h
   src/snapshot_selection.cpp
+  src/transaction_ports.cpp
   src/update_age_format.cpp
   src/update_check_policy.cpp
   src/update_check_ports.cpp

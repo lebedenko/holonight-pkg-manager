@@ -1,0 +1,49 @@
+#include "HelperSignals.h"
+
+#include <QSocketNotifier>
+
+#include <array>
+#include <csignal>
+#include <sys/socket.h>
+#include <unistd.h>
+
+namespace holonight_helper {
+namespace {
+
+// The POSIX signal callback requires storage independent of QObject lifetime.
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables,readability-identifier-naming)
+std::array<int, 2> signal_pipe{-1, -1};
+
+void onSignal(int /*signal*/) {
+  const char byte = 1;
+  [[maybe_unused]] const ssize_t written = ::write(signal_pipe[0], &byte, 1);
+}
+
+}  // namespace
+
+HelperSignals::HelperSignals(QObject* parent) : QObject(parent) {
+  if (::socketpair(AF_UNIX, SOCK_STREAM, 0, signal_pipe.data()) != 0) {
+    return;
+  }
+  auto* notifier = new QSocketNotifier(signal_pipe[1], QSocketNotifier::Read, this);
+  connect(notifier, &QSocketNotifier::activated, this, [this] {
+    char byte = 0;
+    [[maybe_unused]] const ssize_t received = ::read(signal_pipe[1], &byte, 1);
+    emit terminationRequested();
+  });
+  struct sigaction action{};
+  action.sa_handler = onSignal;
+  sigemptyset(&action.sa_mask);
+  sigaction(SIGTERM, &action, nullptr);
+  sigaction(SIGINT, &action, nullptr);
+}
+
+HelperSignals::~HelperSignals() {
+  std::signal(SIGTERM, SIG_DFL);
+  std::signal(SIGINT, SIG_DFL);
+  ::close(signal_pipe[0]);
+  ::close(signal_pipe[1]);
+  signal_pipe[0] = signal_pipe[1] = -1;
+}
+
+}  // namespace holonight_helper

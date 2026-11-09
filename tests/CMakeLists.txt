@@ -4,7 +4,14 @@ include(GoogleTest)
 add_executable(test_holonight_packages_checks
   checks_main.cpp
   domain/update_checker_test.cpp
+  domain/transaction_error_test.cpp
+  domain/transaction_plan_test.cpp
+  domain/transaction_request_test.cpp
   application/fake_clock_test.cpp
+  application/transaction_ports_test.cpp
+  application/plan_store_test.cpp
+  application/plan_service_test.cpp
+  application/idle_monitor_test.cpp
   application/snapshot_selection_test.cpp
   application/update_age_format_test.cpp
   application/update_monitor_adopt_test.cpp
@@ -16,6 +23,7 @@ add_executable(test_holonight_packages_checks
 )
 target_include_directories(test_holonight_packages_checks PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/application
+  ${CMAKE_CURRENT_SOURCE_DIR}/support
   ${CMAKE_CURRENT_SOURCE_DIR}/apps)
 set_target_properties(test_holonight_packages_checks PROPERTIES AUTOMOC ON)
 target_compile_features(test_holonight_packages_checks PRIVATE cxx_std_23)
@@ -46,6 +54,7 @@ add_executable(test_holonight_packages
   backends/pacman_config_test.cpp
   backends/scratch_dir_test.cpp
   backends/pacman_repositories_test.cpp
+  backends/pacman_settings_test.cpp
   backends/pending_update_computation_test.cpp
   backends/sync_database_files_test.cpp
   backends/update_matching_test.cpp
@@ -95,6 +104,7 @@ target_include_directories(test_holonight_packages PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/application
   ${CMAKE_CURRENT_SOURCE_DIR}/apps
   ${CMAKE_CURRENT_SOURCE_DIR}/backends
+  ${CMAKE_CURRENT_SOURCE_DIR}/support
   ${CMAKE_CURRENT_SOURCE_DIR}/packaged
   ${PROJECT_SOURCE_DIR}/apps/packages/app
   ${PROJECT_SOURCE_DIR}/src/backends/src)
@@ -137,6 +147,19 @@ endif()
 add_test(NAME packaged_install_layout
   COMMAND ${CMAKE_COMMAND} "-DBUILD_DIR=${CMAKE_BINARY_DIR}" "-DSTAGE_DIR=${CMAKE_CURRENT_BINARY_DIR}/install-stage"
     "-DINSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}" -P "${CMAKE_CURRENT_SOURCE_DIR}/packaged/check_install.cmake")
+add_test(NAME helper_artifacts
+  COMMAND python3 "${PROJECT_SOURCE_DIR}/scripts/check-helper-artifacts.py" --root "${PROJECT_SOURCE_DIR}")
+add_test(NAME helper_artifacts_fixtures
+  COMMAND python3 "${CMAKE_CURRENT_SOURCE_DIR}/policy/test_helper_artifacts.py")
+add_test(NAME helper_install_layout
+  COMMAND ${CMAKE_COMMAND} "-DBUILD_DIR=${CMAKE_BINARY_DIR}" "-DSTAGE_DIR=${CMAKE_CURRENT_BINARY_DIR}/helper-install-stage"
+    "-DINSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}" -P "${CMAKE_CURRENT_SOURCE_DIR}/helper/check_install.cmake")
+# REQ-C-003: the helper and the transaction library start no external program; libalpm itself runs hooks and scriptlets.
+add_test(NAME no_external_process
+  COMMAND sh -c "! grep -rnE '\\b(system|popen)[[:space:]]*\\(|posix_spawn|QProcess|\\bexec(l|le|lp|v|ve|vp|vpe)[[:space:]]*\\(|\\bfork[[:space:]]*\\(' \"$1/apps/helper\" \"$1/src/transaction\"" sh "${PROJECT_SOURCE_DIR}")
+# REQ-C-004: one version comparison, libalpm's, in one file of the transaction library.
+add_test(NAME version_policy
+  COMMAND sh -c "! grep -rlE 'alpm_pkg_vercmp|compareVersions|versionCompare' \"$1/apps/helper\" \"$1/src/domain\" \"$1/src/application\" \"$1/src/transaction\" | grep -v 'version_policy'" sh "${PROJECT_SOURCE_DIR}")
 add_test(NAME runtime_qml_import_policy
   COMMAND bash "${PROJECT_SOURCE_DIR}/scripts/check-runtime-qml-imports.sh" "${PROJECT_SOURCE_DIR}")
 add_test(NAME layering_policy
@@ -196,3 +219,111 @@ foreach(style IN ITEMS Holonight Fusion)
   set_tests_properties(runtime_controls_${style} PROPERTIES TIMEOUT 90
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_CONTROLS_STYLE=${style};LD_LIBRARY_PATH=$<TARGET_FILE_DIR:HoloNight::Config>")
 endforeach()
+
+# Fixture worlds for the privileged transaction core: temp-dir roots, file:// repositories, signed packages.
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(Archive REQUIRED IMPORTED_TARGET libarchive)
+pkg_check_modules(Alpm REQUIRED IMPORTED_TARGET libalpm)
+add_library(holonight_transaction_test_support STATIC
+  support/fixture_root.cpp
+  support/gpg_keyring.cpp
+  support/package_spec.cpp
+  support/repo_builder.cpp
+)
+target_include_directories(holonight_transaction_test_support PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/support)
+target_compile_features(holonight_transaction_test_support PUBLIC cxx_std_23)
+target_link_libraries(holonight_transaction_test_support PUBLIC
+  holonight_packages_transaction Qt6::Core PkgConfig::Archive)
+
+# The privileged transaction core runs against temporary fixture roots only (REQ-C-009, REQ-C-010).
+add_executable(test_holonight_transaction
+  transaction/main.cpp
+  transaction/download_classifier_test.cpp
+  transaction/error_mapping_test.cpp
+  transaction/event_mapper_test.cpp
+  transaction/execution_test.cpp
+  transaction/fixture_root_test.cpp
+  transaction/gpg_keyring_test.cpp
+  transaction/hook_preview_test.cpp
+  transaction/plan_resolver_test.cpp
+  transaction/question_policy_test.cpp
+  transaction/version_policy_test.cpp
+)
+target_include_directories(test_holonight_transaction PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/support
+  ${PROJECT_SOURCE_DIR}/src/transaction/src)
+target_compile_features(test_holonight_transaction PRIVATE cxx_std_23)
+target_link_libraries(test_holonight_transaction PRIVATE
+  GTest::gtest GTest::gmock holonight_transaction_test_support PkgConfig::Alpm)
+gtest_discover_tests(test_holonight_transaction
+  TEST_PREFIX "holonight_transaction."
+  DISCOVERY_MODE PRE_TEST
+  PROPERTIES TIMEOUT 10)
+
+# The helper's service layer on a private test bus, with fakes for the engine and the authorizer.
+add_executable(test_holonight_package_helper
+  helper/main.cpp
+  helper/helper_config_test.cpp
+  helper/helper_dbus_test.cpp
+  helper/helper_process_test.cpp
+  helper/journal_terminator_test.cpp
+  helper/wire_types_test.cpp
+)
+set_target_properties(test_holonight_package_helper PROPERTIES AUTOMOC ON)
+target_include_directories(test_holonight_package_helper PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/support
+  ${CMAKE_CURRENT_SOURCE_DIR}/packaged)
+target_compile_features(test_holonight_package_helper PRIVATE cxx_std_23)
+target_link_libraries(test_holonight_package_helper PRIVATE
+  GTest::gtest GTest::gmock Qt6::Core Qt6::DBus Qt6::Test holonight_package_helper_service
+  holonight_transaction_test_support)
+add_dependencies(test_holonight_package_helper holonight-package-helper)
+target_compile_definitions(test_holonight_package_helper PRIVATE
+  HOLONIGHT_PACKAGE_HELPER_EXECUTABLE="$<TARGET_FILE:holonight-package-helper>")
+gtest_discover_tests(test_holonight_package_helper
+  TEST_PREFIX "holonight_helper."
+  DISCOVERY_MODE PRE_TEST
+  PROPERTIES TIMEOUT 30)
+
+# The polkit client against a fake polkitd. It is the only test binary that links the polkit code (REQ-C-007).
+add_executable(test_holonight_package_helper_polkit
+  helper/polkit_main.cpp
+  helper/polkit_authorizer_test.cpp
+)
+set_target_properties(test_holonight_package_helper_polkit PROPERTIES AUTOMOC ON)
+target_include_directories(test_holonight_package_helper_polkit PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/support
+  ${CMAKE_CURRENT_SOURCE_DIR}/packaged)
+target_compile_features(test_holonight_package_helper_polkit PRIVATE cxx_std_23)
+target_link_libraries(test_holonight_package_helper_polkit PRIVATE
+  GTest::gtest GTest::gmock Qt6::Core Qt6::DBus holonight_package_helper_polkit)
+gtest_discover_tests(test_holonight_package_helper_polkit
+  TEST_PREFIX "holonight_helper_polkit."
+  DISCOVERY_MODE PRE_TEST
+  PROPERTIES TIMEOUT 30)
+
+# Hook and scriptlet tests need chroot, so the whole binary runs inside a user namespace (REQ-C-014). A statically linked
+# marker tool is the hook command, since the fixture root has no libc.
+add_executable(holonight_test_marker_tool support/tools/marker_tool.cpp)
+target_link_options(holonight_test_marker_tool PRIVATE -static)
+add_executable(test_holonight_transaction_userns
+  transaction/userns_main.cpp
+  transaction/userns_hook_test.cpp
+)
+add_dependencies(test_holonight_transaction_userns holonight_test_marker_tool)
+target_include_directories(test_holonight_transaction_userns PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/support)
+target_compile_features(test_holonight_transaction_userns PRIVATE cxx_std_23)
+target_compile_definitions(test_holonight_transaction_userns PRIVATE
+  HOLONIGHT_TEST_MARKER_TOOL="$<TARGET_FILE:holonight_test_marker_tool>")
+target_link_libraries(test_holonight_transaction_userns PRIVATE
+  GTest::gtest GTest::gmock holonight_transaction_test_support PkgConfig::Alpm)
+# Exit 77 is a skip (namespaces unavailable); HOLONIGHT_REQUIRE_USERNS=1 turns that into a failure for CI.
+gtest_discover_tests(test_holonight_transaction_userns
+  TEST_PREFIX "holonight_userns."
+  DISCOVERY_MODE PRE_TEST
+  PROPERTIES TIMEOUT 30 SKIP_RETURN_CODE 77 LABELS userns)
+add_test(NAME userns_skip_policy
+  COMMAND sh "${CMAKE_CURRENT_SOURCE_DIR}/transaction/userns_policy.sh" skip $<TARGET_FILE:test_holonight_transaction_userns>)
+add_test(NAME userns_require_policy
+  COMMAND sh "${CMAKE_CURRENT_SOURCE_DIR}/transaction/userns_policy.sh" require $<TARGET_FILE:test_holonight_transaction_userns>)

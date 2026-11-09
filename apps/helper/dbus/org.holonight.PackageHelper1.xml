@@ -1,0 +1,43 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<node>
+  <interface name="org.holonight.PackageHelper1.Transactions">
+    <!-- 1 -->
+    <property name="ProtocolVersion" type="u" access="read"/>
+    <!-- true while a plan is being prepared, authorized or executed -->
+    <property name="Busy" type="b" access="read"/>
+
+    <!-- action: "install" or "remove". names: package names. options: must be empty (no key is recognised).
+         The reply is delayed; clients must use a call timeout above 10 seconds. Every domain refusal is a normal reply
+         whose status carries a code from the error taxonomy; D-Bus errors are reserved for protocol faults. -->
+    <method name="PreparePlan">
+      <arg direction="in" name="action" type="s"/>
+      <arg direction="in" name="names" type="as"/>
+      <arg direction="in" name="options" type="a{sv}"/>
+      <arg direction="out" name="status" type="(sasa(ssas))"/>
+      <arg direction="out" name="plan_id" type="s"/>
+      <arg direction="out" name="preview" type="(sa(sssss)a(sssss)a(sssss)a(sb)x)"/>
+    </method>
+
+    <!-- The only input is the plan id. The reply is delayed until the transaction ends; clients must use a call timeout
+         of at least one hour. -->
+    <method name="Execute">
+      <arg direction="in" name="plan_id" type="s"/>
+      <arg direction="out" name="result" type="(s(sasa(ssas))a(ssss)as)"/>
+    </method>
+
+    <method name="Cancel">
+      <arg direction="in" name="plan_id" type="s"/>
+      <arg direction="out" name="status" type="(sasa(ssas))"/>
+    </method>
+
+    <!-- Sent only to the unique name of the plan's owner. -->
+    <signal name="Progress">
+      <arg name="plan_id" type="s"/>
+      <arg name="phase" type="s"/>
+      <arg name="current" type="u"/>
+      <arg name="total" type="u"/>
+      <arg name="item" type="s"/>
+    </signal>
+  </interface>
+</node>

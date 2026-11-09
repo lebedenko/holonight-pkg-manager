@@ -1,0 +1,23 @@
+[Unit]
+Description=HoloNight Packages privileged transaction helper
+
+[Service]
+Type=dbus
+BusName=org.holonight.PackageHelper1
+ExecStart=@HOLONIGHT_HELPER_EXECUTABLE@
+SyslogIdentifier=holonight-package-helper
+StandardOutput=journal
+StandardError=journal
+KillMode=mixed
+TimeoutStopSec=300
+
+# pacman installs files anywhere, ships setuid files, runs arbitrary hook tools, downloads over the network and calls
+# chroot, so only the protections that cannot get in its way are set.
+NoNewPrivileges=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+ProtectClock=yes
+ProtectHostname=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes

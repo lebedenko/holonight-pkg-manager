@@ -133,5 +133,28 @@ TEST(PacmanRepositories, GpgDirAndFailClosedCases) {
       parsePacmanRepositories(tree.write("absent/none.conf", "").parent_path() / "nope.conf", "x86_64").has_value());
 }
 
+TEST(PacmanRepositories, RecordsWhetherASigLevelWasSetExplicitly) {
+  const Tree tree;
+  const auto none =
+      parsePacmanRepositories(tree.write("none.conf", "[options]\n[core]\nServer = file:///x\n"), "x86_64");
+  ASSERT_TRUE(none) << none.error();
+  EXPECT_FALSE(none->default_sig_level_explicit);
+  EXPECT_FALSE(none->repositories[0].sig_level_explicit);
+
+  const auto global = parsePacmanRepositories(
+      tree.write("global.conf", "[options]\nSigLevel = Required\n[core]\nServer = file:///x\n"), "x86_64");
+  ASSERT_TRUE(global) << global.error();
+  EXPECT_TRUE(global->default_sig_level_explicit);
+  EXPECT_TRUE(global->repositories[0].sig_level_explicit);
+
+  const auto own = parsePacmanRepositories(
+      tree.write("own.conf", "[options]\n[core]\nServer = file:///x\nSigLevel = Never\n[extra]\nServer = file:///y\n"),
+      "x86_64");
+  ASSERT_TRUE(own) << own.error();
+  EXPECT_FALSE(own->default_sig_level_explicit);
+  EXPECT_TRUE(own->repositories[0].sig_level_explicit);
+  EXPECT_FALSE(own->repositories[1].sig_level_explicit);
+}
+
 }  // namespace
 }  // namespace holonight_packages_backends

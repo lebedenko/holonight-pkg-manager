@@ -1,0 +1,5 @@
+#pragma once
+
+// Generated from dbus/org.holonight.PackageHelper1.xml by CMake: the <interface> element as one string literal, so the
+// adaptor answers Introspect() with the same text that is installed under dbus-1/interfaces.
+#define HOLONIGHT_HELPER_INTROSPECTION @HOLONIGHT_HELPER_INTERFACE_LITERAL@

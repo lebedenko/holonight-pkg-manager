@@ -3,6 +3,7 @@
 #include <cerrno>
 #include <fstream>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -28,6 +29,63 @@ void appendWords(std::string_view value, std::vector<std::string>& target) {
   std::string word;
   while (words >> word) {
     target.push_back(word);
+  }
+}
+
+void appendPaths(std::string_view value, std::vector<std::filesystem::path>& target) {
+  std::vector<std::string> paths;
+  appendWords(value, paths);
+  for (std::string& path : paths) {
+    target.emplace_back(std::move(path));
+  }
+}
+
+int parseCount(std::string_view value) {
+  const std::string text(trim(value));
+  std::size_t used = 0;
+  try {
+    const int count = std::stoi(text, &used);
+    return used == text.size() && count > 0 ? count : 0;
+  } catch (const std::logic_error&) {
+    return 0;  // not a number, or out of range
+  }
+}
+
+void applyFlag(std::string_view key, PacmanConfig& config) {
+  if (key == "CheckSpace") {
+    config.check_space = true;
+  } else if (key == "DisableSandbox") {
+    config.disable_sandbox_filesystem = true;
+    config.disable_sandbox_syscalls = true;
+  } else if (key == "DisableSandboxFilesystem") {
+    config.disable_sandbox_filesystem = true;
+  } else if (key == "DisableSandboxSyscalls") {
+    config.disable_sandbox_syscalls = true;
+  }
+}
+
+// `key = value` lines of [options] that the helper and the update check care about.
+void applyOption(std::string_view key, std::string_view value, PacmanConfig& config) {
+  if (key == "IgnorePkg") {
+    appendWords(value, config.ignore_pkgs);
+  } else if (key == "IgnoreGroup") {
+    appendWords(value, config.ignore_groups);
+  } else if (key == "HoldPkg") {
+    appendWords(value, config.hold_pkgs);
+  } else if (key == "NoUpgrade") {
+    appendWords(value, config.no_upgrade);
+  } else if (key == "NoExtract") {
+    appendWords(value, config.no_extract);
+  } else if (key == "CacheDir") {
+    appendPaths(value, config.cache_dirs);
+  } else if (key == "HookDir") {
+    appendPaths(value, config.hook_dirs);
+  } else if (key == "LogFile") {
+    config.log_file = std::string(trim(value));
+  } else if (key == "DownloadUser") {
+    config.download_user = std::string(trim(value));
+  } else if (key == "ParallelDownloads") {
+    config.parallel_downloads = parseCount(value);
   }
 }
 
@@ -69,15 +127,10 @@ std::expected<PacmanConfig, std::string> parsePacmanConfig(const std::filesystem
     }
     const auto equals = line.find('=');
     if (equals == std::string_view::npos) {
+      applyFlag(line, config);
       continue;
     }
-    const std::string_view key = trim(line.substr(0, equals));
-    const std::string_view value = line.substr(equals + 1);
-    if (key == "IgnorePkg") {
-      appendWords(value, config.ignore_pkgs);
-    } else if (key == "IgnoreGroup") {
-      appendWords(value, config.ignore_groups);
-    }
+    applyOption(trim(line.substr(0, equals)), line.substr(equals + 1), config);
   }
   if (stream.bad()) {
     return std::unexpected(readError(path, "read failed"));

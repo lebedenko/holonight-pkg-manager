@@ -1,6 +1,18 @@
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(Alpm REQUIRED IMPORTED_TARGET libalpm)
 
+# The libalpm-free pacman.conf parsers, shared by the update check and the privileged transaction library.
+add_library(holonight_packages_pacman_config STATIC
+  src/pacman_config.h
+  src/pacman_config.cpp
+  src/pacman_repositories.h
+  src/pacman_repositories.cpp
+  src/pacman_settings.h
+  src/pacman_settings.cpp
+)
+target_include_directories(holonight_packages_pacman_config PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_compile_features(holonight_packages_pacman_config PUBLIC cxx_std_23)
+
 add_library(holonight_packages_backends STATIC
   src/alpm_package_conversion.h
   src/alpm_error_mapping.h
@@ -9,11 +21,7 @@ add_library(holonight_packages_backends STATIC
   src/alpm_update_checker.cpp
   src/alpm_package_source.cpp
   src/alpm_update_source.cpp
-  src/pacman_config.h
-  src/pacman_config.cpp
   src/repository_catalog.h
-  src/pacman_repositories.h
-  src/pacman_repositories.cpp
   src/pending_update_computation.h
   src/pending_update_computation.cpp
   src/scratch_dir.h
@@ -25,7 +33,7 @@ add_library(holonight_packages_backends STATIC
 )
 target_include_directories(holonight_packages_backends PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(holonight_packages_backends
-  PUBLIC holonight_packages_domain Qt6::Core Qt6::Network
+  PUBLIC holonight_packages_domain holonight_packages_pacman_config Qt6::Core Qt6::Network
   PRIVATE PkgConfig::Alpm holonight_packages_persistence
 )
 target_compile_features(holonight_packages_backends PUBLIC cxx_std_23)

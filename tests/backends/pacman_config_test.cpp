@@ -126,5 +126,54 @@ TEST(PacmanConfig, UnreadableFileIsAnError) {
   EXPECT_FALSE(parsePacmanConfig(file.path()).has_value());
 }
 
+TEST(PacmanConfig, ParsesTheHelperOptions) {
+  const ConfigFile file(
+      "[options]\n"
+      "HoldPkg = pacman glibc\n"
+      "NoUpgrade = etc/passwd\n"
+      "NoExtract = usr/share/doc/*\n"
+      "CacheDir = /var/cache/a/ /var/cache/b/\n"
+      "CacheDir = /var/cache/c/\n"
+      "HookDir = /etc/pacman.d/hooks/\n"
+      "LogFile = /var/log/pacman.log\n"
+      "DownloadUser = alpm\n"
+      "ParallelDownloads = 5\n"
+      "CheckSpace\n"
+      "DisableSandboxSyscalls\n");
+
+  const auto config = parsePacmanConfig(file.path());
+
+  ASSERT_TRUE(config.has_value()) << config.error();
+  EXPECT_THAT(config->hold_pkgs, ElementsAre("pacman", "glibc"));
+  EXPECT_THAT(config->no_upgrade, ElementsAre("etc/passwd"));
+  EXPECT_THAT(config->no_extract, ElementsAre("usr/share/doc/*"));
+  EXPECT_THAT(config->cache_dirs, ElementsAre("/var/cache/a/", "/var/cache/b/", "/var/cache/c/"));
+  EXPECT_THAT(config->hook_dirs, ElementsAre("/etc/pacman.d/hooks/"));
+  EXPECT_EQ(config->log_file, "/var/log/pacman.log");
+  EXPECT_EQ(config->download_user, "alpm");
+  EXPECT_EQ(config->parallel_downloads, 5);
+  EXPECT_TRUE(config->check_space);
+  EXPECT_FALSE(config->disable_sandbox_filesystem);
+  EXPECT_TRUE(config->disable_sandbox_syscalls);
+}
+
+TEST(PacmanConfig, DisableSandboxImpliesBothHalvesAndBadNumbersFallBackToZero) {
+  const ConfigFile file("[options]\nDisableSandbox\nParallelDownloads = lots\n");
+  const auto config = parsePacmanConfig(file.path());
+  ASSERT_TRUE(config.has_value()) << config.error();
+  EXPECT_TRUE(config->disable_sandbox_filesystem);
+  EXPECT_TRUE(config->disable_sandbox_syscalls);
+  EXPECT_EQ(config->parallel_downloads, 0);
+  EXPECT_FALSE(config->check_space);
+}
+
+TEST(PacmanConfig, HelperOptionsOutsideTheOptionsSectionAreIgnored) {
+  const ConfigFile file("[core]\nHoldPkg = nope\nCheckSpace\n[options]\nHoldPkg = yes\n");
+  const auto config = parsePacmanConfig(file.path());
+  ASSERT_TRUE(config.has_value()) << config.error();
+  EXPECT_THAT(config->hold_pkgs, ElementsAre("yes"));
+  EXPECT_FALSE(config->check_space);
+}
+
 }  // namespace
 }  // namespace holonight_packages_backends

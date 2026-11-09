@@ -12,7 +12,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
 CHECKER = ROOT / "scripts/check-layering.py"
-CARVE_OUT = "tests may sync only fixture repositories under a temp dir via file://"
+CARVE_OUT = "tests may run package transactions only against a fixture root under a temporary directory, with file:// fixture repositories, and never automate pointer or focus input"
 
 BASELINE = {
     "AGENTS.md": f"# Rules\n{CARVE_OUT}.\n",
@@ -31,6 +31,11 @@ CASES = {
         "apps/packaged/main.cpp": 'auto dbpath = parser.value("dbpath");\n',
         "apps/packages/app/PackagesApplication.cpp": ".databasePath = kDefault,\n",
     }),
+    "legit-helper-composition-names-dbpath": (None, {
+        "apps/helper/HelperConfig.cpp": 'config.transaction.databasePath = parser.value("dbpath");\n',
+        "apps/helper/HelperTerminator.cpp": "auto lock = databasePath / \"db.lck\";\n",
+    }),
+    "c001-dbpath-in-helper-service": ("C-001", {"apps/helper/HelperService.cpp": "std::string databasePath;\n"}),
     "legit-gui-client-names": (None, {
         "apps/packages/app/UpdateCheckClient.h": "class UpdateCheckClient {};\nclass UpdateCheckModel {};\n",
     }),
@@ -59,9 +64,14 @@ CASES = {
     # C-005: no transactions.
     "c005-trans": ("C-005", {"src/backends/src/other.cpp": "alpm_trans_init(handle, 0);\n"}),
     "c005-pacman-command": ("C-005", {"tests/backends/cmd_test.cpp": 'run("pacman -Syu");\n'}),
+    "legit-transaction-library-uses-trans": (None, {
+        "src/transaction/src/alpm_transaction_engine.cpp": "int r = alpm_trans_commit(h, &d);\n",
+        "src/transaction/src/version_policy.cpp": "int x = alpm_pkg_vercmp(a, b);\n",
+    }),
     # C-006: carve-out line and fixture-only servers.
     "c006-missing-carve-out": ("C-006", {"AGENTS.md": "# Rules\n"}),
     "c006-duplicated-carve-out": ("C-006", {"AGENTS.md": f"{CARVE_OUT}\n{CARVE_OUT}\n"}),
+    "c006-stale-carve-out-wording": ("C-006", {"AGENTS.md": f"{CARVE_OUT}\nTests never run package transactions.\n"}),
     "c006-missing-carve-out-in-claude-md": ("C-006", {"CLAUDE.md": "# Notes\n"}),
     "c006-remote-server-in-tests": ("C-006", {"tests/backends/remote_test.cpp": 'conf = "Server = https://mirror.example/$repo/os/$arch";\n'}),
     "c006-ftp-server-in-test-conf": ("C-006", {"tests/fixtures/pacman.conf": "[core]\nServer = ftp://mirror.example/core\n"}),
@@ -77,6 +87,39 @@ CASES = {
     "c010-mouse": ("C-010", {"tests/apps/new_view_test.cpp": "QTest::mouseClick(&w, Qt::LeftButton);\n"}),
     "c010-key": ("C-010", {"tests/apps/new_view_test.cpp": "QTest::keyClick(&w, Qt::Key_A);\n"}),
     "c010-touch": ("C-010", {"tests/apps/new_view_test.cpp": "QTest::touchEvent(&w, d);\n"}),
+    # H rules: helper and transaction library.
+    "legit-helper-clean": (None, {
+        "apps/helper/HelperService.cpp": "#include <QDBusConnection>\nvoid f() {}\n",
+        "apps/helper/HelperConfig.cpp": "TransactionConfig c{root, db, conf, cache};\n",
+        "src/transaction/src/alpm_transaction_engine.cpp": "#include <alpm.h>\nint r = alpm_trans_prepare(h, &d);\n",
+        "src/transaction/include/holonight_packages_transaction/transaction_seams.h": "using Fetch = int (*)(); // alpm_option_set_fetchcb\n",
+        "src/transaction/src/fetch_seam.h": "alpm_option_set_fetchcb(handle, cb, ctx);\n",
+        "tests/transaction/file_server_test.cpp": 'conf = "Server = file:///tmp/fixture\\n";\n',
+    }),
+    "h001-dbus-in-application": ("H-001", {"src/application/src/leak.cpp": "#include <QDBusMessage>\n"}),
+    "h001-polkit-in-domain": ("H-001", {"src/domain/src/leak.cpp": "const char* a = \"org.freedesktop.PolicyKit1\"; // polkit\n"}),
+    "h002-qt-include-in-transaction": ("H-002", {"src/transaction/src/x.cpp": "#include <QString>\n"}),
+    "h002-dbus-in-transaction": ("H-002", {"src/transaction/src/x.cpp": "void f(QDBusMessage m);\n"}),
+    "h003-system-in-helper": ("H-003", {"apps/helper/HelperService.cpp": 'system("pacman");\n'}),
+    "h003-fork-in-transaction": ("H-003", {"src/transaction/src/x.cpp": "pid_t p = fork();\n"}),
+    "h004-db-update": ("H-004", {"src/transaction/src/x.cpp": "alpm_db_update(h, db, 0);\n"}),
+    "h004-fetchcb-in-helper": ("H-004", {"apps/helper/HelperService.cpp": "alpm_option_set_fetchcb(h, cb, 0);\n"}),
+    "h005-compare-versions": ("H-005", {"src/transaction/src/x.cpp": "int compareVersions(const char*, const char*);\n"}),
+    "h005-vercmp-in-domain": ("H-005", {"src/domain/src/x.cpp": "int vercmp(a, b);\n"}),
+    "h006-upgrade-method": ("H-006", {"apps/helper/dbus/x.xml": '<method name="UpgradeSystem"/>\n'}),
+    "h006-answer-method": ("H-006", {"apps/helper/dbus/x.xml": '<method name="AnswerQuestion"/>\n'}),
+    "h006-packagekit": ("H-006", {"apps/helper/CMakeLists.txt": "find_package(PackageKit)\n"}),
+    "h007-path-argument": ("H-007", {"apps/helper/dbus/x.xml": '<arg name="pacmanConfPath" type="s"/>\n'}),
+    "h007-config-from-adaptor": ("H-007", {"apps/helper/HelperAdaptor.cpp": "TransactionConfig config{a, b, c, d};\n"}),
+    "h008-seams-in-main": ("H-008", {"apps/helper/main.cpp": "TransactionSeams seams;\n"}),
+    "h008-fault-injector-in-config": ("H-008", {"apps/helper/HelperConfig.cpp": "FaultInjector injector;\n"}),
+    "h009-siglevel-parser": ("H-009", {"src/transaction/src/x.cpp": 'if (word == "Required") {}\n'}),
+    "h011-private-key-block": ("H-011", {"tests/transaction/key.cpp": 'const char* k = "-----BEGIN PGP PRIVATE KEY BLOCK-----";\n'}),
+    "h011-keyring-file": ("H-011", {"tests/fixtures/pubring.kbx": "x"}),
+    "h011-gnupg-dir": ("H-011", {"tests/fixtures/private-keys-v1.d/key.key": "x"}),
+    "h012-https-server-in-helper-tests": ("H-012", {"tests/helper/x_test.cpp": 'conf = "Server = https://mirror.example/x";\n'}),
+    "h012-http-server-in-transaction-tests": ("H-012", {"tests/transaction/x_test.cpp": 'conf = "Server = http://127.0.0.1:1/x";\n'}),
+    "h010-input-automation-in-helper-tests": ("C-010", {"tests/helper/x_test.cpp": "QTest::mouseClick(&w, Qt::LeftButton);\n"}),
     # One comparison loop.
     "f007-second-vercmp": ("F-007", {"src/backends/src/other.cpp": "if (alpm_pkg_vercmp(a, b) > 0) {}\n"}),
 }

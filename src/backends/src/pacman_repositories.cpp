@@ -294,6 +294,7 @@ std::expected<PacmanRepositories, std::string> parsePacmanRepositories(const std
   }
   result.architectures = parser.architectures.empty() ? std::vector<std::string>{parser.machine} : parser.architectures;
   result.default_sig_level = merge(parser.global_sig, kPacmanDefaultSigLevel);
+  result.default_sig_level_explicit = parser.global_sig.mask != 0;
   const std::string& arch = result.architectures.front();
   for (const RawRepository& raw : parser.repositories) {
     if (raw.name.empty() || raw.name.contains('/') || raw.name.contains("..")) {
@@ -302,7 +303,12 @@ std::expected<PacmanRepositories, std::string> parsePacmanRepositories(const std
     if (raw.servers.empty()) {
       return std::unexpected("Repository '" + raw.name + "' has no Server");
     }
-    PacmanRepository repository{.name = raw.name, .servers = {}, .sig_level = merge(raw.sig, result.default_sig_level)};
+    PacmanRepository repository{
+        .name = raw.name,
+        .servers = {},
+        .sig_level = merge(raw.sig, result.default_sig_level),
+        .sig_level_explicit = raw.sig.mask != 0 || result.default_sig_level_explicit,
+    };
     for (const std::string& server : raw.servers) {
       repository.servers.push_back(substitute(server, raw.name, arch));
     }

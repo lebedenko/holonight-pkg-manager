@@ -1,0 +1,5 @@
+[D-BUS Service]
+Name=org.holonight.PackageHelper1
+Exec=/bin/false
+User=root
+SystemdService=holonight-package-helper.service

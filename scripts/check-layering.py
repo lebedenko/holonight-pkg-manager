@@ -20,7 +20,8 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-CARVE_OUT = "tests may sync only fixture repositories under a temp dir via file://"
+CARVE_OUT = "tests may run package transactions only against a fixture root under a temporary directory, with file:// fixture repositories, and never automate pointer or focus input"
+STALE_CARVE_OUT = "never run package transactions"
 SOURCE_SUFFIXES = {".h", ".hpp", ".cpp", ".cc", ".qml", ".py", ".sh"}
 
 # Existing tests that predate the "no pointer/focus automation" rule. The rule guards every other test file.
@@ -53,7 +54,10 @@ RULES: list[Rule] = [
     Rule("C-001", "libalpm and dbpath names belong in src/backends and the two composition roots only",
          ALPM_NAMES,
          include=("src/domain", "src/application", "apps", "qml"),
-         exclude=("apps/packaged/main.cpp", "apps/packages/app/PackagesApplication.cpp")),
+         exclude=("apps/packaged/main.cpp", "apps/packages/app/PackagesApplication.cpp",
+                  # The helper's command line and its terminator name the database path (the lock file lives there).
+                  "apps/helper/main.cpp", "apps/helper/HelperConfig.cpp", "apps/helper/HelperConfig.h",
+                  "apps/helper/HelperTerminator.cpp", "apps/helper/HelperTerminator.h")),
     Rule("C-001", "the snapshot store and cache locations are libalpm-free",
          ALPM_NAMES,
          include=("src/persistence",),
@@ -66,7 +70,7 @@ RULES: list[Rule] = [
     Rule("C-005", "no package transaction API or package-manager commands",
          rx(r"\balpm_trans_\w*|\bpacman\s+-[SUR]\w*"),
          include=("src", "apps", "qml", "tests"),
-         exclude=("tests/policy",)),
+         exclude=("tests/policy", "src/transaction")),
     Rule("C-007", "no notification or network-state integration",
          rx(r"org\.freedesktop\.Notifications|NetworkManager"),
          include=("src", "apps", "qml"),
@@ -85,10 +89,49 @@ RULES: list[Rule] = [
          include=("tests",), exclude=("tests/policy",),
          suffixes=(".h", ".hpp", ".cpp", ".cc", ".conf", ".in", ".sh", ".py", ".txt", ".md", ""))
     ,
+    Rule("H-001", "domain and application stay free of D-Bus and polkit",
+         rx(r"QDBus|<QtDBus|(?i:polkit)"),
+         include=("src/domain", "src/application")),
+    Rule("H-002", "the transaction library is Qt-free, D-Bus-free and polkit-free",
+         rx(r"#\s*include\s*[<\"]Q|QDBus|(?i:polkit)"),
+         include=("src/transaction",)),
+    Rule("H-003", "no external process in the helper and the transaction library",
+         PROCESS_SPAWN,
+         include=("apps/helper", "src/transaction")),
+    Rule("H-004", "the helper never refreshes databases or installs the fetch callback",
+         rx(r"\balpm_(?:db_update|syncdb|fetch_pkgurl|option_set_fetchcb)\b"),
+         include=("apps/helper", "src/transaction"),
+         exclude=("src/transaction/include/holonight_packages_transaction/transaction_seams.h",
+                  "src/transaction/src/fetch_seam.h")),
+    Rule("H-005", "no second version comparison in the helper or the domain",
+         rx(r"\b(?:compareVersions|versionCompare|vercmp)\b"),
+         include=("apps/helper", "src/transaction", "src/domain")),
+    Rule("H-006", "the helper exposes no upgrade, answer or history method and no AUR/PackageKit/-U",
+         rx(r"<method\s+name=\"\w*(?:Upgrade|Answer|History)|(?i:packagekit)|\baur\b|\"-U\""),
+         include=("apps/helper",),
+         suffixes=(".h", ".hpp", ".cpp", ".cc", ".xml", ".in", ".txt")),
+    Rule("H-007", "no caller-supplied path, repository, server or config argument",
+         rx(r"(?i)<arg[^>]*name=\"\w*(?:path|repo|server|config)\w*\""),
+         include=("apps/helper",),
+         suffixes=(".xml",)),
+    Rule("H-007", "TransactionConfig is constructed only from the command line",
+         rx(r"\bTransactionConfig\b\s*\w*\s*[{(]"),
+         include=("apps/helper",),
+         exclude=("apps/helper/HelperConfig.cpp", "apps/helper/HelperConfig.h")),
+    Rule("H-008", "production code cannot reach test seams",
+         rx(r"\b(?:FaultInjector|TransactionSeams)\b"),
+         include=("apps/helper/main.cpp", "apps/helper/HelperConfig.cpp", "apps/helper/HelperConfig.h")),
+    Rule("H-009", "SigLevel keywords are parsed in one place only",
+         rx(r"\"(?:Required|TrustAll|TrustedOnly|Optional|Never)\""),
+         include=("apps/helper", "src/transaction")),
+    Rule("H-012", "helper and transaction tests may only use file:// repositories",
+         rx(r"Server\s*=\s*(?!file://)[A-Za-z][A-Za-z0-9+.-]*://"),
+         include=("tests/helper", "tests/transaction"),
+         suffixes=(".h", ".hpp", ".cpp", ".cc", ".conf", ".in", ".sh", ".py", ".txt", ".md", "")),
     Rule("F-007", "the installed-versus-available comparison exists once",
          rx(r"\balpm_pkg_vercmp\b"),
          include=("src", "apps"),
-         exclude=("src/backends/src/pending_update_computation.cpp",)),
+         exclude=("src/backends/src/pending_update_computation.cpp", "src/transaction/src/version_policy.cpp")),
 ]
 
 
@@ -128,7 +171,32 @@ def scan(root: Path) -> list[str]:
                 if rule.pattern.search(line):
                     found.append(f"{rule.rule_id} {relative}:{number}: {line.strip()}")
     found.extend(check_carve_out(root))
+    found.extend(check_key_material(root))
     return found
+
+
+KEY_FILE_SUFFIXES = {".gpg", ".kbx", ".asc"}
+KEY_CONTENT = re.compile(r"BEGIN PGP PRIVATE KEY|private-keys-v1\.d")
+
+
+def check_key_material(root: Path) -> list[str]:
+    """H-011: tests generate their keyring at run time and commit no key material."""
+    problems: list[str] = []
+    base = root / "tests"
+    if not base.is_dir():
+        return problems
+    for path in sorted(base.rglob("*")):
+        if not path.is_file() or "policy" in path.relative_to(base).parts[:1]:
+            continue
+        relative = path.relative_to(root).as_posix()
+        if path.suffix in KEY_FILE_SUFFIXES or "private-keys-v1.d" in path.parts:
+            problems.append(f"H-011 {relative}:1: key material file")
+            continue
+        if path.suffix in SOURCE_SUFFIXES | {".txt", ".md", ".conf", ".in", ""}:
+            for number, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+                if KEY_CONTENT.search(line):
+                    problems.append(f"H-011 {relative}:{number}: {line.strip()}")
+    return problems
 
 
 def check_carve_out(root: Path) -> list[str]:
@@ -140,7 +208,10 @@ def check_carve_out(root: Path) -> list[str]:
             if required:
                 problems.append(f"C-006 {name}: file is missing")
             continue
-        count = sum(1 for line in path.read_text(encoding="utf-8").splitlines() if CARVE_OUT in line)
+        text = path.read_text(encoding="utf-8")
+        if STALE_CARVE_OUT in text:
+            problems.append(f"C-006 {name}: still contains '{STALE_CARVE_OUT}'")
+        count = sum(1 for line in text.splitlines() if CARVE_OUT in line.lower())
         if count != 1:
             problems.append(f"C-006 {name}: expected exactly one line containing '{CARVE_OUT}', found {count}")
     return problems

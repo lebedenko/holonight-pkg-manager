@@ -6,7 +6,9 @@ Use Conventional Commits for every new commit: `type(scope): imperative summary`
 
 `apps/packages/` owns the `holonight-packages` executable, application wiring, and QML module registration.
 `apps/packaged/` owns the `holonight-packaged` session D-Bus service (adaptor, activation files, introspection XML);
-its `UpdateMonitor` lives in `src/application/`. Reusable
+its `UpdateMonitor` lives in `src/application/`. `apps/helper/` owns `holonight-package-helper`, the privileged system
+D-Bus transaction helper (adaptor, polkit client, polkit/bus/systemd artifacts); its libalpm core is `src/transaction/`
+(see `apps/helper/README.md`). Reusable
 C++ targets live in `src/domain/`, `src/application/`, `src/backends/`, `src/advisor/`, `src/persistence/`, and
 `src/platform/`. QML sources are feature-scoped under `qml/`; design notes and mockups live in `docs/`; tests live in
 `tests/`.
@@ -25,7 +27,9 @@ files grouped by feature.
 `domain`, `application`, `backends` and `persistence` are static libraries (`application` links Qt Core and
 Concurrent for `UpdateMonitor`); `holonight_packages_snapshot_store` is a libalpm-free static library (JSON update
 snapshot store); `advisor` and `platform` remain
-interface stubs. Preserve the current ownership and dependency direction.
+interface stubs. `src/transaction` is a Qt-free static library (`holonight_packages_transaction`) that links libalpm and
+runs install/remove plans; `holonight_packages_pacman_config` is the libalpm-free `pacman.conf` parser it shares with
+`backends`. Preserve the current ownership and dependency direction.
 
 Application QML imports `QtQuick.Controls as Controls` and qualifies instances, enums and attached properties.
 Keep Core/composite imports and semantic painting. Use public composite enums; HnSelectableDelegate is internal.
@@ -36,8 +40,8 @@ Run policy fixtures, dual-style runtime acceptance and existing QML tests for UI
 acceptance module under `tests/runtime` separate from source-based tests. Its source boundary is MockPackageSource,
 with real presentation/filter models. Preserve table horizontal and independent list/detail/page vertical scrolling.
 Production launch checks may only enumerate ALPM read-only with isolated HOME/XDG and desktop activation.
-No pointer/focus automation or package transactions.
-Carve-out: tests may sync only fixture repositories under a temp dir via file://; nothing runs package transactions.
+No pointer/focus automation. Production code in the GUI and in `holonight-packaged` never runs package transactions.
+Carve-out: tests may run package transactions only against a fixture root under a temporary directory, with file:// fixture repositories, and never automate pointer or focus input.
 See `docs/sdd/unified-qtquick-controls/SPEC.md`.
 
 

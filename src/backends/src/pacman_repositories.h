@@ -31,6 +31,9 @@ struct PacmanRepository {
   std::vector<std::string> servers;
   // Effective level: the repository's own SigLevel merged over the global one, merged over the built-in default.
   std::uint32_t sig_level = kPacmanDefaultSigLevel;
+  // True when pacman.conf set a SigLevel for this repository or globally. When false, `sig_level` is only pacman's
+  // built-in default, which libalpm itself does not apply (its own default is 0, SI-14).
+  bool sig_level_explicit = false;
 
   bool operator==(const PacmanRepository&) const = default;
 };
@@ -43,6 +46,8 @@ struct PacmanRepositories {
   std::vector<std::string> architectures;
   // The global level, passed to libalpm as the handle default.
   std::uint32_t default_sig_level = kPacmanDefaultSigLevel;
+  // True when [options] set a SigLevel.
+  bool default_sig_level_explicit = false;
 
   std::vector<std::filesystem::path> configuration_files;
 
