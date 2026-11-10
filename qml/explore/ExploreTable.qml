@@ -41,6 +41,12 @@ Controls.ScrollView {
                 anchors.rightMargin: columnSizes.padding
                 spacing: columnSizes.spacing
 
+                Item {
+                    Layout.minimumWidth: columnSizes.icon
+                    Layout.maximumWidth: columnSizes.icon
+                    Layout.preferredWidth: columnSizes.icon
+                }
+
                 HnLabel {
                     role: HnTypographyRole.Caption
                     rawText: qsTr("Package")

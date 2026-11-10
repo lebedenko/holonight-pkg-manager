@@ -76,6 +76,7 @@ add_executable(test_holonight_packages
   apps/installed_packages_model_test.cpp
   apps/installed_packages_filter_model_test.cpp
   apps/installed_packages_view_test.cpp
+  apps/package_icon_resolver_test.cpp
   apps/explore_model_test.cpp
   apps/explore_view_test.cpp
   apps/snapshot_file_reader_test.cpp
@@ -117,6 +118,7 @@ target_compile_definitions(test_holonight_packages PRIVATE
   HOLONIGHT_PACKAGED_EXECUTABLE="$<TARGET_FILE:holonight-packaged>"
   HOLONIGHT_QML_SOURCE_DIR="${PROJECT_SOURCE_DIR}/qml")
 target_link_libraries(test_holonight_packages PRIVATE
+  holonight_package_icons
   GTest::gtest GTest::gmock Qt6::Gui Qt6::Quick Qt6::Qml Qt6::Test Qt6::Concurrent Qt6::DBus
   holonight_packaged_service
   holonight_packages_domain
@@ -209,6 +211,7 @@ target_include_directories(test_runtime_controls PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/application" "${CMAKE_CURRENT_SOURCE_DIR}/apps"
   "${PROJECT_SOURCE_DIR}/apps/packages/app")
 target_link_libraries(test_runtime_controls PRIVATE
+  holonight_package_icons
   GTest::gtest GTest::gmock Qt6::Quick Qt6::Qml Qt6::QmlPrivate Qt6::Test Qt6::Concurrent
   holonight_packages_application holonight_packages_snapshot_store holonight_packages_domain)
 target_compile_definitions(test_runtime_controls PRIVATE

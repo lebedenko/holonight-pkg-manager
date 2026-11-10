@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PackageIconResolver.h"
 #include "holonight_packages_application/update_summary.h"
 #include "holonight_packages_domain/pending_update.h"
 #include "holonight_packages_domain/update_checker.h"
@@ -13,6 +14,7 @@
 #include <QHash>
 #include <QModelIndex>
 #include <QObject>
+#include <QPointer>
 #include <QString>
 #include <QTimer>
 #include <QVariant>
@@ -70,6 +72,8 @@ class UpdatesModel : public QAbstractListModel {
     SizeDeltaRole,
     SizeDeltaLabelRole,
     IsIgnoredRole,
+    IconNameRole,
+    IconSourceRole,
   };
 
   using Clock = std::function<std::chrono::system_clock::time_point()>;
@@ -116,6 +120,8 @@ class UpdatesModel : public QAbstractListModel {
   [[nodiscard]] bool hasCheckedSnapshot() const { return online_.has_value(); }
   [[nodiscard]] const auto& displayedFetchedAt() const { return displayed_fetched_at_; }
 
+  void setIconResolver(PackageIconResolver* resolver);
+
  signals:
   void stateChanged();
 
@@ -124,6 +130,8 @@ class UpdatesModel : public QAbstractListModel {
       std::expected<holonight_packages_domain::UpdateSnapshot, holonight_packages_domain::UpdateSourceError>;
 
   void armWatcher();
+  QPointer<PackageIconResolver> icon_resolver_;
+
   void startLoading();
   void onLoadFinished();
   void applySnapshot(holonight_packages_domain::UpdateSnapshot snapshot);

@@ -10,7 +10,9 @@
 #include <expected>
 #include <filesystem>
 #include <memory>
+#include <span>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -150,6 +152,15 @@ AlpmPackageSource::enumerateInstalledPackages() const {
     auto package = toPackage(static_cast<alpm_pkg_t*>(node->data), connection->syncDatabases());
     if (!package.has_value()) {
       return std::unexpected(std::move(package.error()));
+    }
+    const auto* files = alpm_pkg_get_files(static_cast<alpm_pkg_t*>(node->data));
+    if (files != nullptr) {
+      for (const auto& file : std::span(files->files, files->count)) {
+        const std::string_view path(file.name);
+        if (path.starts_with("usr/share/applications/") && path.ends_with(".desktop")) {
+          package->desktopEntryPaths.push_back((database_root_ / path).string());
+        }
+      }
     }
     packages.push_back(std::move(*package));
   }

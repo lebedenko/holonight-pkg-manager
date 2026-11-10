@@ -28,6 +28,7 @@ install(FILES LICENSE LICENSES/GPL-3.0-or-later.txt
   DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/${PROJECT_NAME}")
 
 find_package(Qt6 6.11 REQUIRED COMPONENTS Core Gui Quick Qml Network Sql DBus Concurrent)
+find_package(AppStreamQt 1.0 REQUIRED)
 find_package(HolonightQt REQUIRED COMPONENTS Controls)
 unset(HOLONIGHT_QML_IMPORT_PATH CACHE)
 find_path(HOLONIGHT_QML_IMPORT_PATH

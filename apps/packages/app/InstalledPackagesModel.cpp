@@ -65,6 +65,18 @@ QVariant InstalledPackagesModel::data(const QModelIndex& index, int role) const 
   }
   const Package& package = packages_[static_cast<std::size_t>(index.row())];
   switch (role) {
+    case IconNameRole:
+      return icon_resolver_ ? icon_resolver_
+                                  ->icon(QString::fromStdString(package.name),
+                                         PackageIconResolver::isOfficialRepository(package.repository))
+                                  .name
+                            : QString();
+    case IconSourceRole:
+      return icon_resolver_ ? icon_resolver_
+                                  ->icon(QString::fromStdString(package.name),
+                                         PackageIconResolver::isOfficialRepository(package.repository))
+                                  .source
+                            : QUrl();
     case NameRole:
       return QString::fromStdString(package.name);
     case InstalledVersionRole:
@@ -99,6 +111,8 @@ QVariant InstalledPackagesModel::data(const QModelIndex& index, int role) const 
 
 QHash<int, QByteArray> InstalledPackagesModel::roleNames() const {
   static const QHash<int, QByteArray> role_names{
+      {IconNameRole, QByteArrayLiteral("iconName")},
+      {IconSourceRole, QByteArrayLiteral("iconSource")},
       {NameRole, QByteArrayLiteral("name")},
       {InstalledVersionRole, QByteArrayLiteral("installedVersion")},
       {SourceLabelRole, QByteArrayLiteral("sourceLabel")},
@@ -172,6 +186,9 @@ void InstalledPackagesModel::onEnumerationFinished() {
   if (result.has_value()) {
     beginResetModel();
     packages_ = std::move(*result);
+    if (icon_resolver_) {
+      icon_resolver_->setInstalledPackages(packages_);
+    }
     endResetModel();
     status_ = Status::Loaded;
     error_message_.clear();
@@ -207,4 +224,21 @@ void InstalledPackagesModel::recomputeAggregates() {
   aggregates.orphan_package_count = orphan_statistics.orphanPackageCount;
   aggregates.reclaimable_size_bytes = orphan_statistics.reclaimableSizeBytes;
   aggregates_ = aggregates;
+}
+
+void InstalledPackagesModel::setIconResolver(PackageIconResolver* resolver) {
+  if (icon_resolver_) {
+    disconnect(icon_resolver_, nullptr, this, nullptr);
+  }
+  icon_resolver_ = resolver;
+  if (resolver != nullptr) {
+    connect(resolver, &PackageIconResolver::iconsChanged, this, [this] {
+      if (rowCount() > 0) {
+        emit dataChanged(index(0), index(rowCount() - 1), {IconNameRole, IconSourceRole});
+      }
+    });
+  }
+  if (resolver != nullptr && status_ == Status::Loaded) {
+    resolver->setInstalledPackages(packages_);
+  }
 }

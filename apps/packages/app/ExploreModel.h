@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PackageIconResolver.h"
 #include "holonight_packages_application/explore_search.h"
 #include "holonight_packages_domain/explore_source.h"
 
@@ -10,6 +11,7 @@
 #include <QHash>
 #include <QModelIndex>
 #include <QObject>
+#include <QPointer>
 #include <QString>
 #include <QTimer>
 #include <QVariant>
@@ -79,6 +81,8 @@ class ExploreModel : public QAbstractListModel {
     InstalledVersionRole,
     InstalledBadgeTextRole,
     InstalledVersionDiffersRole,
+    IconNameRole,
+    IconSourceRole,
   };
 
   using Clock = std::function<std::chrono::system_clock::time_point()>;
@@ -127,6 +131,8 @@ class ExploreModel : public QAbstractListModel {
   // Single-flight: ignored while a load or reload is in progress. Never retried automatically.
   Q_INVOKABLE void reload();
 
+  void setIconResolver(PackageIconResolver* resolver);
+
  signals:
   void stateChanged();
   void searchTextChanged();
@@ -141,6 +147,8 @@ class ExploreModel : public QAbstractListModel {
     std::chrono::system_clock::time_point data_as_of;
   };
   using LoadResult = std::expected<LoadedIndex, holonight_packages_domain::ExploreSourceError>;
+
+  QPointer<PackageIconResolver> icon_resolver_;
 
   void startLoading();
   void onLoadFinished();

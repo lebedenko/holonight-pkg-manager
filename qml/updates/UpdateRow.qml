@@ -4,12 +4,14 @@ import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import Holonight.Core
+import "../packages"
 import Holonight.Controls
 
 // HnListDelegate, not the qmldir-internal HnSelectableDelegate (see PackageTableRow.qml).
 HnListDelegate {
     id: root
 
+    required property url iconSource
     required property string name
     required property string installedVersion
     required property string availableVersion
@@ -30,6 +32,16 @@ HnListDelegate {
 
     contentItem: RowLayout {
         spacing: root.columns.spacing
+
+        PackageIcon {
+            packageName: root.name
+            iconSource: root.iconSource
+            Layout.minimumWidth: root.columns.icon
+            Layout.maximumWidth: root.columns.icon
+            Layout.preferredWidth: root.columns.icon
+            Layout.preferredHeight: root.columns.icon
+            Layout.alignment: Qt.AlignVCenter
+        }
 
         HnLabel {
             objectName: "updateRowName"

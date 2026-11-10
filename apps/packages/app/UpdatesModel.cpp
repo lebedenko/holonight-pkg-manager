@@ -64,6 +64,10 @@ QVariant UpdatesModel::data(const QModelIndex& index, int role) const {
   }
   const PendingUpdate& update = updates_[static_cast<std::size_t>(index.row())];
   switch (role) {
+    case IconNameRole:
+      return icon_resolver_ ? icon_resolver_->icon(QString::fromStdString(update.name), true).name : QString();
+    case IconSourceRole:
+      return icon_resolver_ ? icon_resolver_->icon(QString::fromStdString(update.name), true).source : QUrl();
     case NameRole:
       return QString::fromStdString(update.name);
     case InstalledVersionRole:
@@ -89,6 +93,8 @@ QVariant UpdatesModel::data(const QModelIndex& index, int role) const {
 
 QHash<int, QByteArray> UpdatesModel::roleNames() const {
   static const QHash<int, QByteArray> role_names{
+      {IconNameRole, QByteArrayLiteral("iconName")},
+      {IconSourceRole, QByteArrayLiteral("iconSource")},
       {NameRole, QByteArrayLiteral("name")},
       {InstalledVersionRole, QByteArrayLiteral("installedVersion")},
       {AvailableVersionRole, QByteArrayLiteral("availableVersion")},
@@ -321,4 +327,18 @@ void UpdatesModel::applyFailure(const UpdateSourceError& error) {
   reload_error_message_.clear();
   data_as_of_ = QDateTime();
   databases_stale_ = false;
+}
+
+void UpdatesModel::setIconResolver(PackageIconResolver* resolver) {
+  if (icon_resolver_) {
+    disconnect(icon_resolver_, nullptr, this, nullptr);
+  }
+  icon_resolver_ = resolver;
+  if (resolver != nullptr) {
+    connect(resolver, &PackageIconResolver::iconsChanged, this, [this] {
+      if (rowCount() > 0) {
+        emit dataChanged(index(0), index(rowCount() - 1), {IconNameRole, IconSourceRole});
+      }
+    });
+  }
 }

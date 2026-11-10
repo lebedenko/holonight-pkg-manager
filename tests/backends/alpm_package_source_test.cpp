@@ -67,6 +67,23 @@ class PermissionsGuard {
   std::filesystem::perms permissions_{};
 };
 
+TEST(AlpmPackageSource, DesktopEntryPathsArePackageOwnedAndRelativeToConfiguredRoot) {
+  TemporaryDatabase database;
+  {
+    std::ofstream files(database.root() / "local/apple-2.3-4/files");
+    files << "%FILES%\nusr/share/applications/apple.desktop\nusr/bin/apple\n"
+             "usr/share/icons/apple.desktop\nusr/share/applications/nested/utility.desktop\n\n";
+  }
+  AlpmPackageSource source(database.root(), database.root());
+  const auto result = source.enumerateInstalledPackages();
+  ASSERT_TRUE(result.has_value());
+  const auto* package = findByName(*result, "apple");
+  ASSERT_NE(package, nullptr);
+  EXPECT_EQ(package->desktopEntryPaths,
+            (std::vector<std::string>{(database.root() / "usr/share/applications/apple.desktop").string(),
+                                      (database.root() / "usr/share/applications/nested/utility.desktop").string()}));
+}
+
 TEST(AlpmPackageConversion, AcceptsValidStrings) {
   const auto result =
       detail::convertPackageFields("apple", "2.3-4", "core", SourceType::Official, InstallReason::Explicit);

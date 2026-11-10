@@ -77,6 +77,18 @@ QVariant ExploreModel::data(const QModelIndex& index, int role) const {
     return {};
   }
   switch (role) {
+    case IconNameRole:
+      return icon_resolver_ ? icon_resolver_
+                                  ->icon(QString::fromStdString(package->name),
+                                         PackageIconResolver::isOfficialRepository(package->repository))
+                                  .name
+                            : QString();
+    case IconSourceRole:
+      return icon_resolver_ ? icon_resolver_
+                                  ->icon(QString::fromStdString(package->name),
+                                         PackageIconResolver::isOfficialRepository(package->repository))
+                                  .source
+                            : QUrl();
     case NameRole:
       return QString::fromStdString(package->name);
     case AvailableVersionRole:
@@ -115,6 +127,8 @@ QVariant ExploreModel::data(const QModelIndex& index, int role) const {
 
 QHash<int, QByteArray> ExploreModel::roleNames() const {
   static const QHash<int, QByteArray> role_names{
+      {IconNameRole, QByteArrayLiteral("iconName")},
+      {IconSourceRole, QByteArrayLiteral("iconSource")},
       {NameRole, QByteArrayLiteral("name")},
       {AvailableVersionRole, QByteArrayLiteral("availableVersion")},
       {RepositoryRole, QByteArrayLiteral("repository")},
@@ -361,4 +375,18 @@ QString ExploreModel::identityAt(int row) const {
     return {};
   }
   return QString::fromStdString(package->repository + "/" + package->name);
+}
+
+void ExploreModel::setIconResolver(PackageIconResolver* resolver) {
+  if (icon_resolver_) {
+    disconnect(icon_resolver_, nullptr, this, nullptr);
+  }
+  icon_resolver_ = resolver;
+  if (resolver != nullptr) {
+    connect(resolver, &PackageIconResolver::iconsChanged, this, [this] {
+      if (rowCount() > 0) {
+        emit dataChanged(index(0), index(rowCount() - 1), {IconNameRole, IconSourceRole});
+      }
+    });
+  }
 }

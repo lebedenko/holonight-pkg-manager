@@ -35,6 +35,10 @@ struct Package {
   // NOLINTNEXTLINE(readability-identifier-naming): preserve the established public data contract.
   std::size_t configFileCount = 0;
 
+  // Absolute package-owned desktop entries; icon interpretation belongs to the GUI.
+  // NOLINTNEXTLINE(readability-identifier-naming): preserve the established public data contract.
+  std::vector<std::string> desktopEntryPaths;
+
   bool operator==(const Package&) const = default;
 };
 

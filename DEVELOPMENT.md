@@ -6,6 +6,11 @@ CMake reports missing packages and never downloads them. Use `cmake --preset dev
 The development preset enables tests; `release` stages optimized builds.
 clangd uses `build/dev/compile_commands.json`.
 
+The GUI requires AppStreamQt (`appstream-qt` on Arch) in addition to the Qt and ALPM dependencies. The acceptance
+image must include it; older image digests without AppStreamQt fail configuration and need to be rebuilt before
+running the container gate. The catalog (`archlinux-appstream-data`) and JXL Qt decoder (`kimageformats`) are optional.
+Integration tests verify JXL decoding when the plugin is discoverable, and tile fallback otherwise.
+
 `task format` uses the pinned image. `task check` is the acceptance gate: fresh provider
 builds, build, tests, format, static analysis, applicable QML checks and REUSE.
 `task check:integration` adds Release staging and project runtime checks. GitHub invokes

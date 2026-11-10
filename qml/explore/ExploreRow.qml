@@ -12,6 +12,7 @@ import "../packages"
 HnListDelegate {
     id: root
 
+    required property url iconSource
     required property string name
     required property string description
     required property string repository
@@ -32,6 +33,16 @@ HnListDelegate {
 
     contentItem: RowLayout {
         spacing: root.columns.spacing
+
+        PackageIcon {
+            packageName: root.name
+            iconSource: root.iconSource
+            Layout.minimumWidth: root.columns.icon
+            Layout.maximumWidth: root.columns.icon
+            Layout.preferredWidth: root.columns.icon
+            Layout.preferredHeight: root.columns.icon
+            Layout.alignment: Qt.AlignVCenter
+        }
 
         ColumnLayout {
             spacing: 2

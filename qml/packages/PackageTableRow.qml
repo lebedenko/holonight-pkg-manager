@@ -12,6 +12,7 @@ import Holonight.Controls
 HnListDelegate {
     id: root
 
+    required property url iconSource
     required property string name
     required property string description
     required property string sourceLabel
@@ -49,19 +50,12 @@ HnListDelegate {
             Controls.ToolTip.delay: 500
         }
 
-        Rectangle {
+        PackageIcon {
+            packageName: root.name
+            iconSource: root.iconSource
             Layout.preferredWidth: root.columns.icon
             Layout.preferredHeight: root.columns.icon
             Layout.alignment: Qt.AlignVCenter
-            radius: 8
-            color: HoloniightPalette.surfaceElevated
-
-            HnLabel {
-                anchors.centerIn: parent
-                role: HnTypographyRole.Body
-                rawText: root.name.length > 0 ? root.name.charAt(0).toUpperCase() : "?"
-                color: HoloniightPalette.textSecondary
-            }
         }
 
         ColumnLayout {

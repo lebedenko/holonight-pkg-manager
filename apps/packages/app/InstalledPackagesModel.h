@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PackageIconResolver.h"
 #include "holonight_packages_application/package_list_use_case.h"
 #include "holonight_packages_domain/package.h"
 #include "holonight_packages_domain/package_source.h"
@@ -10,6 +11,7 @@
 #include <QHash>
 #include <QModelIndex>
 #include <QObject>
+#include <QPointer>
 #include <QString>
 #include <QVariant>
 #include <QtQmlIntegration/qqmlintegration.h>
@@ -53,6 +55,8 @@ class InstalledPackagesModel : public QAbstractListModel {
     OptionalDependenciesRole,
     ConfigFileCountRole,
     IsOrphanRole,
+    IconNameRole,
+    IconSourceRole,
   };
 
   explicit InstalledPackagesModel(std::shared_ptr<holonight_packages_application::PackageListUseCase> use_case,
@@ -81,6 +85,8 @@ class InstalledPackagesModel : public QAbstractListModel {
   Q_INVOKABLE void refresh();
   Q_INVOKABLE static QString formatSize(quint64 bytes);
 
+  void setIconResolver(PackageIconResolver* resolver);
+
  signals:
   void statusChanged();
 
@@ -97,6 +103,8 @@ class InstalledPackagesModel : public QAbstractListModel {
     int orphan_package_count = 0;
     quint64 reclaimable_size_bytes = 0;
   };
+
+  QPointer<PackageIconResolver> icon_resolver_;
 
   void startLoading();
   void onEnumerationFinished();

@@ -3,6 +3,7 @@
 #include "DBusUpdateCheckClient.h"
 #include "ExploreModel.h"
 #include "InstalledPackagesModel.h"
+#include "PackageIconResolver.h"
 #include "SnapshotFileReader.h"
 #include "UpdateCheckModel.h"
 #include "UpdateStatusClient.h"
@@ -60,6 +61,11 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
           .databasePath = holonight_packages_backends::kDefaultPacmanDatabasePath,
       });
   explore_model_ = std::make_unique<ExploreModel>(std::move(explore_source));
+
+  icon_resolver_ = std::make_unique<PackageIconResolver>();
+  installed_packages_model_->setIconResolver(icon_resolver_.get());
+  updates_model_->setIconResolver(icon_resolver_.get());
+  explore_model_->setIconResolver(icon_resolver_.get());
 
   update_status_client_ = std::make_unique<UpdateStatusClient>(QDBusConnection::sessionBus());
 

@@ -1,3 +1,7 @@
+add_library(holonight_package_icons STATIC app/PackageIconResolver.cpp app/PackageIconResolver.h)
+target_include_directories(holonight_package_icons PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/app")
+target_link_libraries(holonight_package_icons PUBLIC holonight_packages_domain Qt6::Gui Qt6::Concurrent PRIVATE AppStreamQt)
+
 qt_add_executable(holonight-packages
   main.cpp
   app/PackagesApplication.h
@@ -53,6 +57,7 @@ qt_add_qml_module(holonight-packages
 )
 
 target_link_libraries(holonight-packages PRIVATE
+  holonight_package_icons
   HolonightQt::Controls
   holonight_packages_domain
   holonight_packages_application

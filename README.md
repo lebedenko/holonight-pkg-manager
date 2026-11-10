@@ -20,6 +20,7 @@ the per-user service, the privileged helper, and desktop/D-Bus integration are n
 - Qt >=6.11 (`Core`, `Gui`, `Quick`, `Qml`, `Network`, `Sql`, `DBus`, `Concurrent`, and `QuickControls2`)
 - libalpm (ships with `pacman` on Arch Linux; no separate `-dev` package needed)
 - ICU (`uc`, for Unicode case-insensitive Explore search)
+- AppStreamQt >=1.0 (`appstream-qt` on Arch Linux, required for the GUI)
 - CMake 3.25+
 - Ninja
 - [Task](https://taskfile.dev/)
@@ -27,6 +28,17 @@ the per-user service, the privileged helper, and desktop/D-Bus integration are n
 - Python 3 and ripgrep for acceptance/policy checks
 - Installed GTest >=1.14 CONFIG with GMock and Qt Test/QmlPrivate (only when tests are enabled); private Qt must match public Qt exactly
 - clang-format, clang-tidy, REUSE and dbus/ldd test helpers; gcovr only for coverage
+
+## Package icons
+
+Installed, Updates and Explore use local application icons, preserving their original colors. Installed icons come
+from package-owned visible desktop entries. Exact AppStream package associations provide icons for uninstalled official
+applications. Libraries, command-line tools and unmatched packages retain initial-letter tiles; detail panels are unchanged.
+No icons or catalogs are downloaded by the GUI.
+
+On Arch, optional `archlinux-appstream-data` supplies the catalog and cached icons. Optional `kimageformats` supplies
+Qt's JPEG XL decoder for current Arch cached icons. Without either, missing or unreadable icons silently use tiles.
+Image plugins must be available on Qt's plugin search path in the installed runtime, as well as during development.
 
 ## Development
 
