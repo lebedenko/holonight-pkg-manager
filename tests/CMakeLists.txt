@@ -241,6 +241,7 @@ target_link_libraries(holonight_transaction_test_support PUBLIC
 # The privileged transaction core runs against temporary fixture roots only (REQ-C-009, REQ-C-010).
 add_executable(test_holonight_transaction
   transaction/main.cpp
+  transaction/database_lock_test.cpp
   transaction/download_classifier_test.cpp
   transaction/error_mapping_test.cpp
   transaction/event_mapper_test.cpp
@@ -257,7 +258,15 @@ target_include_directories(test_holonight_transaction PRIVATE
   ${PROJECT_SOURCE_DIR}/src/transaction/src)
 target_compile_features(test_holonight_transaction PRIVATE cxx_std_23)
 target_link_libraries(test_holonight_transaction PRIVATE
-  GTest::gtest GTest::gmock holonight_transaction_test_support PkgConfig::Alpm)
+  GTest::gtest GTest::gmock holonight_transaction_test_support PkgConfig::Alpm holonight_packages_pacman_config)
+add_executable(holonight_lock_finalization_child transaction/lock_finalization_child.cpp)
+target_include_directories(holonight_lock_finalization_child PRIVATE
+  ${PROJECT_SOURCE_DIR}/src/transaction/src)
+target_link_libraries(holonight_lock_finalization_child PRIVATE holonight_transaction_test_support holonight_packages_pacman_config PkgConfig::Alpm)
+target_compile_features(holonight_lock_finalization_child PRIVATE cxx_std_23)
+add_dependencies(test_holonight_transaction holonight_lock_finalization_child)
+target_compile_definitions(test_holonight_transaction PRIVATE
+  HOLONIGHT_LOCK_CHILD="$<TARGET_FILE:holonight_lock_finalization_child>")
 gtest_discover_tests(test_holonight_transaction
   TEST_PREFIX "holonight_transaction."
   DISCOVERY_MODE PRE_TEST
@@ -320,7 +329,7 @@ target_compile_features(test_holonight_transaction_userns PRIVATE cxx_std_23)
 target_compile_definitions(test_holonight_transaction_userns PRIVATE
   HOLONIGHT_TEST_MARKER_TOOL="$<TARGET_FILE:holonight_test_marker_tool>")
 target_link_libraries(test_holonight_transaction_userns PRIVATE
-  GTest::gtest GTest::gmock holonight_transaction_test_support PkgConfig::Alpm)
+  GTest::gtest GTest::gmock holonight_transaction_test_support PkgConfig::Alpm holonight_packages_pacman_config)
 # Exit 77 is a skip (namespaces unavailable); HOLONIGHT_REQUIRE_USERNS=1 turns that into a failure for CI.
 gtest_discover_tests(test_holonight_transaction_userns
   TEST_PREFIX "holonight_userns."

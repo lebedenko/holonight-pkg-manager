@@ -78,38 +78,25 @@ TEST(JournalLoggerTest, AMessageWithNewlinesIsOneJournalLine) {
   EXPECT_EQ(std::count(text.begin(), text.end(), '\n'), 1);
 }
 
-TEST(HelperTerminatorTest, RemovesTheLockFileThenExitsAfterTheGracePeriod) {
-  const fs::path lock = fs::temp_directory_path() / ("terminator-lock-" + std::to_string(::getpid()));
-  {
-    std::ofstream(lock) << ::getpid();
-  }
-  int exits = 0;
-  HelperTerminator terminator(lock, [&exits] { ++exits; }, std::chrono::milliseconds(40));
+TEST(HelperTerminatorTest, FinalizesOnceOnlyAfterTheGracePeriod) {
+  int finalizations = 0;
+  const auto started = std::chrono::steady_clock::now();
+  HelperTerminator terminator(
+      [&] {
+        EXPECT_GE(std::chrono::steady_clock::now() - started, std::chrono::milliseconds(100));
+        ++finalizations;
+      },
+      std::chrono::milliseconds(100));
   terminator.terminateAfterReply();
-  EXPECT_FALSE(fs::exists(lock));  // the next package manager is not blocked
-  EXPECT_EQ(exits, 0);             // the reply still has time to leave
+  terminator.terminateAfterReply();
+  EXPECT_EQ(finalizations, 0);
+  pump(20);
+  EXPECT_EQ(finalizations, 0);
+  pump(200);
+  EXPECT_EQ(finalizations, 1);
+  terminator.terminateAfterReply();
   pump(150);
-  EXPECT_EQ(exits, 1);
-}
-
-TEST(HelperTerminatorTest, PreservesAForeignLock) {
-  const fs::path lock = fs::temp_directory_path() / ("foreign-lock-" + std::to_string(::getpid()));
-  std::ofstream(lock) << "0";
-  int exits = 0;
-  HelperTerminator terminator(lock, [&exits] { ++exits; }, std::chrono::milliseconds(10));
-  terminator.terminateAfterReply();
-  EXPECT_TRUE(fs::exists(lock));
-  pump(80);
-  EXPECT_EQ(exits, 1);
-  fs::remove(lock);
-}
-
-TEST(HelperTerminatorTest, AMissingLockFileIsNotAnError) {
-  int exits = 0;
-  HelperTerminator terminator("/definitely/not/here/db.lck", [&exits] { ++exits; }, std::chrono::milliseconds(10));
-  terminator.terminateAfterReply();
-  pump(80);
-  EXPECT_EQ(exits, 1);
+  EXPECT_EQ(finalizations, 1);
 }
 
 TEST(HelperSignalsTest, SigtermBecomesAQtSignal) {

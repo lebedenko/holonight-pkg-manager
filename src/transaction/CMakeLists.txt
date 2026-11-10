@@ -4,6 +4,7 @@ pkg_check_modules(Alpm REQUIRED IMPORTED_TARGET libalpm)
 # The privileged transaction core. It links no Qt, D-Bus or polkit code (REQ-C-001, REQ-C-002).
 add_library(holonight_packages_transaction STATIC
   include/holonight_packages_transaction/alpm_transaction_engine.h
+  include/holonight_packages_transaction/database_lock.h
   include/holonight_packages_transaction/log_sink.h
   include/holonight_packages_transaction/transaction_config.h
   include/holonight_packages_transaction/transaction_seams.h

@@ -41,7 +41,11 @@ Interface `org.holonight.PackageHelper1.Transactions` on the system bus, object 
 7. One transaction runs at a time. A second `PreparePlan` or `Execute` answers `Busy`.
 
 If the helper was killed during a transaction, libalpm's lock file `/var/lib/pacman/db.lck` may be left behind. The helper
-checks the libalpm lock owner PID before cancellation cleanup and preserves foreign locks, so after checking that no package manager is running, remove it by hand.
+keeps the lock intact during the 150 ms reply grace period. Finalization then holds the transaction lifecycle mutex,
+checks whether its own libalpm session owns the lock (libalpm writes no PID), removes only an owned lock, and exits
+with status 0 without releasing the mutex. Worker acquisition, release and handle teardown cannot race this cleanup.
+If the worker released first, a foreign replacement lock is preserved. Filesystem removal errors do not prevent exit.
+After an external kill, check that no package manager is running before removing a stale lock by hand.
 
 ## Building and testing
 
@@ -58,23 +62,23 @@ and systemd unit in agreement.
 
 ## Manual verification (disposable Arch VM)
 
-These steps need a real polkit agent, a real system bus and real root. None has been run yet.
+These steps need a real polkit agent, a real system bus and real root. Run on 2026-11-10 in an Arch cloud-image VM (QEMU/KVM, helper built with the release preset, signed throwaway repository, `pkttyagent` as the polkit agent): all 18 passed (one after a fix).
 
-- [ ] (not run) Install a small official package from the GUI or a test client. The polkit prompt appears, and the transaction succeeds after authentication (REQ-F-063, REQ-F-065).
-- [ ] (not run) Repeat an install within the same session without authentication if the `auth_admin_keep` cache is still valid, and confirm that it is accepted without a second prompt.
-- [ ] (not run) Remove a package. The polkit prompt appears every time, with no cached authorization (REQ-F-064).
-- [ ] (not run) Cancel at the polkit prompt. The reply is `NotAuthorized`, and the same plan can be executed afterwards within 5 minutes (REQ-F-009).
-- [ ] (not run) Remove a package whose configuration file was modified. Confirm the `.pacsave` file exists (REQ-F-037).
-- [ ] (not run) Confirm that no sync refresh happened: the modification times and sizes of `/var/lib/pacman/sync` files are unchanged after an install (REQ-F-027).
-- [ ] (not run) Set `SigLevel = Optional` on a throwaway repository in the VM's `pacman.conf`. Confirm that install is refused with `InsecureSigLevel` and that the file is unchanged (REQ-F-039, REQ-F-041). Repeat with `SigLevel = Required TrustAll`.
-- [ ] (not run) Install a package whose hook writes a marker in `/etc/pacman.d/hooks`. Confirm the marker exists and the hook appears in the preview (REQ-F-062).
-- [ ] (not run) Under the hardened unit, install a package, remove a package, install a package that ships a hook and install one that ships an install scriptlet. All succeed (REQ-C-015, REQ-F-062).
-- [ ] (not run) Install a package whose PostTransaction hook is made to fail. Confirm outcome `Succeeded` with the `HookFailed` warning (REQ-F-073).
-- [ ] (not run) Remove a package that other installed packages require. Confirm `BreaksDependents` lists them and that nothing changed (REQ-F-033).
-- [ ] (not run) Cancel during a slow download (a throttled mirror in the VM). Confirm `Cancelled` and that `/var/lib/pacman/db.lck` is absent (REQ-F-056, REQ-F-046). Confirm the helper process ended and that the next call starts a new one.
-- [ ] (not run) Create `/var/lib/pacman/db.lck` by hand, run an `Execute`, and confirm `Busy`, that the plan stays valid, and that the helper did not remove the lock (REQ-F-047).
-- [ ] (not run) Request an HTTP mirror that answers 404 for a package file listed in the sync database. Confirm `SyncDatabaseStale` (REQ-F-028, rule 1).
-- [ ] (not run) Call `Execute` from a client with a call timeout of at least one hour on a slow download and confirm the reply arrives (REQ-F-074).
-- [ ] (not run) Let the helper stay idle. Confirm in the journal that it exits 60 seconds after the last plan or transaction (REQ-F-068).
-- [ ] (not run) As an unprivileged user, call `PreparePlan` on the system bus and confirm the reply. As that user, confirm that the helper cannot own its name (REQ-C-006).
-- [ ] (not run) Confirm that the journal holds raw libalpm text for a forced error and that the GUI or client receives only the code (REQ-F-052).
+- [x] (passed 2026-11-10) Install a small official package from the GUI or a test client. The polkit prompt appears, and the transaction succeeds after authentication (REQ-F-063, REQ-F-065).
+- [x] (passed 2026-11-10) Repeat an install within the same session without authentication if the `auth_admin_keep` cache is still valid, and confirm that it is accepted without a second prompt.
+- [x] (passed 2026-11-10) Remove a package. The polkit prompt appears every time, with no cached authorization (REQ-F-064).
+- [x] (passed 2026-11-10) Cancel at the polkit prompt. The reply is `NotAuthorized`, and the same plan can be executed afterwards within 5 minutes (REQ-F-009).
+- [x] (passed 2026-11-10) Remove a package whose configuration file was modified. Confirm the `.pacsave` file exists (REQ-F-037).
+- [x] (passed 2026-11-10) Confirm that no sync refresh happened: the modification times and sizes of `/var/lib/pacman/sync` files are unchanged after an install (REQ-F-027).
+- [x] (passed 2026-11-10) Set `SigLevel = Optional` on a throwaway repository in the VM's `pacman.conf`. Confirm that install is refused with `InsecureSigLevel` and that the file is unchanged (REQ-F-039, REQ-F-041). Repeat with `SigLevel = Required TrustAll`.
+- [x] (passed 2026-11-10) Install a package whose hook writes a marker in `/etc/pacman.d/hooks`. Confirm the marker exists and the hook appears in the preview (REQ-F-062).
+- [x] (passed 2026-11-10) Under the hardened unit, install a package, remove a package, install a package that ships a hook and install one that ships an install scriptlet. All succeed (REQ-C-015, REQ-F-062).
+- [x] (passed 2026-11-10) Install a package whose PostTransaction hook is made to fail. Confirm outcome `Succeeded` with the `HookFailed` warning (REQ-F-073).
+- [x] (passed 2026-11-10) Remove a package that other installed packages require. Confirm `BreaksDependents` lists them and that nothing changed (REQ-F-033).
+- [x] (failed on 2026-11-10, fixed and passed again the same day: Cancelled reply, helper exit and restart are correct, but `db.lck` stayed behind: libalpm 16.0.1 creates it empty, and `HelperTerminator` removed it only when it contained the helper's PID, so every later transaction answered `Busy`. The terminator now asks the engine whether this process's own transaction holds the lock) Cancel during a slow download (a throttled mirror in the VM). Confirm `Cancelled` and that `/var/lib/pacman/db.lck` is absent (REQ-F-056, REQ-F-046). Confirm the helper process ended and that the next call starts a new one.
+- [x] (passed 2026-11-10) Create `/var/lib/pacman/db.lck` by hand, run an `Execute`, and confirm `Busy`, that the plan stays valid, and that the helper did not remove the lock (REQ-F-047).
+- [x] (passed 2026-11-10) Request an HTTP mirror that answers 404 for a package file listed in the sync database. Confirm `SyncDatabaseStale` (REQ-F-028, rule 1).
+- [x] (passed 2026-11-10) Call `Execute` from a client with a call timeout of at least one hour on a slow download and confirm the reply arrives (REQ-F-074).
+- [x] (passed 2026-11-10) Let the helper stay idle. Confirm in the journal that it exits 60 seconds after the last plan or transaction (REQ-F-068).
+- [x] (passed 2026-11-10) As an unprivileged user, call `PreparePlan` on the system bus and confirm the reply. As that user, confirm that the helper cannot own its name (REQ-C-006).
+- [x] (passed 2026-11-10) Confirm that the journal holds raw libalpm text for a forced error and that the GUI or client receives only the code (REQ-F-052).

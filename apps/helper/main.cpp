@@ -12,12 +12,16 @@
 #include "holonight_packages_application/plan_service.h"
 #include "holonight_packages_application/update_check_runtime.h"
 #include "holonight_packages_transaction/alpm_transaction_engine.h"
+#include "holonight_packages_transaction/database_lock.h"
 
 #include <QCoreApplication>
 #include <QDBusConnection>
 #include <QTextStream>
 
+#include <cstdlib>
+#include <filesystem>
 #include <memory>
+#include <system_error>
 
 namespace {
 
@@ -49,7 +53,15 @@ int main(int argc, char* argv[]) {
   holonight_packages_application::SystemPlanIdGenerator ids;
   holonight_packages_application::SystemClock clock;
   holonight_helper::QtWorkRunner runner;
-  holonight_helper::HelperTerminator terminator(config->lockFile());
+  holonight_helper::HelperTerminator terminator([lockFile = config->lockFile()] {
+    const holonight_packages_transaction::DatabaseLockGuard guard;
+    std::error_code ignored;
+    if (guard.ownsLock()) {
+      std::filesystem::remove(lockFile, ignored);
+    }
+    // Do not release the guard: worker acquisition and cleanup stay blocked until process exit.
+    std::_Exit(0);
+  });
 
   holonight_packages_application::PlanService plans(holonight_packages_application::PlanService::Dependencies{
       .engine = engine,

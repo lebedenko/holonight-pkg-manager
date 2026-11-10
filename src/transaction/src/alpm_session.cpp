@@ -1,8 +1,11 @@
 #include "alpm_session.h"
 
+#include "holonight_packages_transaction/database_lock.h"
+
 #include <cstdarg>
 #include <cstdio>
 #include <filesystem>
+#include <mutex>
 #include <vector>
 
 namespace holonight_packages_transaction {
@@ -153,25 +156,56 @@ std::expected<std::unique_ptr<AlpmSession>, TransactionFailure> AlpmSession::ope
   return session;
 }
 
+namespace {
+struct LifecycleState {
+  std::mutex mutex;
+  // A NOLOCK preview can coexist with the owning session.
+  const AlpmSession* owner = nullptr;
+};
+
+LifecycleState& lifecycleState() {
+  static LifecycleState state;
+  return state;
+}
+}  // namespace
+
+DatabaseLockGuard::DatabaseLockGuard() : lock_(lifecycleState().mutex) {}
+
+bool DatabaseLockGuard::ownsLock() const noexcept { return lock_.owns_lock() && lifecycleState().owner != nullptr; }
+
 AlpmSession::~AlpmSession() {
+  const std::scoped_lock lock(lifecycleState().mutex);
   if (handle_ != nullptr) {
-    releaseTransaction();
+    if (transactionOpen_) {
+      alpm_trans_release(handle_);
+    }
     alpm_release(handle_);
+    if (lifecycleState().owner == this) {
+      lifecycleState().owner = nullptr;
+    }
   }
 }
 
 bool AlpmSession::beginTransaction(int flags) {
+  const std::scoped_lock lock(lifecycleState().mutex);
   if (transactionOpen_) {
     return false;
   }
   transactionOpen_ = alpm_trans_init(handle_, flags) == 0;
+  if (transactionOpen_ && (flags & ALPM_TRANS_FLAG_NOLOCK) == 0) {
+    lifecycleState().owner = this;
+  }
   return transactionOpen_;
 }
 
 void AlpmSession::releaseTransaction() {
+  const std::scoped_lock lock(lifecycleState().mutex);
   if (transactionOpen_) {
     alpm_trans_release(handle_);
     transactionOpen_ = false;
+    if (lifecycleState().owner == this) {
+      lifecycleState().owner = nullptr;
+    }
   }
 }
 

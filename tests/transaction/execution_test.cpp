@@ -3,6 +3,7 @@
 #include "gpg_keyring.h"
 #include "gpgme_guard.h"
 #include "holonight_packages_transaction/alpm_transaction_engine.h"
+#include "holonight_packages_transaction/database_lock.h"
 #include "manifest.h"
 #include "repo_builder.h"
 
@@ -73,6 +74,7 @@ class ExecutionTest : public ::testing::Test {
     seams.observe = [this](std::string_view stage) {
       stages_.emplace_back(stage);
       lockAtStage_[std::string(stage)] = fs::exists(world_.lockPath());
+      ownedAtStage_[std::string(stage)] = holonight_packages_transaction::DatabaseLockGuard{}.ownsLock();
       if (onStage) {
         onStage(stage);
       }
@@ -114,6 +116,7 @@ class ExecutionTest : public ::testing::Test {
   RepoBuilder core_;
   std::vector<std::string> stages_;
   std::map<std::string, bool> lockAtStage_;
+  std::map<std::string, bool> ownedAtStage_;
   std::vector<std::string> journal_;
   std::function<void(std::string_view)> onStage;
   std::function<int(const std::string&, const std::string&, bool)> fetchSeam;
@@ -208,6 +211,11 @@ TEST_F(ExecutionTest, TheLockIsHeldFromTheReResolutionToTheEndAndNeverOtherwise)
   EXPECT_TRUE(lockAtStage_.at("resolved"));
   EXPECT_TRUE(lockAtStage_.at("commit-point"));
   EXPECT_FALSE(fs::exists(world_.lockPath()));
+  // The helper removes the lock after a cancel only when its own transaction holds it; libalpm writes no PID.
+  EXPECT_FALSE(ownedAtStage_.at("opened"));
+  EXPECT_TRUE(ownedAtStage_.at("resolved"));
+  EXPECT_TRUE(ownedAtStage_.at("commit-point"));
+  EXPECT_FALSE(holonight_packages_transaction::DatabaseLockGuard{}.ownsLock());
 }
 
 TEST_F(ExecutionTest, ALockHeldByAnotherProcessIsBusyAndIsNeverRemoved) {
