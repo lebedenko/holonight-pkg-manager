@@ -8,6 +8,7 @@ add_library(holonight_packages_domain STATIC
   src/transaction_progress.cpp
   src/transaction_request.cpp
   src/transaction_result.cpp
+  src/transaction_service.cpp
   src/update_source.cpp
 )
 target_include_directories(holonight_packages_domain PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

@@ -4,6 +4,7 @@ import Holonight.Core
 import HolonightPackages
 import "../explore"
 import "../packages"
+import "../transactions"
 import "../updates"
 
 Rectangle {
@@ -16,6 +17,8 @@ Rectangle {
     property var updateStatusClient: null
     // Optional: the online-check view-model. Null hides the Check now control.
     property var updateCheckModel: null
+    // Optional: the install/remove view-model. Null leaves the Install and Remove controls disabled and shows no dialog.
+    property var transactionController: null
 
     // Installed stays the landing page until the Updates page gains an advisor and update actions.
     property string currentPage: "installed"
@@ -53,6 +56,7 @@ Rectangle {
             InstalledPackagesView {
                 objectName: "installedPage"
                 installedPackagesModel: root.installedPackagesModel
+                transactionController: root.transactionController
             }
 
             UpdatesView {
@@ -64,7 +68,13 @@ Rectangle {
             ExploreView {
                 objectName: "explorePage"
                 exploreModel: root.exploreModel
+                transactionController: root.transactionController
             }
         }
+    }
+
+    // Inert while transactionController is null.
+    TransactionDialog {
+        controller: root.transactionController
     }
 }

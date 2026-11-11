@@ -13,6 +13,10 @@ class UpdateStatusClient;
 class UpdateCheckClient;
 class SnapshotFileReader;
 class UpdateCheckModel;
+class DBusTransactionService;
+class ModelListRefresh;
+class TransactionController;
+class WindowCloseGuard;
 
 class PackagesApplication : public QGuiApplication {
   Q_OBJECT
@@ -40,6 +44,10 @@ class PackagesApplication : public QGuiApplication {
   std::unique_ptr<UpdateCheckClient> update_check_client_;
   std::unique_ptr<SnapshotFileReader> snapshot_reader_;
   std::unique_ptr<UpdateCheckModel> update_check_model_;
+  std::unique_ptr<DBusTransactionService> transaction_service_;
+  std::unique_ptr<ModelListRefresh> list_refresh_;
+  std::unique_ptr<TransactionController> transaction_controller_;
   std::unique_ptr<QQuickView> view_;
+  std::unique_ptr<WindowCloseGuard> close_guard_;
   bool ready_ = false;
 };

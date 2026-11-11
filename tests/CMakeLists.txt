@@ -7,10 +7,13 @@ add_executable(test_holonight_packages_checks
   domain/transaction_error_test.cpp
   domain/transaction_plan_test.cpp
   domain/transaction_request_test.cpp
+  domain/transaction_service_test.cpp
   application/fake_clock_test.cpp
   application/transaction_ports_test.cpp
   application/plan_store_test.cpp
   application/plan_service_test.cpp
+  application/transaction_doubles_test.cpp
+  application/transaction_flow_test.cpp
   application/idle_monitor_test.cpp
   application/snapshot_selection_test.cpp
   application/update_age_format_test.cpp
@@ -37,6 +40,8 @@ gtest_discover_tests(test_holonight_packages_checks
   TEST_PREFIX "holonight_packages_checks."
   DISCOVERY_MODE PRE_TEST
   PROPERTIES TIMEOUT 10 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+add_test(NAME holonight_packages_checks_no_qtdbus
+  COMMAND sh -c "! ldd \"$1\" | grep -q libQt6DBus" sh $<TARGET_FILE:test_holonight_packages_checks>)
 add_test(NAME holonight_packages_checks_no_libalpm
   COMMAND sh -c "! ldd \"$1\" | grep -q libalpm" sh $<TARGET_FILE:test_holonight_packages_checks>)
 
@@ -78,6 +83,9 @@ add_executable(test_holonight_packages
   apps/installed_packages_view_test.cpp
   apps/package_icon_resolver_test.cpp
   apps/explore_model_test.cpp
+  apps/helper_wire_test.cpp
+  apps/transaction_messages_test.cpp
+  apps/model_list_refresh_test.cpp
   apps/explore_view_test.cpp
   apps/snapshot_file_reader_test.cpp
   apps/update_check_client_test.cpp
@@ -89,6 +97,9 @@ add_executable(test_holonight_packages
   ${PROJECT_SOURCE_DIR}/apps/packages/app/InstalledPackagesFilterModel.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdatesModel.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/ExploreModel.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/ModelListRefresh.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/HelperWire.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/TransactionMessages.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/DataFreshness.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdateStatusClient.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdateCheckClient.cpp
@@ -116,6 +127,7 @@ target_compile_definitions(test_holonight_packages PRIVATE
   HOLONIGHT_QML_IMPORT_PATH="${HOLONIGHT_QML_IMPORT_PATH}"
   HOLONIGHT_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
   HOLONIGHT_PACKAGED_EXECUTABLE="$<TARGET_FILE:holonight-packaged>"
+  HOLONIGHT_HELPER_DBUS_XML="${PROJECT_SOURCE_DIR}/apps/helper/dbus/org.holonight.PackageHelper1.xml"
   HOLONIGHT_QML_SOURCE_DIR="${PROJECT_SOURCE_DIR}/qml")
 target_link_libraries(test_holonight_packages PRIVATE
   holonight_package_icons
@@ -174,7 +186,13 @@ add_test(NAME runtime_qml_import_policy_fixtures
 find_package(Qt6 ${Qt6_VERSION} EXACT REQUIRED COMPONENTS QmlPrivate)
 qt_add_executable(test_runtime_controls
   runtime/main.cpp runtime/test_runtime_controls.cpp
+  runtime/test_transaction_dialogs.cpp
   apps/installed_packages_view_test.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/TransactionController.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/TransactionController.h
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/TransactionRowModel.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/TransactionRowModel.h
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/TransactionMessages.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/InstalledPackagesModel.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/InstalledPackagesModel.h
   ${PROJECT_SOURCE_DIR}/apps/packages/app/InstalledPackagesFilterModel.cpp
@@ -296,6 +314,73 @@ gtest_discover_tests(test_holonight_package_helper
   TEST_PREFIX "holonight_helper."
   DISCOVERY_MODE PRE_TEST
   PROPERTIES TIMEOUT 30)
+
+# Transaction view-model and dialogs: Qt Quick, but no QtDBus (the controller talks to the port only).
+add_executable(test_holonight_packages_transactions
+  transactions/main.cpp
+  transactions/transaction_row_model_test.cpp
+  transactions/transaction_controller_test.cpp
+  transactions/window_close_guard_test.cpp
+  transactions/transaction_dialog_view_test.cpp
+  transactions/transaction_buttons_test.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/TransactionRowModel.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/TransactionController.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/WindowCloseGuard.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/TransactionMessages.cpp
+)
+set_target_properties(test_holonight_packages_transactions PROPERTIES AUTOMOC ON)
+target_include_directories(test_holonight_packages_transactions PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/application
+  ${CMAKE_CURRENT_SOURCE_DIR}/apps
+  ${CMAKE_CURRENT_SOURCE_DIR}/support
+  ${PROJECT_SOURCE_DIR}/apps/packages/app)
+target_compile_features(test_holonight_packages_transactions PRIVATE cxx_std_23)
+target_compile_definitions(test_holonight_packages_transactions PRIVATE
+  HOLONIGHT_QML_IMPORT_PATH="${HOLONIGHT_QML_IMPORT_PATH}"
+  HOLONIGHT_QML_SOURCE_DIR="${PROJECT_SOURCE_DIR}/qml")
+target_link_libraries(test_holonight_packages_transactions PRIVATE
+  GTest::gtest GTest::gmock Qt6::Gui Qt6::Quick Qt6::Qml Qt6::Test Qt6::Concurrent
+  holonight_packages_application holonight_packages_domain)
+gtest_discover_tests(test_holonight_packages_transactions
+  TEST_PREFIX "holonight_transactions."
+  DISCOVERY_MODE PRE_TEST
+  PROPERTIES TIMEOUT 30 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;LD_LIBRARY_PATH=$<TARGET_FILE_DIR:HoloNight::Config>")
+# Qt Gui itself pulls in libQt6DBus for its platform integration, so ldd would always show it. What matters is that
+# this binary does not depend on QtDBus directly (its own NEEDED entries).
+add_test(NAME holonight_packages_transactions_no_qtdbus
+  COMMAND sh -c "! readelf -d \"$1\" | grep -q 'NEEDED.*libQt6DBus'" sh $<TARGET_FILE:test_holonight_packages_transactions>)
+
+# The GUI's helper client against a scripted fake helper on a private dbus-daemon. Every test here needs the daemon,
+# so with it missing no test in this binary passes (REQ-NF-005, REQ-NF-006).
+add_executable(test_holonight_packages_helper_client
+  helper_client/main.cpp
+  helper_client/fake_helper_object_test.cpp
+  helper_client/dbus_transaction_service_test.cpp
+  helper_client/helper_contract_test.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/HelperWire.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/DBusTransactionService.cpp
+)
+set_target_properties(test_holonight_packages_helper_client PROPERTIES AUTOMOC ON)
+target_include_directories(test_holonight_packages_helper_client PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/support
+  ${CMAKE_CURRENT_SOURCE_DIR}/packaged
+  ${CMAKE_CURRENT_SOURCE_DIR}/helper_client
+  ${PROJECT_SOURCE_DIR}/apps/packages/app)
+target_compile_features(test_holonight_packages_helper_client PRIVATE cxx_std_23)
+target_compile_definitions(test_holonight_packages_helper_client PRIVATE
+  HOLONIGHT_HELPER_DBUS_XML="${PROJECT_SOURCE_DIR}/apps/helper/dbus/org.holonight.PackageHelper1.xml")
+target_link_libraries(test_holonight_packages_helper_client PRIVATE
+  GTest::gtest GTest::gmock Qt6::Core Qt6::DBus Qt6::Test holonight_packages_domain holonight_package_helper_service
+  holonight_transaction_test_support)
+gtest_discover_tests(test_holonight_packages_helper_client
+  TEST_PREFIX "holonight_helper_client."
+  DISCOVERY_MODE PRE_TEST
+  PROPERTIES TIMEOUT 60)
+# With dbus-daemon off PATH the binary must fail, not pass or skip (REQ-NF-006).
+add_test(NAME helper_client_requires_dbus_daemon
+  COMMAND ${CMAKE_COMMAND} -E env PATH=/nonexistent $<TARGET_FILE:test_holonight_packages_helper_client>)
+set_tests_properties(helper_client_requires_dbus_daemon PROPERTIES
+  WILL_FAIL TRUE TIMEOUT 120 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 # The polkit client against a fake polkitd. It is the only test binary that links the polkit code (REQ-C-007).
 add_executable(test_holonight_package_helper_polkit

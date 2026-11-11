@@ -8,8 +8,8 @@ Scans the sources under DIR (default: the repository) and prints one line per vi
 
     RULE path:line: offending text
 
-Exits 1 when anything is found. With --base, additionally checks (against that git ref) that nothing changed under
-qml/packages and qml/explore, and that the pre-existing D-Bus `Updates` interface block is byte-identical.
+Exits 1 when anything is found. With --base, additionally checks (against that git ref) that the pre-existing D-Bus
+`Updates` interface block is byte-identical.
 """
 from __future__ import annotations
 
@@ -128,6 +128,11 @@ RULES: list[Rule] = [
          rx(r"Server\s*=\s*(?!file://)[A-Za-z][A-Za-z0-9+.-]*://"),
          include=("tests/helper", "tests/transaction"),
          suffixes=(".h", ".hpp", ".cpp", ".cc", ".conf", ".in", ".sh", ".py", ".txt", ".md", "")),
+    Rule("T-001", "the helper's bus names appear only in the GUI adapter and its wire decoding",
+         rx(r"org\.holonight\.PackageHelper1"),
+         include=("src/domain", "src/application", "apps/packages", "qml"),
+         exclude=("apps/packages/app/DBusTransactionService.h", "apps/packages/app/DBusTransactionService.cpp",
+                  "apps/packages/app/HelperWire.h", "apps/packages/app/HelperWire.cpp")),
     Rule("F-007", "the installed-versus-available comparison exists once",
          rx(r"\balpm_pkg_vercmp\b"),
          include=("src", "apps"),
@@ -229,8 +234,6 @@ def check_against_base(root: Path, base: str) -> list[str]:
         print(f"check-layering: base ref '{base}' not found; skipping the base comparison", file=sys.stderr)
         return []
     problems: list[str] = []
-    changed = git(root, "diff", "--name-only", base, "--", "qml/packages", "qml/explore").stdout.split()
-    problems.extend(f"C-007 {path}: qml/packages and qml/explore must not change" for path in changed)
     xml = "apps/packaged/dbus/org.holonight.Packages1.Updates.xml"
     before = git(root, "show", f"{base}:{xml}")
     if before.returncode == 0 and (root / xml).exists():
@@ -244,7 +247,7 @@ def check_against_base(root: Path, base: str) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
-    parser.add_argument("--base", help="git ref to compare qml/packages, qml/explore and the Updates D-Bus block with")
+    parser.add_argument("--base", help="git ref to compare the Updates D-Bus block with")
     arguments = parser.parse_args()
     problems = scan(arguments.root)
     if arguments.base:

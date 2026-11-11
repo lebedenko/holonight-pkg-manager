@@ -10,6 +10,8 @@ Item {
     id: root
 
     required property InstalledPackagesModel installedPackagesModel
+    // Optional TransactionController, passed down to the detail panel's Remove control.
+    property var transactionController: null
 
     readonly property bool hasPackages: root.installedPackagesModel.status === InstalledPackagesModel.Loaded
                                         && root.installedPackagesModel.totalPackageCount > 0
@@ -88,6 +90,7 @@ Item {
                     id: packageDetail
 
                     filterModel: filterModel
+                    transactionController: root.transactionController
                     Layout.minimumHeight: 200
                     objectName: "packageDetailPanel"
                     Layout.preferredWidth: 300

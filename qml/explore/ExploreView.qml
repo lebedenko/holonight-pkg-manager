@@ -14,6 +14,8 @@ Item {
     id: root
 
     required property ExploreModel exploreModel
+    // Optional TransactionController, passed down to the detail panel's Install control.
+    property var transactionController: null
 
     readonly property bool hasIndex: root.exploreModel.state === ExploreModel.Hint
                                      || root.exploreModel.state === ExploreModel.NoMatches
@@ -92,6 +94,7 @@ Item {
                 ExploreDetailPanel {
                     objectName: "exploreDetailPanel"
                     exploreModel: root.exploreModel
+                    transactionController: root.transactionController
                     Layout.minimumHeight: 200
                     Layout.preferredWidth: 300
                     Layout.fillWidth: resultsLayout.columns === 1

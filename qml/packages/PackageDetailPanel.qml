@@ -8,6 +8,8 @@ PackageDetailFrame {
     id: root
 
     required property InstalledPackagesFilterModel filterModel
+    // Optional TransactionController; null leaves the Remove control disabled.
+    property var transactionController: null
 
     hasSelection: root.filterModel.currentRow >= 0
     detailContent: detailContentComponent
@@ -38,6 +40,8 @@ PackageDetailFrame {
             repository: root.currentPackage.repository
             metadataRows: root.metadataRows
             description: root.currentPackage.description
+            actionKind: "remove"
+            transactionController: root.transactionController
             extraSections: Component {
                 PackageDetailDependencySections {
                     description: root.currentPackage.description

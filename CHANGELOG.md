@@ -6,6 +6,13 @@ All notable changes to HoloNight Packages will be documented in this file.
 
 ### Added
 
+- Install and Remove from the GUI. The Explore details panel has an Install control and the Installed details panel a
+  Remove control, one package at a time. Each asks the privileged `holonight-package-helper` for a plan and shows a
+  confirmation dialog with the packages to install or remove (dependencies, orphans, hooks, expiry); after confirming,
+  polkit authorizes in the helper and a modal progress dialog shows the phase and current item, with Cancel until the
+  transaction starts changing the system. Refusals (for example a required system update) and failures have fixed,
+  translatable messages; a transaction that cannot be cancelled keeps the window open. The Installed and Explore lists
+  are re-read after every outcome. Updates, system upgrade, multi-select and AUR are not part of this change.
 - Initial Qt 6/QML application skeleton and development infrastructure.
 - Read-only Updates page, reachable from the sidebar (Installed stays the landing page). It compares installed
   packages with the sync databases already on disk via libalpm and lists strictly newer official-repository

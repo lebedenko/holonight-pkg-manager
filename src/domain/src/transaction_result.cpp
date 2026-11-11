@@ -22,4 +22,29 @@ std::string_view warningTokenName(WarningToken /*token*/) noexcept {
   return "HookFailed";  // the only warning there is
 }
 
+std::optional<ExecutionOutcome> parseExecutionOutcome(std::string_view name) noexcept {
+  for (const auto outcome : {ExecutionOutcome::Succeeded, ExecutionOutcome::Failed, ExecutionOutcome::Cancelled}) {
+    if (executionOutcomeName(outcome) == name) {
+      return outcome;
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<ChangeAction> parseChangeAction(std::string_view name) noexcept {
+  for (const auto action : {ChangeAction::Install, ChangeAction::Remove}) {
+    if (changeActionName(action) == name) {
+      return action;
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<WarningToken> parseWarningToken(std::string_view name) noexcept {
+  if (name == warningTokenName(WarningToken::HookFailed)) {
+    return WarningToken::HookFailed;
+  }
+  return std::nullopt;
+}
+
 }  // namespace holonight_packages_domain

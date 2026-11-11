@@ -299,7 +299,7 @@ TEST_F(ExploreViewTest, ClickingARowUpdatesTheReadOnlyDetailsPanel) {
   EXPECT_TRUE(shownTexts(child("exploreDetailPanel")).contains("Vi Improved"));
 }
 
-TEST_F(ExploreViewTest, DetailsPanelHasNoActionsOrInstalledOnlyContent) {
+TEST_F(ExploreViewTest, DetailsPanelHasNoRemoveOrInstalledOnlySections) {
   source().enqueue(vimSnapshot());
   startModel();
   createView();
@@ -317,7 +317,7 @@ TEST_F(ExploreViewTest, DetailsPanelHasNoActionsOrInstalledOnlyContent) {
   EXPECT_TRUE(exists("packageDetailOriginBadge"));
 
   const auto texts = shownTexts(child("exploreDetailPanel"));
-  for (const QString& forbidden : {"Remove", "Installed", "Reason", "Required by", "Local state"}) {
+  for (const QString& forbidden : {"Remove", "Reason", "Required by", "Local state"}) {
     EXPECT_FALSE(texts.contains(forbidden)) << qPrintable(forbidden);
   }
   EXPECT_FALSE(exists("packageRowCheckBox"));
@@ -443,6 +443,30 @@ TEST_F(ExploreViewTest, QueryAndSelectionSurviveViewRecreation) {
   ASSERT_TRUE(QTest::qWaitFor([this] { return rowsReady(3); }));
   EXPECT_EQ(model().currentRow(), 2);
   EXPECT_TRUE(shownTexts(child("exploreDetailPanel")).contains("vimb"));
+}
+
+TEST_F(ExploreViewTest, SelectedDetailsFollowInstalledStateAfterReload) {
+  source().enqueue(vimSnapshot());
+  startModel();
+  createView();
+  model().setSearchText(QStringLiteral("vimb"));
+  ASSERT_TRUE(QTest::qWaitFor([this] { return model().rowCount() == 1 && !model().loading(); }, 2000));
+  model().setCurrentRow(0);
+  QCoreApplication::processEvents();
+  EXPECT_FALSE(shownTexts(child("exploreDetailPanel")).contains("Installed"));
+
+  auto installed = vimSnapshot();
+  installed.packages[2].installedVersion = "3.7-1";
+  source().enqueue(std::move(installed));
+  model().reload();
+  ASSERT_TRUE(QTest::qWaitFor([this] { return !model().loading(); }, 2000));
+  EXPECT_EQ(model().currentPackage().value("name").toString(), "vimb");
+  EXPECT_TRUE(shownTexts(child("exploreDetailPanel")).contains("Installed"));
+
+  source().enqueue(vimSnapshot());
+  model().reload();
+  ASSERT_TRUE(QTest::qWaitFor([this] { return !model().loading(); }, 2000));
+  EXPECT_FALSE(shownTexts(child("exploreDetailPanel")).contains("Installed"));
 }
 
 }  // namespace

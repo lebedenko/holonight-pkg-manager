@@ -1,13 +1,17 @@
 #include "PackagesApplication.h"
 
+#include "DBusTransactionService.h"
 #include "DBusUpdateCheckClient.h"
 #include "ExploreModel.h"
 #include "InstalledPackagesModel.h"
+#include "ModelListRefresh.h"
 #include "PackageIconResolver.h"
 #include "SnapshotFileReader.h"
+#include "TransactionController.h"
 #include "UpdateCheckModel.h"
 #include "UpdateStatusClient.h"
 #include "UpdatesModel.h"
+#include "WindowCloseGuard.h"
 #include "holonight_packages_application/package_list_use_case.h"
 #include "holonight_packages_application/update_check_runtime.h"
 #include "holonight_packages_backends/alpm_explore_source.h"
@@ -84,6 +88,15 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
     snapshot_reader_->start();
   }
 
+  // Install and Remove go through the privileged helper on the system bus. The connection is made lazily on the first
+  // request, so starting the application sends nothing to the system bus; a missing helper or bus reads as
+  // "helper unavailable" in the dialog.
+  transaction_service_ = std::make_unique<DBusTransactionService>([] {
+    return QDBusConnection::connectToBus(QDBusConnection::SystemBus, QStringLiteral("holonight-package-helper-client"));
+  });
+  list_refresh_ = std::make_unique<ModelListRefresh>(*installed_packages_model_, *explore_model_);
+  transaction_controller_ = std::make_unique<TransactionController>(*transaction_service_, *list_refresh_);
+
   view_ = std::make_unique<QQuickView>();
   if (QFileInfo{applicationFilePath()}.canonicalFilePath() ==
       QFileInfo{QStringLiteral(HOLONIGHT_BUILD_EXECUTABLE)}.canonicalFilePath()) {
@@ -105,6 +118,7 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
       {QStringLiteral("exploreModel"), QVariant::fromValue(explore_model_.get())},
       {QStringLiteral("updateStatusClient"), QVariant::fromValue(update_status_client_.get())},
       {QStringLiteral("updateCheckModel"), QVariant::fromValue(update_check_model_.get())},
+      {QStringLiteral("transactionController"), QVariant::fromValue(transaction_controller_.get())},
   });
   view_->setSource(QUrl(QStringLiteral("qrc:/HolonightPackages/workspace/WorkspaceWindow.qml")));
   if (view_->status() == QQuickView::Error) {
@@ -113,13 +127,19 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
     }
     return;
   }
+  close_guard_ = std::make_unique<WindowCloseGuard>(*transaction_controller_, *view_);
   view_->setTitle(applicationDisplayName());
   view_->show();
   ready_ = true;
 }
 
 PackagesApplication::~PackagesApplication() {
+  // The view holds QML references to the controller; the guard is a child of the view. Destroy them first.
+  close_guard_.reset();
   view_.reset();
+  transaction_controller_.reset();
+  list_refresh_.reset();
+  transaction_service_.reset();
   update_check_model_.reset();
   snapshot_reader_.reset();
   update_check_client_.reset();

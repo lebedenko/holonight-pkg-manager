@@ -14,6 +14,15 @@ ColumnLayout {
     required property string repository
     property bool showActions: true
     property bool showInstalledIndicator: true
+    // "remove" (Installed page) or "install" (Explore page): exactly one transaction control per page (REQ-C-003).
+    property string actionKind: "remove"
+    property bool showMoreOptions: true
+    // Optional TransactionController. Null keeps the control disabled with the "Not implemented yet" tooltip.
+    property var transactionController: null
+
+    readonly property bool actionEnabled: root.transactionController !== null && root.transactionController.allowAction
+    readonly property string actionToolTip: root.transactionController === null ? qsTr("Not implemented yet")
+        : (root.transactionController.allowAction ? "" : qsTr("Another package operation is in progress"))
 
     spacing: 12
 
@@ -66,6 +75,7 @@ ColumnLayout {
                 }
 
                 HnStatusIndicator {
+                    objectName: "packageDetailInstalledIndicator"
                     visible: root.showInstalledIndicator
                     status: HnStatusIndicator.Success
                     text: qsTr("Installed")
@@ -87,58 +97,94 @@ ColumnLayout {
         RowLayout {
             spacing: 8
 
-            Controls.Button {
-                id: removeButton
-
-                objectName: "packageDetailRemoveButton"
+            Loader {
                 Layout.fillWidth: true
-
-                Controls.ToolTip.text: qsTr("Not implemented yet")
-                Controls.ToolTip.visible: hovered
-                Controls.ToolTip.delay: 500
-
-                background: Rectangle {
-                    radius: 8
-                    color: "transparent"
-                    border.color: HoloniightPalette.error
-                    border.width: HnMetrics.borderWidth
-                }
-
-                contentItem: RowLayout {
-                    spacing: 6
-
-                    Item {
-                        Layout.fillWidth: true
-                    }
-
-                    HnIcon {
-                        source: "qrc:/qt/qml/Holonight/Controls/assets/delete.svg"
-                        rendering: HnIcon.Semantic
-                        size: 16
-                        normalColor: HoloniightPalette.error
-                    }
-
-                    HnLabel {
-                        role: HnTypographyRole.Body
-                        rawText: qsTr("Remove")
-                        color: HoloniightPalette.error
-                    }
-
-                    Item {
-                        Layout.fillWidth: true
-                    }
-                }
+                sourceComponent: root.actionKind === "install" ? installButtonComponent : removeButtonComponent
             }
 
-            HnIconButton {
-                objectName: "packageDetailMoreOptionsButton"
-
-                icon.source: "qrc:/qt/qml/Holonight/Controls/assets/more-vertical.svg"
-
-                Controls.ToolTip.text: qsTr("Not implemented yet")
-                Controls.ToolTip.visible: hovered
-                Controls.ToolTip.delay: 500
+            Loader {
+                active: root.showMoreOptions
+                sourceComponent: moreOptionsComponent
             }
+        }
+    }
+
+    Component {
+        id: moreOptionsComponent
+
+        HnIconButton {
+            objectName: "packageDetailMoreOptionsButton"
+
+            icon.source: "qrc:/qt/qml/Holonight/Controls/assets/more-vertical.svg"
+
+            Controls.ToolTip.text: qsTr("Not implemented yet")
+            Controls.ToolTip.visible: hovered
+            Controls.ToolTip.delay: 500
+        }
+    }
+
+    Component {
+        id: removeButtonComponent
+
+        Controls.Button {
+            objectName: "packageDetailRemoveButton"
+            enabled: root.actionEnabled
+            opacity: enabled ? 1.0 : 0.5
+
+            Controls.ToolTip.text: root.actionToolTip
+            Controls.ToolTip.visible: hovered && root.actionToolTip.length > 0
+            Controls.ToolTip.delay: 500
+
+            onClicked: root.transactionController.requestRemove(root.name)
+
+            background: Rectangle {
+                radius: 8
+                color: "transparent"
+                border.color: HoloniightPalette.error
+                border.width: HnMetrics.borderWidth
+            }
+
+            contentItem: RowLayout {
+                spacing: 6
+
+                Item {
+                    Layout.fillWidth: true
+                }
+
+                HnIcon {
+                    source: "qrc:/qt/qml/Holonight/Controls/assets/delete.svg"
+                    rendering: HnIcon.Semantic
+                    size: 16
+                    normalColor: HoloniightPalette.error
+                }
+
+                HnLabel {
+                    role: HnTypographyRole.Body
+                    rawText: qsTr("Remove")
+                    color: HoloniightPalette.error
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                }
+            }
+        }
+    }
+
+    Component {
+        id: installButtonComponent
+
+        Controls.Button {
+            objectName: "packageDetailInstallButton"
+            enabled: root.actionEnabled
+            highlighted: true
+            text: qsTr("Install")
+
+            Controls.ToolTip.text: root.actionToolTip
+            Controls.ToolTip.visible: hovered && root.actionToolTip.length > 0
+            Controls.ToolTip.delay: 500
+
+            onClicked: root.transactionController.requestInstall(root.name)
         }
     }
 

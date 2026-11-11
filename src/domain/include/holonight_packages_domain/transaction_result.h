@@ -3,6 +3,7 @@
 #include "holonight_packages_domain/transaction_error.h"
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -13,11 +14,13 @@ namespace holonight_packages_domain {
 enum class ExecutionOutcome : std::uint8_t { Succeeded, Failed, Cancelled };
 
 [[nodiscard]] std::string_view executionOutcomeName(ExecutionOutcome outcome) noexcept;
+[[nodiscard]] std::optional<ExecutionOutcome> parseExecutionOutcome(std::string_view name) noexcept;
 
 // What happened to one package whose change completed.
 enum class ChangeAction : std::uint8_t { Install, Remove };
 
 [[nodiscard]] std::string_view changeActionName(ChangeAction action) noexcept;
+[[nodiscard]] std::optional<ChangeAction> parseChangeAction(std::string_view name) noexcept;
 
 struct ChangedPackage {
   std::string name;
@@ -32,6 +35,7 @@ struct ChangedPackage {
 enum class WarningToken : std::uint8_t { HookFailed };
 
 [[nodiscard]] std::string_view warningTokenName(WarningToken token) noexcept;
+[[nodiscard]] std::optional<WarningToken> parseWarningToken(std::string_view name) noexcept;
 
 struct ExecutionResult {
   ExecutionOutcome outcome = ExecutionOutcome::Failed;

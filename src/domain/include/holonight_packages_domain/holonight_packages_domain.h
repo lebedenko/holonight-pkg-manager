@@ -13,6 +13,7 @@
 #include "holonight_packages_domain/transaction_progress.h"
 #include "holonight_packages_domain/transaction_request.h"
 #include "holonight_packages_domain/transaction_result.h"
+#include "holonight_packages_domain/transaction_service.h"
 #include "holonight_packages_domain/update_checker.h"
 #include "holonight_packages_domain/update_snapshot_store.h"
 #include "holonight_packages_domain/update_source.h"

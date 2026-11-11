@@ -8,6 +8,7 @@ add_library(holonight_packages_application STATIC
   src/package_size_formatter.cpp
   include/holonight_packages_application/update_monitor.h
   src/snapshot_selection.cpp
+  src/transaction_flow.cpp
   src/transaction_ports.cpp
   src/update_age_format.cpp
   src/update_check_policy.cpp

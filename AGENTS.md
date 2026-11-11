@@ -40,7 +40,7 @@ Run policy fixtures, dual-style runtime acceptance and existing QML tests for UI
 acceptance module under `tests/runtime` separate from source-based tests. Its source boundary is MockPackageSource,
 with real presentation/filter models. Preserve table horizontal and independent list/detail/page vertical scrolling.
 Production launch checks may only enumerate ALPM read-only with isolated HOME/XDG and desktop activation.
-No pointer/focus automation. Production code in the GUI and in `holonight-packaged` never runs package transactions.
+No pointer/focus automation. Production code in the GUI and in `holonight-packaged` does not itself change packages: the GUI only requests install and remove, one package at a time, from the privileged `holonight-package-helper` over D-Bus (the helper authorizes through polkit and performs the change), and `holonight-packaged` never changes packages.
 Carve-out: tests may run package transactions only against a fixture root under a temporary directory, with file:// fixture repositories, and never automate pointer or focus input.
 See `docs/sdd/unified-qtquick-controls/SPEC.md`.
 

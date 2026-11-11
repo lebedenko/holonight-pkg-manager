@@ -26,6 +26,20 @@ qt_add_executable(holonight-packages
   app/SnapshotFileReader.cpp
   app/UpdateCheckModel.h
   app/UpdateCheckModel.cpp
+  app/DBusTransactionService.h
+  app/DBusTransactionService.cpp
+  app/HelperWire.h
+  app/HelperWire.cpp
+  app/ModelListRefresh.h
+  app/ModelListRefresh.cpp
+  app/TransactionController.h
+  app/TransactionController.cpp
+  app/TransactionMessages.h
+  app/TransactionMessages.cpp
+  app/TransactionRowModel.h
+  app/TransactionRowModel.cpp
+  app/WindowCloseGuard.h
+  app/WindowCloseGuard.cpp
 )
 
 set_target_properties(holonight-packages PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
@@ -52,7 +66,7 @@ qt_add_qml_module(holonight-packages
   NO_IMPORT_SCAN
   QML_FILES ${HOLONIGHT_PACKAGES_QML_FILES}
   SOURCES app/InstalledPackagesModel.h app/InstalledPackagesFilterModel.h app/UpdatesModel.h app/ExploreModel.h
-          app/UpdateStatusClient.h app/UpdateCheckModel.h
+          app/UpdateStatusClient.h app/UpdateCheckModel.h app/TransactionController.h app/TransactionRowModel.h
   RESOURCES ${HOLONIGHT_PACKAGES_RESOURCES}
 )
 

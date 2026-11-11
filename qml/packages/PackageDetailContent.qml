@@ -14,6 +14,9 @@ ColumnLayout {
     required property string description
     property bool showActions: true
     property bool showInstalledIndicator: true
+    property string actionKind: "remove"
+    property bool showMoreOptions: true
+    property var transactionController: null
     property Component extraSections: null
     property Component footerContent: null
 
@@ -25,6 +28,9 @@ ColumnLayout {
         repository: root.repository
         showActions: root.showActions
         showInstalledIndicator: root.showInstalledIndicator
+        actionKind: root.actionKind
+        showMoreOptions: root.showMoreOptions
+        transactionController: root.transactionController
         Layout.fillWidth: true
         Layout.leftMargin: 16
         Layout.rightMargin: 16

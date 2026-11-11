@@ -1,1 +1,1 @@
-ghcr.io/lebedenko/holonight-deps@sha256:4d467b1a1d7f57c97b088ffdd8150939e882f7b4cc81a0f06e1b99115bd14d69
+ghcr.io/lebedenko/holonight-deps@sha256:d630d538405e4c25f0de6e33e7028631cfbc24c915d49b5f3a90c606d339e0c1

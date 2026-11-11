@@ -46,6 +46,14 @@ CASES = {
         "tests/apps/explore_view_test.cpp": "QTest::keyClick(&w, Qt::Key_Down);\nQTest::mouseClick(&w, Qt::LeftButton);\n",
     }),
     "legit-missing-claude-md": (None, {"CLAUDE.md": None}),
+    # T-001: the helper's bus names belong to the GUI adapter and its wire decoding only.
+    "legit-adapter-names-helper": (None, {
+        "apps/packages/app/DBusTransactionService.cpp": 'constexpr const char* kName = "org.holonight.PackageHelper1";\n',
+        "apps/packages/app/HelperWire.cpp": "// org.holonight.PackageHelper1 wire types\n",
+    }),
+    "t001-helper-name-in-controller": ("T-001", {
+        "apps/packages/app/TransactionController.cpp": 'auto name = "org.holonight.PackageHelper1";\n'}),
+    "t001-helper-name-in-qml": ("T-001", {"qml/transactions/Leak.qml": 'Item { property string n: "org.holonight.PackageHelper1" }\n'}),
     # C-001: libalpm and dbpath names outside the backend and composition roots.
     "c001-alpm-header-in-application": ("C-001", {"src/application/src/leak.cpp": "#include <alpm.h>\n"}),
     "c001-alpm-call-in-domain": ("C-001", {"src/domain/src/leak.cpp": "void f() { alpm_release(h); }\n"}),

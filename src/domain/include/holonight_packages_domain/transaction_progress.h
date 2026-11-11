@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -12,6 +13,8 @@ namespace holonight_packages_domain {
 enum class ProgressPhase : std::uint8_t { Resolving, Downloading, Verifying, Hooks, Installing, Removing, Done };
 
 [[nodiscard]] std::string_view progressPhaseName(ProgressPhase phase) noexcept;
+// The inverse of progressPhaseName; empty for any other string.
+[[nodiscard]] std::optional<ProgressPhase> parseProgressPhase(std::string_view name) noexcept;
 
 struct ProgressUpdate {
   ProgressPhase phase = ProgressPhase::Resolving;

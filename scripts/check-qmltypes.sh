@@ -17,6 +17,7 @@ required_types=(
   "InstalledPackagesFilterModel"
   "UpdatesModel"
   "ExploreModel"
+  "TransactionController"
 )
 
 if [[ ! -s "${qmltypes_file}" ]]; then

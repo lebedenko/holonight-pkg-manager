@@ -6,19 +6,21 @@ import Holonight.Controls
 import HolonightPackages
 import "../packages"
 
-// Read-only details of the selected search result. Composes only the shared detail components that make sense for a
-// package that is not (necessarily) installed: no actions, no local-state sections.
+// Details of the selected search result. Composes only the shared detail components that make sense for a package
+// that is not (necessarily) installed: a single Install action, no local-state sections.
 PackageDetailFrame {
     id: root
 
     required property ExploreModel exploreModel
+    // Optional TransactionController; null leaves the Install control disabled.
+    property var transactionController: null
 
     hasSelection: root.exploreModel.currentRow >= 0
     detailContent: detailContentComponent
     // A fully-keyed fallback so bindings never see `undefined` while the Loader deactivates.
     readonly property var emptyPackage: ({
         name: "", availableVersion: "", repository: "", description: "", downloadSizeLabel: "",
-        installedSizeLabel: "", url: "", licenses: [], dependencies: [], optionalDependencies: [],
+        isInstalled: false, installedSizeLabel: "", url: "", licenses: [], dependencies: [], optionalDependencies: [],
     })
     readonly property var currentPackage: root.hasSelection ? root.exploreModel.currentPackage : root.emptyPackage
     readonly property var metadataRows: [
@@ -38,8 +40,11 @@ PackageDetailFrame {
             repository: root.currentPackage.repository
             metadataRows: root.metadataRows
             description: root.currentPackage.description
-            showActions: false
-            showInstalledIndicator: false
+            showActions: true
+            actionKind: "install"
+            showMoreOptions: false
+            transactionController: root.transactionController
+            showInstalledIndicator: root.currentPackage.isInstalled
             extraSections: Component {
                 ColumnLayout {
                     spacing: 16
