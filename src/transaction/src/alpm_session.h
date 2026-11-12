@@ -4,6 +4,7 @@
 #include "holonight_packages_domain/transaction_request.h"
 #include "holonight_packages_transaction/log_sink.h"
 #include "holonight_packages_transaction/transaction_config.h"
+#include "holonight_packages_transaction/transaction_seams.h"
 #include "pacman_settings.h"
 #include "question_policy.h"
 
@@ -35,6 +36,25 @@ class AlpmSession {
   [[nodiscard]] static std::expected<std::unique_ptr<AlpmSession>, holonight_packages_domain::TransactionFailure> open(
       const TransactionConfig& config, holonight_packages_domain::PlanAction action, LogSink logSink);
 
+  // system-upgrade (DESIGN 5.2, 5.3, 5.6): a scratch handle syncs into its own dbpath with the configured servers; a
+  // live handle commits from the cache and registers the repositories without servers, so it can never download.
+  enum class UpgradeRole : unsigned char { Scratch, Live };
+  // The only server of a live upgrade handle (DESIGN D-7, revised): a file:// directory that does not exist.
+  static constexpr const char* kNoDownloadServer = "file:///nonexistent/holonight-package-helper/no-download";
+
+  // The configuration checks of the upgrade, before libalpm is initialised: unsupported options, a repository without
+  // a server, then any other parse failure, each ConfigurationError (REQ-F-018, REQ-F-075, REQ-F-076).
+  [[nodiscard]] static std::expected<holonight_packages_backends::PacmanSettings,
+                                     holonight_packages_domain::TransactionFailure>
+  loadUpgradeSettings(const TransactionConfig& config, const LogSink& logSink);
+
+  // Opens a handle on `database_path` for the upgrade, after loadUpgradeSettings(); then refuses a signature level
+  // weaker than Required + TrustedOnly with InsecureSigLevel before any network use (REQ-F-031). `seams` may be null;
+  // its observe("alpm-initialize") runs right before alpm_initialize, and its fetch replaces the downloader.
+  [[nodiscard]] static std::expected<std::unique_ptr<AlpmSession>, holonight_packages_domain::TransactionFailure>
+  openUpgrade(const TransactionConfig& config, UpgradeRole role, const std::filesystem::path& database_path,
+              const TransactionSeams* seams, LogSink logSink);
+
   // The hook directories libalpm searches, in order: the system directory, then pacman.conf's HookDir (default
   // <root>/etc/pacman.d/hooks). Later directories override earlier ones.
   [[nodiscard]] static std::vector<std::filesystem::path> hookDirectories(
@@ -52,6 +72,8 @@ class AlpmSession {
   [[nodiscard]] const std::vector<std::filesystem::path>& hookDirs() const noexcept { return hookDirs_; }
   [[nodiscard]] QuestionPolicy& questions() noexcept { return questions_; }
   [[nodiscard]] const std::vector<std::string>& logLines() const noexcept { return logLines_; }
+  // Forgets the log lines collected so far, so the next libalpm call can be classified on its own.
+  void clearLog() noexcept { logLines_.clear(); }
 
   // Observers that run on the thread driving libalpm.
   using EventHandler = std::function<void(const alpm_event_t&)>;
@@ -69,6 +91,11 @@ class AlpmSession {
 
  private:
   AlpmSession() = default;
+
+  [[nodiscard]] static std::expected<std::unique_ptr<AlpmSession>, holonight_packages_domain::TransactionFailure>
+  initialize(const TransactionConfig& config, const std::filesystem::path& database_path,
+             holonight_packages_backends::PacmanSettings settings, bool registerSync, bool withServers,
+             LogSink logSink);
 
   static void eventTrampoline(void* context, alpm_event_t* event);
   static void questionTrampoline(void* context, alpm_question_t* question);

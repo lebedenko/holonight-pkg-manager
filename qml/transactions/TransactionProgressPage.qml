@@ -22,6 +22,16 @@ ColumnLayout {
         Layout.fillWidth: true
     }
 
+    // "Step 1 of 2" during a system upgrade with a keyring step (system-upgrade REQ-F-084).
+    HnLabel {
+        objectName: "transactionStep"
+        role: HnTypographyRole.Caption
+        rawText: root.controller.stepText
+        visible: root.controller.stepText.length > 0
+        color: HoloniightPalette.textSecondary
+        Layout.fillWidth: true
+    }
+
     HnLabel {
         objectName: "transactionPhase"
         role: HnTypographyRole.Body

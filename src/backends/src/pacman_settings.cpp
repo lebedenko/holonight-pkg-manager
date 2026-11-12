@@ -4,11 +4,17 @@ namespace holonight_packages_backends {
 
 std::expected<PacmanSettings, std::string> loadPacmanSettings(const std::filesystem::path& path,
                                                               std::string_view machine_architecture) {
+  return loadPacmanSettings(path, machine_architecture, nullptr);
+}
+
+std::expected<PacmanSettings, std::string> loadPacmanSettings(const std::filesystem::path& path,
+                                                              std::string_view machine_architecture,
+                                                              PacmanDiagnostics* diagnostics) {
   auto options = parsePacmanConfig(path);
   if (!options) {
     return std::unexpected(options.error());
   }
-  auto repositories = parsePacmanRepositories(path, machine_architecture);
+  auto repositories = parsePacmanRepositories(path, machine_architecture, diagnostics);
   if (!repositories) {
     return std::unexpected(repositories.error());
   }

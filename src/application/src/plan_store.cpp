@@ -1,6 +1,7 @@
 #include "holonight_packages_application/plan_store.h"
 
 #include <algorithm>
+#include <vector>
 
 namespace holonight_packages_application {
 
@@ -24,8 +25,15 @@ bool PlanStore::hasRoomFor(std::uint32_t uid) const {
   return live < limits_.total && forUid < limits_.per_uid;
 }
 
+void PlanStore::notifyDiscarded(const StoredPlan& plan) const {
+  if (observer_) {
+    observer_(plan);
+  }
+}
+
 std::optional<PlanId> PlanStore::add(const CallerIdentity& owner, holonight_packages_domain::PlanRequest request,
-                                     holonight_packages_domain::ResolvedPlan plan) {
+                                     holonight_packages_domain::ResolvedPlan plan,
+                                     std::optional<holonight_packages_domain::UpgradeWorkspace> workspace) {
   if (!hasRoomFor(owner.uid)) {
     return std::nullopt;
   }
@@ -40,6 +48,7 @@ std::optional<PlanId> PlanStore::add(const CallerIdentity& owner, holonight_pack
                               .plan = std::move(plan),
                               .created = clock_->now(),
                               .state = PlanState::Pending,
+                              .workspace = std::move(workspace),
                           });
   return plan_id;
 }
@@ -50,7 +59,9 @@ PlanLookup PlanStore::find(const PlanId& plan_id, const CallerIdentity& caller) 
     return PlanLookup{.kind = PlanLookup::Kind::NotFound, .plan = nullptr};
   }
   if (expired(found->second)) {
+    const StoredPlan gone = std::move(found->second);
     plans_.erase(found);
+    notifyDiscarded(gone);
     return PlanLookup{.kind = PlanLookup::Kind::Expired, .plan = nullptr};
   }
   return PlanLookup{.kind = PlanLookup::Kind::Found, .plan = &found->second};
@@ -67,16 +78,42 @@ void PlanStore::setState(const PlanId& plan_id, PlanState state) {
   }
 }
 
-void PlanStore::consume(const PlanId& plan_id) { plans_.erase(plan_id); }
+void PlanStore::consume(const PlanId& plan_id) {
+  if (const auto found = plans_.find(plan_id); found != plans_.end()) {
+    const StoredPlan gone = std::move(found->second);
+    plans_.erase(found);
+    notifyDiscarded(gone);
+  }
+}
 
 std::size_t PlanStore::discardPendingFor(std::string_view unique_name) {
-  return std::erase_if(plans_, [unique_name](const auto& entry) {
-    return entry.second.state == PlanState::Pending && entry.second.owner.unique_name == unique_name;
+  std::vector<StoredPlan> gone;
+  std::erase_if(plans_, [unique_name, &gone](auto& entry) {
+    const bool discard = entry.second.state == PlanState::Pending && entry.second.owner.unique_name == unique_name;
+    if (discard) {
+      gone.push_back(std::move(entry.second));
+    }
+    return discard;
   });
+  for (const StoredPlan& plan : gone) {
+    notifyDiscarded(plan);
+  }
+  return gone.size();
 }
 
 std::size_t PlanStore::sweepExpired() {
-  return std::erase_if(plans_, [this](const auto& entry) { return expired(entry.second); });
+  std::vector<StoredPlan> gone;
+  std::erase_if(plans_, [this, &gone](auto& entry) {
+    const bool discard = expired(entry.second);
+    if (discard) {
+      gone.push_back(std::move(entry.second));
+    }
+    return discard;
+  });
+  for (const StoredPlan& plan : gone) {
+    notifyDiscarded(plan);
+  }
+  return gone.size();
 }
 
 std::optional<std::chrono::system_clock::time_point> PlanStore::nextExpiry() const {

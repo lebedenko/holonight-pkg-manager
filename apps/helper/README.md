@@ -1,16 +1,22 @@
 # holonight-package-helper
 
 The privileged half of HoloNight Packages: a small system D-Bus service that installs and removes packages from the
-official Arch repositories through libalpm. It is started by the bus when a client calls it, authorizes every change through
-polkit, and exits when it has nothing to do. The design and the requirements are in
-`docs/sdd/package-helper-transactions/` (`SPEC.md`, `DESIGN.md`, `SPIKES.md`).
+official Arch repositories through libalpm, and upgrades the whole system. It is started by the bus when a client calls
+it, authorizes every change through polkit, and exits when it has nothing to do. The design and the requirements are in
+`docs/sdd/package-helper-transactions/` and, for the system upgrade, `docs/sdd/system-upgrade/` (`SPEC.md`,
+`DESIGN.md`, `SPIKES.md`).
 
 ## What it does and does not do
 
-- It installs and removes official-repository packages, nothing else: no system upgrade, no AUR, no local files or URLs,
-  no PackageKit.
-- It never refreshes the sync databases. An install that would need a newer version of something already installed
-  (a partial upgrade) is refused with `PartialUpgradeRequired`; there is no override.
+- It installs and removes official-repository packages and upgrades the whole system as `pacman -Syu` does, nothing else: no
+  per-package upgrade, no AUR, no local files or URLs, no PackageKit.
+- Install and remove never refresh the sync databases. An install that would need a newer version of something already
+  installed (a partial upgrade) is refused with `PartialUpgradeRequired`; there is no override, and the GUI offers the
+  system upgrade instead.
+- The system upgrade is the only action that refreshes the sync databases. It syncs them into a private scratch copy
+  under `/var/lib/holonight-package-helper` (the unit's `StateDirectory`, mode 0711), shows a preview from that copy,
+  downloads every package into the cache, and only then, under the libalpm lock, replaces the live databases with the
+  copy it previewed and installs. libalpm's `DownloadUser` sandbox stays in effect for every download.
 - It reads `/etc/pacman.conf` only. A caller sends an action and package names and nothing else, never a path, a
   repository, a server or a resolved package list.
 - It refuses every install when a repository's `SigLevel` is weaker than `Required` + `TrustedOnly` (or not set at all).
@@ -38,7 +44,23 @@ Interface `org.holonight.PackageHelper1.Transactions` on the system bus, object 
    after `Installing`), and `Done` is always last and only after success.
 6. Refusals and failures are normal replies with a code, never D-Bus errors. A reply never contains free text: only codes,
    package names, versions and enumerated warnings (`HookFailed`). Raw libalpm output goes to the journal.
-7. One transaction runs at a time. A second `PreparePlan` or `Execute` answers `Busy`.
+7. One transaction runs at a time. A second `PreparePlan`, `PrepareUpgrade` or `Execute` answers `Busy`.
+8. `PrepareUpgrade(options)` (`ProtocolVersion` 2) needs no authorization and takes only an empty options map. It syncs
+   the databases, so **use a call timeout of 10 minutes**; the helper gives up its own sync after 480 seconds with
+   `SyncFailed` (a link slower than about 160 kbit/s cannot sync today's `extra` database in that time). While it runs,
+   `Progress("", "Syncing", i, n, repository)` goes to the caller only, and `Cancel("")` cancels it: the reply is
+   `Cancelled` and the helper process ends, because a running download cannot be stopped. `NothingToDo` means the
+   system is up to date and carries an empty plan ID. The preview lists upgrades, replacements, new packages, held-back
+   packages (`IgnorePkg`/`IgnoreGroup`), the keyring flag with its packages, the download size and the installed-size
+   change.
+9. `Execute` of an upgrade plan asks polkit for `org.holonight.packages.upgrade` (counts only, no names). Before
+   anything changes it downloads the packages into the cache; a cancel then is still accepted. A live database that
+   changed since the preparation is `SyncDatabaseChanged` (prepare again). The point of no return is the replacement of
+   the live databases (`Promoting`); after it `Cancel` answers `PastPointOfNoReturn`. An `archlinux-keyring` update is
+   committed first with its required dependencies (`KeyringStep` 1 of 2), then the rest (`MainStep` 2 of 2, or 1 of 1). A failure after the point
+   of no return is `UpgradePartiallyApplied` naming the step (`keyring` or `main`); running the upgrade again finishes
+   it.
+10. Clients check `ProtocolVersion` (now 2) before they call `PrepareUpgrade`; version 1 helpers do not have it.
 
 If the helper was killed during a transaction, libalpm's lock file `/var/lib/pacman/db.lck` may be left behind. The helper
 keeps the lock intact during the 150 ms reply grace period. Finalization then holds the transaction lifecycle mutex,
@@ -82,3 +104,21 @@ These steps need a real polkit agent, a real system bus and real root. Run on 20
 - [x] (passed 2026-11-10) Let the helper stay idle. Confirm in the journal that it exits 60 seconds after the last plan or transaction (REQ-F-068).
 - [x] (passed 2026-11-10) As an unprivileged user, call `PreparePlan` on the system bus and confirm the reply. As that user, confirm that the helper cannot own its name (REQ-C-006).
 - [x] (passed 2026-11-10) Confirm that the journal holds raw libalpm text for a forced error and that the GUI or client receives only the code (REQ-F-052).
+
+## Manual verification of the system upgrade (disposable Arch VM)
+
+These steps need real mirrors, a real polkit agent and real root (`docs/sdd/system-upgrade/SPEC.md`, "Verification").
+Each is recorded here with its date and result when it is run. These five checks remain release gates by user
+decision on 2026-11-12; automated fixture coverage does not mark them passed.
+
+- [ ] A real `-Syu` from a month-old Arch Linux Archive snapshot that includes a keyring update. The keyring step runs
+  first and the upgrade succeeds (system-upgrade REQ-F-055, SPIKES S-2).
+- [ ] A cancel during a throttled fetch. The result is `Cancelled`, `/var/lib/pacman/db.lck` is absent, and the scratch
+  root under `/var/lib/holonight-package-helper` is gone (REQ-F-049).
+- [ ] A `pacman -Sy` run in a terminal between the preview and the confirmation. The result is `SyncDatabaseChanged`,
+  and a new preparation succeeds (REQ-F-051).
+- [ ] An install refused with `PartialUpgradeRequired`, then "Update system…", then the upgrade, then the same install,
+  which succeeds (REQ-F-089).
+- [ ] Under the installed, hardened unit with `DownloadUser = alpm`, a `PrepareUpgrade` and an `Execute` succeed; the
+  scratch root and the state directory are mode 0711 and owned by root (REQ-F-008, REQ-C-008, SPIKES S-1 f). A key
+  import question during the fetch is answered no (REQ-F-029).

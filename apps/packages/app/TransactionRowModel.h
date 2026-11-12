@@ -25,12 +25,15 @@ class TransactionRowModel : public QAbstractListModel {
   // NOLINTNEXTLINE(cppcoreguidelines-use-enum-class): preserve Qt model role constants.
   enum Role : std::uint16_t {
     NameRole = Qt::UserRole + 1,
-    KindRole,    // "target" | "dependency" | "orphan" | "hook" | "changed"
+    // "target" | "dependency" | "orphan" | "hook" | "changed", and for an upgrade (system-upgrade REQ-F-082) "upgrade"
+    // | "replacement" | "newDependency" | "heldBack", in that order
+    KindRole,
     ActionRole,  // "install" | "remove" ("" for hooks)
     OldVersionRole,
     NewVersionRole,
     RepositoryRole,
     ConditionalRole,
+    ReplacesRole,  // a replacement: the name of the installed package it replaces
   };
 
   struct Row {
@@ -41,6 +44,7 @@ class TransactionRowModel : public QAbstractListModel {
     QString new_version;
     QString repository;
     bool conditional = false;
+    QString replaces;
 
     bool operator==(const Row&) const = default;
   };
@@ -57,6 +61,7 @@ class TransactionRowModel : public QAbstractListModel {
 
   // Builders from the domain values.
   [[nodiscard]] static QList<Row> previewRows(const holonight_packages_domain::ResolvedPlan& plan);
+  [[nodiscard]] static QList<Row> upgradeRows(const holonight_packages_domain::UpgradeDetail& detail);
   [[nodiscard]] static QList<Row> hookRows(const holonight_packages_domain::ResolvedPlan& plan);
   [[nodiscard]] static QList<Row> changedRows(const std::vector<holonight_packages_domain::ChangedPackage>& changed);
 

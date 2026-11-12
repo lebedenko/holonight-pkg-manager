@@ -37,9 +37,15 @@ enum class TransactionErrorCode : std::uint8_t {
   PastPointOfNoReturn,
   TransactionFailed,
   InternalError,
+  // system-upgrade; appended so that the existing ordinals stay.
+  SyncFailed,
+  SyncDatabaseChanged,
+  KeyImportRequired,
+  UpgradePartiallyApplied,
+  Cancelled,  // a cancelled PrepareUpgrade, which has no outcome field
 };
 
-inline constexpr std::size_t kTransactionErrorCodeCount = 24;
+inline constexpr std::size_t kTransactionErrorCodeCount = 29;
 
 // A decision that resolution cannot make for the caller (REQ-F-024).
 struct NeedsDecisionChoice {

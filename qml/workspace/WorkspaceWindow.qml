@@ -63,6 +63,7 @@ Rectangle {
                 objectName: "updatesPage"
                 updatesModel: root.updatesModel
                 updateCheckModel: root.updateCheckModel
+                transactionController: root.transactionController
             }
 
             ExploreView {

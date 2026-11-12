@@ -51,3 +51,29 @@ and produce a `SPEC.md`/`DESIGN.md`/`TASKS.md` under `docs/sdd/` the way `instal
 registered sync databases per installed package to determine repository membership (n = installed packages, m =
 registered repos). At m≈3 this is negligible in the measurements above; revisit only if it shows up in profiling
 after the caching fix, not before.
+
+## Review: download sandbox for the system upgrade (libalpm, bubblewrap or systemd-run)
+
+**Status:** Open, scheduled for review after `docs/sdd/system-upgrade` lands.
+
+**Problem:** The system upgrade (`docs/sdd/system-upgrade`) keeps libalpm's own `DownloadUser` sandbox (child process as
+`alpm`, Landlock, seccomp) for the database sync and the package fetch, with a `0711` scratch root (DESIGN D-9). The
+downloads still run from the root helper process, and libalpm cannot interrupt a running download, so a cancel, the
+sync timeout and the scratch size cap all end the helper process (DESIGN D-4).
+
+**Options to compare** (raised 2026-11-12 during the system-upgrade design):
+
+- **Keep libalpm's sandbox** (current). No new dependency, seccomp included; cancel needs a process end.
+- **bubblewrap worker.** A `holonight-package-sync-worker` executable runs the sync and fetch under `bwrap`
+  (`--unshare-all --share-net --die-with-parent --cap-drop ALL`, only `/usr`, the pacman configuration, the keyring and
+  the scratch dir or `CacheDir` bound). Cancel and timeouts kill the worker, not the helper. Costs: `bubblewrap` becomes
+  a hard dependency; no seccomp unless a BPF filter is supplied (libseccomp); gpg with a read-only `GPGDir` needs a
+  spike; a small worker-to-helper protocol; the sandboxed run cannot be tested in the CI container.
+- **systemd-run transient unit.** The same worker as a transient service (`DynamicUser`, `ProtectSystem=strict`,
+  `ReadWritePaths`, `SystemCallFilter`, empty `CapabilityBoundingSet`); cancel is `StopUnit`. No new dependency and a
+  systemd-built seccomp filter; costs are D-Bus to systemd1, unit lifecycle, `DynamicUser` file ownership and harder
+  unit tests.
+
+**Suggested scope for the SDD session:** decide whether the isolation and the killable worker justify the change, run a
+spike as root in a disposable VM (sync, `DOWNLOADONLY` fetch, kill during download, read-only keyring), and amend the
+system-upgrade SPEC (REQ-F-003, REQ-F-008, REQ-F-032, REQ-F-049) if the decision changes.

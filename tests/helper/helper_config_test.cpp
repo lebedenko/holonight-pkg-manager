@@ -18,7 +18,12 @@ TEST(HelperConfigTest, DefaultsAreTheSystemLocations) {
   EXPECT_EQ(config->transaction.database_path, "/var/lib/pacman");
   EXPECT_EQ(config->transaction.pacman_conf_path, "/etc/pacman.conf");
   EXPECT_EQ(config->transaction.cache_directory, "/var/cache/pacman/pkg");
-  EXPECT_EQ(config->lockFile(), "/var/lib/pacman/db.lck");
+  EXPECT_EQ(config->state_directory, "/var/lib/holonight-package-helper");
+}
+
+TEST(HelperConfigTest, TheStateDirectoryCanBeMovedButMustBeAbsolute) {
+  EXPECT_EQ(parse({"--state-dir=/tmp/s"})->state_directory, "/tmp/s");
+  EXPECT_FALSE(parse({"--state-dir=relative"}).has_value());
 }
 
 TEST(HelperConfigTest, TheFourOptionsOverrideTheirPaths) {
@@ -28,7 +33,6 @@ TEST(HelperConfigTest, TheFourOptionsOverrideTheirPaths) {
   EXPECT_EQ(config->transaction.database_path, "/tmp/d");
   EXPECT_EQ(config->transaction.pacman_conf_path, "/tmp/c.conf");
   EXPECT_EQ(config->transaction.cache_directory, "/tmp/k");
-  EXPECT_EQ(config->lockFile(), "/tmp/d/db.lck");
 }
 
 TEST(HelperConfigTest, RelativeEmptyAndUnknownArgumentsAreRejected) {

@@ -20,6 +20,8 @@ add_library(holonight_package_helper_service STATIC
   HelperIdentity.h
   HelperService.h
   HelperService.cpp
+  StateDirScratchRoots.cpp
+  StateDirScratchRoots.h
   HelperSignals.h
   HelperSignals.cpp
   HelperTerminator.h

@@ -211,16 +211,18 @@ TEST_F(TransactionDialogView, TheCancelControlIsDisabledAfterAHooksEvent) {
   EXPECT_TRUE(find("transactionProgressBar")->property("indeterminate").toBool());
 }
 
-TEST_F(TransactionDialogView, ARefusalResultPageOffersOnlyClose) {
+// GUI REQ-F-022 as amended by system-upgrade REQ-F-089: Close and "Update system…", never a retry of the install.
+TEST_F(TransactionDialogView, APartialUpgradeRefusalOffersCloseAndUpdateSystem) {
   ASSERT_TRUE(controller_->requestInstall(QStringLiteral("app")));
   service_.completePrepare(FakeTransactionService::refusal(TransactionErrorCode::PartialUpgradeRequired, {"glibc"}));
   ASSERT_TRUE(QTest::qWaitFor([this] { return popup()->property("opened").toBool(); }, 3000));
   QCoreApplication::processEvents();
   EXPECT_TRUE(visible("transactionCloseButton"));
+  EXPECT_TRUE(visible("transactionUpdateSystemButton"));
   EXPECT_FALSE(visible("transactionConfirmButton"));
   EXPECT_FALSE(visible("transactionTryAgainButton"));
   EXPECT_FALSE(visible("transactionCancelButton"));
-  EXPECT_TRUE(find("transactionMessage")->property("rawText").toString().contains(QStringLiteral("outside this app")));
+  EXPECT_TRUE(find("transactionMessage")->property("rawText").toString().contains(QStringLiteral("Update system")));
 }
 
 TEST_F(TransactionDialogView, ABusyRefusalOffersTryAgainAndClose) {
@@ -279,6 +281,148 @@ TEST_F(TransactionDialogView, TheQmlSourcesUseNoRichTextAndTheTestsSimulateNoInp
       EXPECT_FALSE(text.contains(QLatin1String(forbidden))) << qPrintable(file) << " " << forbidden;
     }
   }
+}
+
+// ---- system-upgrade T-071 to T-073: the upgrade pages ----
+
+ResolvedPlan upgradePlanOf(int upgrades, bool keyring) {
+  ResolvedPlan plan;
+  plan.action = PlanAction::Upgrade;
+  UpgradeDetail detail;
+  for (int index = 0; index < upgrades; ++index) {
+    detail.upgrades.push_back(UpgradeEntry{
+        .name = "pkg-" + std::to_string(index), .old_version = "1", .new_version = "2", .repository = "core"});
+  }
+  detail.held_back = {HeldBackEntry{.name = "kept", .installed_version = "1"}};
+  if (keyring) {
+    detail.keyring_packages = {"archlinux-keyring"};
+  }
+  detail.download_bytes = 4096;
+  plan.upgrade = detail;
+  return plan;
+}
+
+class TransactionDialogUpgradeView : public TransactionDialogView {
+ public:
+  void startUpgrade() {
+    service_.setVersion(2);
+    ASSERT_TRUE(controller_->requestUpgrade());
+    service_.completeProbes();
+    ASSERT_TRUE(QTest::qWaitFor([this] { return popup()->property("opened").toBool(); }, 3000));
+    QCoreApplication::processEvents();
+  }
+  void toUpgradePreview(int upgrades = 3, bool keyring = false) {
+    startUpgrade();
+    service_.completePrepare(FakeTransactionService::previewOf("plan-u", upgradePlanOf(upgrades, keyring)));
+    QCoreApplication::processEvents();
+  }
+};
+
+TEST_F(TransactionDialogUpgradeView, ThePreparingPageShowsTheSyncAndOffersCancel) {
+  startUpgrade();
+  service_.emitProgress("", ProgressUpdate{.phase = ProgressPhase::Syncing, .current = 1, .total = 2, .item = "core"});
+  QCoreApplication::processEvents();
+  EXPECT_TRUE(find("transactionMessage")->property("rawText").toString().contains(QStringLiteral("1 of 2")));
+  service_.emitProgress("", ProgressUpdate{.phase = ProgressPhase::Syncing, .current = 2, .total = 2, .item = "extra"});
+  QCoreApplication::processEvents();
+  EXPECT_TRUE(find("transactionMessage")->property("rawText").toString().contains(QStringLiteral("2 of 2")));
+  ASSERT_TRUE(visible("transactionPrepareCancelButton"));
+  EXPECT_TRUE(find("transactionPrepareCancelButton")->property("enabled").toBool());
+}
+
+TEST_F(TransactionDialogUpgradeView, ThePreviewListsEveryRowInSectionsWithoutSelectionAndTheWiderDialog) {
+  toUpgradePreview(500);
+  auto* list = find("upgradePreviewList");
+  ASSERT_NE(list, nullptr);
+  EXPECT_EQ(list->property("count").toInt(), 501);
+  EXPECT_NE(find("upgradePreviewScrollBar"), nullptr);
+  EXPECT_FALSE(visible("upgradeKeyringNotice"));
+  EXPECT_FALSE(find("upgradeDownloadSize")->property("rawText").toString().isEmpty());
+  EXPECT_FALSE(find("transactionExpires")->property("rawText").toString().isEmpty());
+  EXPECT_EQ(popup()->property("preferredWidth").toInt(), 640);
+  for (QQuickItem* item : allItems()) {
+    EXPECT_STRNE(item->metaObject()->className(), "QQuickCheckBox");
+  }
+  EXPECT_TRUE(visible("transactionConfirmButton"));
+}
+
+TEST_F(TransactionDialogUpgradeView, TheKeyringNoticeShowsWhenTheFlagIsSet) {
+  toUpgradePreview(1, true);
+  ASSERT_TRUE(visible("upgradeKeyringNotice"));
+  EXPECT_TRUE(
+      find("upgradeKeyringNotice")->property("rawText").toString().contains(QStringLiteral("archlinux-keyring")));
+}
+
+TEST_F(TransactionDialogUpgradeView, TheProgressPageCountsTheStepsAndCancelEndsAtPromotion) {
+  toUpgradePreview(1, true);
+  controller_->confirm();
+  service_.emitProgress("plan-u", ProgressUpdate{.phase = ProgressPhase::Downloading, .current = 0, .total = 2});
+  QCoreApplication::processEvents();
+  EXPECT_TRUE(find("transactionRunCancelButton")->property("enabled").toBool());
+  service_.emitProgress("plan-u", ProgressUpdate{.phase = ProgressPhase::Promoting});
+  QCoreApplication::processEvents();
+  EXPECT_FALSE(find("transactionRunCancelButton")->property("enabled").toBool());
+  EXPECT_EQ(controller_->handleCloseRequest(), holonight_packages_application::CloseDecision::Ignore);
+  QCoreApplication::processEvents();
+  EXPECT_TRUE(popup()->property("opened").toBool());
+  EXPECT_TRUE(visible("transactionNotice"));
+  service_.emitProgress("plan-u", ProgressUpdate{.phase = ProgressPhase::KeyringStep, .current = 1, .total = 2});
+  QCoreApplication::processEvents();
+  EXPECT_TRUE(find("transactionStep")->property("rawText").toString().contains(QStringLiteral("1 of 2")));
+  service_.emitProgress("plan-u", ProgressUpdate{.phase = ProgressPhase::MainStep, .current = 2, .total = 2});
+  QCoreApplication::processEvents();
+  EXPECT_TRUE(find("transactionStep")->property("rawText").toString().contains(QStringLiteral("2 of 2")));
+}
+
+TEST_F(TransactionDialogUpgradeView, APartialUpgradeResultOffersCloseAndNamesTheStep) {
+  toUpgradePreview();
+  controller_->confirm();
+  auto failed = FakeTransactionService::failed(TransactionErrorCode::UpgradePartiallyApplied);
+  failed->failure.names = {"main"};
+  service_.completeExecute(std::move(failed));
+  QCoreApplication::processEvents();
+  EXPECT_TRUE(visible("transactionCloseButton"));
+  EXPECT_FALSE(visible("transactionTryAgainButton"));
+  EXPECT_TRUE(find("transactionMessage")->property("rawText").toString().contains(QStringLiteral("Update system")));
+}
+
+// ---- system-upgrade T-070: the Updates page button, by its source ----
+
+QString readQml(const QString& relative) {
+  QFile file(QStringLiteral(HOLONIGHT_QML_SOURCE_DIR) + relative);
+  EXPECT_TRUE(file.open(QIODevice::ReadOnly | QIODevice::Text)) << relative.toStdString();
+  return QString::fromUtf8(file.readAll());
+}
+
+TEST(UpdatesViewSource, UpdateSystemFollowsTheControllerAndNeverTheList) {
+  const QString source = readQml(QStringLiteral("/updates/UpdatesView.qml"));
+  const qsizetype start = source.indexOf(QStringLiteral("objectName: \"updateSystemButton\""));
+  ASSERT_GE(start, 0);
+  const qsizetype end = source.indexOf(QStringLiteral("onClicked"), start);
+  const QString button = source.mid(start, end - start);
+  EXPECT_TRUE(button.contains(QStringLiteral("root.transactionController.upgradeEnabled")));
+  EXPECT_TRUE(button.contains(QStringLiteral("upgradeDisabledReason")));
+  EXPECT_FALSE(button.contains(QStringLiteral("updatesModel")));  // enabled whatever the list shows (REQ-F-078)
+  EXPECT_TRUE(source.contains(QStringLiteral("root.transactionController.requestUpgrade()")));
+  EXPECT_TRUE(source.contains(QStringLiteral("root.transactionController.probeHelper()")));
+}
+
+TEST(UpdatesViewSource, TheUpgradePreviewHasSectionsAScrollBarAndNoSelectionControl) {
+  const QString source = readQml(QStringLiteral("/transactions/UpgradePreviewPage.qml"));
+  EXPECT_TRUE(source.contains(QStringLiteral("section.property: \"kind\"")));
+  EXPECT_TRUE(source.contains(QStringLiteral("Controls.ScrollBar.vertical")));
+  EXPECT_FALSE(source.contains(QStringLiteral("CheckBox")));
+  EXPECT_FALSE(source.contains(QStringLiteral("ItemSelectionModel")));
+  EXPECT_FALSE(source.contains(QStringLiteral("Switch")));
+}
+
+TEST(UpdatesViewSource, TheRefusalButtonStartsTheUpgradeAndNothingRetriesTheInstall) {
+  const QString source = readQml(QStringLiteral("/transactions/TransactionActionRow.qml"));
+  const qsizetype start = source.indexOf(QStringLiteral("transactionUpdateSystemButton"));
+  ASSERT_GE(start, 0);
+  const QString button = source.mid(start, source.indexOf(QLatin1Char('}'), start) - start);
+  EXPECT_TRUE(button.contains(QStringLiteral("root.controller.updateSystem()")));
+  EXPECT_FALSE(source.contains(QStringLiteral("requestInstall")));
 }
 
 }  // namespace

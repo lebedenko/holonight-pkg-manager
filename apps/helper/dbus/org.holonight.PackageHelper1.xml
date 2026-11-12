@@ -2,7 +2,8 @@
  "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
 <node>
   <interface name="org.holonight.PackageHelper1.Transactions">
-    <!-- 1 -->
+    <!-- 2: version 1 plus PrepareUpgrade, the phases Syncing, Promoting, KeyringStep and MainStep, and the codes
+         SyncFailed, SyncDatabaseChanged, KeyImportRequired, UpgradePartiallyApplied and Cancelled. -->
     <property name="ProtocolVersion" type="u" access="read"/>
     <!-- true while a plan is being prepared, authorized or executed -->
     <property name="Busy" type="b" access="read"/>
@@ -19,6 +20,20 @@
       <arg direction="out" name="preview" type="(sa(sssss)a(sssss)a(sssss)a(sb)x)"/>
     </method>
 
+    <!-- A full system upgrade. options: must be empty (no key is recognised). The helper syncs the databases into a
+         private copy and resolves the upgrade there; nothing on the system changes. The reply is delayed: clients must
+         use a call timeout of 10 minutes. While it runs, Progress("", "Syncing", i, n, repository) goes to the caller
+         only, and Cancel("") cancels it. preview: upgrades (name, old version, new version, repository), replacements
+         (old name, old version, new name, new version, repository), new packages (name, version, repository), held-back
+         packages (name, installed version), the keyring flag and its packages, the download size, the installed-size
+         change and the expiry time. NothingToDo means the system is up to date and carries an empty plan id. -->
+    <method name="PrepareUpgrade">
+      <arg direction="in" name="options" type="a{sv}"/>
+      <arg direction="out" name="status" type="(sasa(ssas))"/>
+      <arg direction="out" name="plan_id" type="s"/>
+      <arg direction="out" name="preview" type="(a(ssss)a(sssss)a(sss)a(ss)bastxx)"/>
+    </method>
+
     <!-- The only input is the plan id. The reply is delayed until the transaction ends; clients must use a call timeout
          of at least one hour. -->
     <method name="Execute">
@@ -26,6 +41,7 @@
       <arg direction="out" name="result" type="(s(sasa(ssas))a(ssss)as)"/>
     </method>
 
+    <!-- An empty plan id cancels the caller's own PrepareUpgrade. -->
     <method name="Cancel">
       <arg direction="in" name="plan_id" type="s"/>
       <arg direction="out" name="status" type="(sasa(ssas))"/>

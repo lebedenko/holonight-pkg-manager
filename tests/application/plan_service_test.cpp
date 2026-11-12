@@ -468,7 +468,7 @@ TEST_F(PlanServiceTest, ACancelWhileTheWorkRunsRepliesCancelledFirstThenTerminat
   runner.runPending();
   EXPECT_EQ(control.calls, 1);
   EXPECT_EQ(events.size(), 2U);  // no second reply
-  EXPECT_FALSE(service.slotBusy());
+  EXPECT_TRUE(service.slotBusy());
 }
 
 TEST_F(PlanServiceTest, ADisconnectWhileTheWorkRunsIsTheSameCancel) {
@@ -515,8 +515,9 @@ TEST_F(PlanServiceTest, ShutdownBeforeTheCommitPointCancelsTheRunAndAfterItWaits
   EXPECT_EQ(first->outcome, ExecutionOutcome::Cancelled);
   EXPECT_EQ(terminator.calls(), 1);
   runner.runPending();
+}
 
-  runner.deferred = false;
+TEST_F(PlanServiceTest, ShutdownAfterTheCommitPointWaitsForCompletion) {
   const PlanId late = preparedId();
   RecordingControl control;
   control.decision = CancelDecision::PastPointOfNoReturn;
@@ -529,7 +530,7 @@ TEST_F(PlanServiceTest, ShutdownBeforeTheCommitPointCancelsTheRunAndAfterItWaits
   };
   EXPECT_EQ(execute(":1.10", late)->outcome, ExecutionOutcome::Succeeded);
   EXPECT_TRUE(answered);
-  EXPECT_EQ(terminator.calls(), 1);
+  EXPECT_EQ(terminator.calls(), 0);
 }
 
 TEST_F(PlanServiceTest, TheActivityObserverFiresWhenStoreOrSlotChange) {

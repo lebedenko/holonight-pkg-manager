@@ -21,3 +21,8 @@ ProtectClock=yes
 ProtectHostname=yes
 ProtectKernelLogs=yes
 ProtectControlGroups=yes
+
+# The system upgrade keeps its private copy of the sync databases under /var/lib/holonight-package-helper. 0711 lets
+# libalpm's download sandbox (DownloadUser) reach its own download directory below it, but no one can list it.
+StateDirectory=holonight-package-helper
+StateDirectoryMode=0711

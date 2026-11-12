@@ -200,11 +200,12 @@ In scope:
 - For each of the codes `InvalidArgument`, `PackageNotFound`, `PackageIgnored`, `ProtectedPackage`, `BreaksDependents`, `NeedsDecision`, `PartialUpgradeRequired`, `InsecureSigLevel`, `DatabaseUnavailable`, `ConfigurationError`, `NothingToDo` and `InternalError` (the full set `PreparePlan` can return, plus `Busy`, which REQ-F-023 covers), the fake service records zero `Execute` calls and the dialog model has no Confirm action.
 - The refusal message for `PackageNotFound` contains the package names from the reply.
 
-### REQ-F-022: PartialUpgradeRequired says the system must be updated outside the app [C]
-**Statement:** Where the refusal code is `PartialUpgradeRequired`, the GUI shall show the table message stating that the system must be updated first, outside this app, and shall offer no action other than Close.
+### REQ-F-022: PartialUpgradeRequired offers the system upgrade [C]
+*Amended 2026-11-12 by `docs/sdd/system-upgrade/SPEC.md` (REQ-F-089), which resolves OQ-07.*
+**Statement:** Where the refusal code is `PartialUpgradeRequired`, the GUI shall show the table message stating that the system must be updated first, and shall offer the actions Close and "Update system…". "Update system…" closes the refusal and starts the system upgrade; the install is not retried.
 **Acceptance criteria:**
-- With a fake `PartialUpgradeRequired` refusal, the dialog's actions are exactly Close, and the message equals the table entry, which names the installed packages listed in the reply.
-- The dialog offers no control that starts a system upgrade, adds an override or changes the request.
+- With a fake `PartialUpgradeRequired` refusal, the dialog's actions are exactly Close and "Update system…", and the message equals the table entry, which names the installed packages listed in the reply.
+- The dialog offers no control that adds an override, changes the request or retries the install.
 
 ### REQ-F-023: Busy, PlanNotFound and PlanExpired offer Try again [C]
 **Statement:** Where the code of a refusal at preparation or of a failed `Execute` is `Busy`, `PlanNotFound` or `PlanExpired`, the GUI shall offer a Try again action that calls `PreparePlan` again with the same action and names and returns to the `preparing` state.
@@ -561,7 +562,7 @@ The following decisions and defaults are accepted. Finalization still requires a
 - **OQ-04 — RESOLVED (2026-11-11, accepted).** Cancel is disabled from the `Hooks` phase onwards (REQ-F-012), because the helper's commit point is the start of the first PreTransaction hook. This replaces the stage-0 wording "until Installing or Removing".
 - **OQ-05 — RESOLVED (2026-11-11).** `PlanExpired` also offers Try again, as `Busy` and `PlanNotFound` do (REQ-F-023, REQ-F-027).
 - **OQ-06 — Count label for Install.** Remove has a count label. Accepted default: the Install Confirm label reads `Install` and the dependency rows are listed (REQ-F-003).
-- **OQ-07 — Remedy for `PartialUpgradeRequired`.** The GUI offers no remedy in this feature. A later feature may offer a way to bring the system up to date. Accepted default: none in this SPEC.
+- **OQ-07 — Remedy for `PartialUpgradeRequired`.** The GUI offers no remedy in this feature. A later feature may offer a way to bring the system up to date. Accepted default: none in this SPEC. **Resolved 2026-11-12** by `docs/sdd/system-upgrade/SPEC.md`: the refusal offers "Update system…" (REQ-F-022 as amended).
 - **OQ-08 — RESOLVED (SC-4).** Success is an empty `code` string, `Cancel` returns `(sasa(ssas))`, `expires_at` is epoch seconds, and outcomes are `Succeeded`, `Failed`, `Cancelled`. The adapter decodes these fields using the XML and checks them with contract tests (REQ-C-004).
 - **OQ-09 — Expiry handling in the GUI.** The GUI could disable Confirm after the preview's expiry time, instead of letting the helper reject it. Accepted default: no client-side expiry check in this SPEC; the helper decides (REQ-F-027).
 - **OQ-10 — Closing during `preparing`.** REQ-F-034 exits without `Cancel`, relying on the helper discarding a plan when its caller disconnects (helper SPEC, REQ-F-012). Accepted default; no Cancel is sent while preparing.

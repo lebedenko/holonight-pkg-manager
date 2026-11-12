@@ -4,6 +4,7 @@
 #include "fake_plan_id_generator.h"
 
 #include <chrono>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 namespace holonight_packages_application {
@@ -156,6 +157,24 @@ TEST_F(PlanStoreTest, IdsAreUniqueAndRetryOnCollision) {
   const auto second = local.add(alice, PlanRequest{}, ResolvedPlan{});
   ASSERT_TRUE(first && second);
   EXPECT_NE(*first, *second);
+}
+
+// system-upgrade T-044: every exit from the store is reported, so the service can remove the scratch root.
+TEST_F(PlanStoreTest, EveryWayOutOfTheStoreIsReportedOnce) {
+  std::vector<PlanId> gone;
+  store.setDiscardObserver([&gone](const StoredPlan& plan) { gone.push_back(plan.id); });
+  const auto consumed = add(alice);
+  store.consume(consumed);
+  const auto disconnected = add(alice);
+  EXPECT_EQ(store.discardPendingFor(alice.unique_name), 1U);
+  const auto found = add(alice);
+  const auto swept = add(bob);
+  clock.advance(std::chrono::seconds(301));
+  EXPECT_EQ(store.find(found, alice).kind, PlanLookup::Kind::Expired);
+  EXPECT_EQ(store.sweepExpired(), 1U);
+  EXPECT_THAT(gone, ::testing::ElementsAre(consumed, disconnected, found, swept));
+  store.consume(consumed);  // already gone: nothing more to report
+  EXPECT_EQ(gone.size(), 4U);
 }
 
 }  // namespace

@@ -33,6 +33,11 @@ constexpr std::array<std::pair<Code, std::string_view>, kTransactionErrorCodeCou
         {Code::PastPointOfNoReturn, "PastPointOfNoReturn"},
         {Code::TransactionFailed, "TransactionFailed"},
         {Code::InternalError, "InternalError"},
+        {Code::SyncFailed, "SyncFailed"},
+        {Code::SyncDatabaseChanged, "SyncDatabaseChanged"},
+        {Code::KeyImportRequired, "KeyImportRequired"},
+        {Code::UpgradePartiallyApplied, "UpgradePartiallyApplied"},
+        {Code::Cancelled, "Cancelled"},
     },
 };
 

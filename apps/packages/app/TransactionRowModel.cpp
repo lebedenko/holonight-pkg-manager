@@ -36,6 +36,8 @@ QVariant TransactionRowModel::data(const QModelIndex& index, int role) const {
       return row.repository;
     case ConditionalRole:
       return row.conditional;
+    case ReplacesRole:
+      return row.replaces;
     default:
       return {};
   }
@@ -50,6 +52,7 @@ QHash<int, QByteArray> TransactionRowModel::roleNames() const {
       {NewVersionRole, "newVersion"},
       {RepositoryRole, "repository"},
       {ConditionalRole, "conditional"},
+      {ReplacesRole, "replaces"},
   };
 }
 
@@ -69,6 +72,9 @@ void TransactionRowModel::setRows(QList<Row> rows) {
 void TransactionRowModel::clear() { setRows({}); }
 
 QList<TransactionRowModel::Row> TransactionRowModel::previewRows(const holonight_packages_domain::ResolvedPlan& plan) {
+  if (plan.upgrade) {
+    return upgradeRows(*plan.upgrade);
+  }
   QList<Row> rows;
   for (const auto& change : plan.changes) {
     QString kind = QStringLiteral("target");
@@ -87,7 +93,56 @@ QList<TransactionRowModel::Row> TransactionRowModel::previewRows(const holonight
         .new_version = text(change.new_version),
         .repository = text(change.repository),
         .conditional = false,
+        .replaces = {},
     });
+  }
+  return rows;
+}
+
+QList<TransactionRowModel::Row> TransactionRowModel::upgradeRows(
+    const holonight_packages_domain::UpgradeDetail& detail) {
+  QList<Row> rows;
+  rows.reserve(static_cast<qsizetype>(detail.upgrades.size() + detail.replacements.size() +
+                                      detail.new_dependencies.size() + detail.held_back.size()));
+  for (const auto& entry : detail.upgrades) {
+    rows.push_back(Row{.name = text(entry.name),
+                       .kind = QStringLiteral("upgrade"),
+                       .action = QStringLiteral("install"),
+                       .old_version = text(entry.old_version),
+                       .new_version = text(entry.new_version),
+                       .repository = text(entry.repository),
+                       .conditional = false,
+                       .replaces = {}});
+  }
+  for (const auto& entry : detail.replacements) {
+    rows.push_back(Row{.name = text(entry.new_name),
+                       .kind = QStringLiteral("replacement"),
+                       .action = QStringLiteral("install"),
+                       .old_version = text(entry.old_version),
+                       .new_version = text(entry.new_version),
+                       .repository = text(entry.repository),
+                       .conditional = false,
+                       .replaces = text(entry.old_name)});
+  }
+  for (const auto& entry : detail.new_dependencies) {
+    rows.push_back(Row{.name = text(entry.name),
+                       .kind = QStringLiteral("newDependency"),
+                       .action = QStringLiteral("install"),
+                       .old_version = {},
+                       .new_version = text(entry.version),
+                       .repository = text(entry.repository),
+                       .conditional = false,
+                       .replaces = {}});
+  }
+  for (const auto& entry : detail.held_back) {
+    rows.push_back(Row{.name = text(entry.name),
+                       .kind = QStringLiteral("heldBack"),
+                       .action = {},
+                       .old_version = text(entry.installed_version),
+                       .new_version = {},
+                       .repository = {},
+                       .conditional = false,
+                       .replaces = {}});
   }
   return rows;
 }
@@ -103,6 +158,7 @@ QList<TransactionRowModel::Row> TransactionRowModel::hookRows(const holonight_pa
         .new_version = {},
         .repository = {},
         .conditional = hook.conditional,
+        .replaces = {},
     });
   }
   return rows;
@@ -120,6 +176,7 @@ QList<TransactionRowModel::Row> TransactionRowModel::changedRows(
         .new_version = text(change.new_version),
         .repository = {},
         .conditional = false,
+        .replaces = {},
     });
   }
   return rows;

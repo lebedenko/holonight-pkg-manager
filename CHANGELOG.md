@@ -6,6 +6,18 @@ All notable changes to HoloNight Packages will be documented in this file.
 
 ### Added
 
+- System upgrade from the Updates page. **Update system…** asks `holonight-package-helper` (protocol version 2) for a
+  full upgrade: the helper syncs the databases into a private copy under `/var/lib/holonight-package-helper`, the GUI
+  shows the sync per repository with Cancel, then a preview with every upgrade, replacement, new package and package held
+  back by `IgnorePkg`/`IgnoreGroup`, the keyring step, the download size and the installed-size change. After polkit
+  (`org.holonight.packages.upgrade`) the helper downloads every package first, then, under the libalpm lock, refuses
+  with "databases changed" if anything synced meanwhile, replaces the live databases with the previewed copy, commits
+  `archlinux-keyring` and its required dependencies first, followed by the rest. Cancel works until the databases are replaced; a failure after
+  that names the step and the next upgrade finishes it. The Installed, Updates and Explore lists and the session update
+  count are refreshed after every outcome. A partial-upgrade refusal of an install now offers **Update system…**. An old
+  helper (protocol version 1) disables the button with an explanation. Replacements are accepted; conflicts, provider
+  choices, removals and key imports are refused with fixed messages. Links slower than about 160 kbit/s cannot finish
+  the sync within the helper's 480-second limit.
 - Install and Remove from the GUI. The Explore details panel has an Install control and the Installed details panel a
   Remove control, one package at a time. Each asks the privileged `holonight-package-helper` for a plan and shows a
   confirmation dialog with the packages to install or remove (dependencies, orphans, hooks, expiry); after confirming,

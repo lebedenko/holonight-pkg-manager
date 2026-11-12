@@ -60,6 +60,45 @@ struct ChangeWire {  // (ssss)
   QString new_version;
 };
 
+// The upgrade preview of PrepareUpgrade (system-upgrade DESIGN 6.1).
+struct UpgradeItemWire {  // (ssss)
+  QString name;
+  QString old_version;
+  QString new_version;
+  QString repository;
+};
+
+struct ReplacementWire {  // (sssss)
+  QString old_name;
+  QString old_version;
+  QString new_name;
+  QString new_version;
+  QString repository;
+};
+
+struct NewDependencyWire {  // (sss)
+  QString name;
+  QString version;
+  QString repository;
+};
+
+struct HeldBackWire {  // (ss)
+  QString name;
+  QString installed_version;
+};
+
+struct UpgradePreviewWire {  // (a(ssss)a(sssss)a(sss)a(ss)bastxx)
+  QList<UpgradeItemWire> upgrades;
+  QList<ReplacementWire> replacements;
+  QList<NewDependencyWire> new_dependencies;
+  QList<HeldBackWire> held_back;
+  bool keyring = false;
+  QStringList keyring_packages;
+  qulonglong download_bytes = 0;
+  qlonglong size_change_bytes = 0;
+  qlonglong expires_at = 0;  // epoch seconds
+};
+
 struct ResultWire {  // (s(sasa(ssas))a(ssss)as)
   QString outcome;
   StatusWire status;
@@ -81,6 +120,16 @@ QDBusArgument& operator<<(QDBusArgument& argument, const ChangeWire& value);
 const QDBusArgument& operator>>(const QDBusArgument& argument, ChangeWire& value);
 QDBusArgument& operator<<(QDBusArgument& argument, const ResultWire& value);
 const QDBusArgument& operator>>(const QDBusArgument& argument, ResultWire& value);
+QDBusArgument& operator<<(QDBusArgument& argument, const UpgradeItemWire& value);
+const QDBusArgument& operator>>(const QDBusArgument& argument, UpgradeItemWire& value);
+QDBusArgument& operator<<(QDBusArgument& argument, const ReplacementWire& value);
+const QDBusArgument& operator>>(const QDBusArgument& argument, ReplacementWire& value);
+QDBusArgument& operator<<(QDBusArgument& argument, const NewDependencyWire& value);
+const QDBusArgument& operator>>(const QDBusArgument& argument, NewDependencyWire& value);
+QDBusArgument& operator<<(QDBusArgument& argument, const HeldBackWire& value);
+const QDBusArgument& operator>>(const QDBusArgument& argument, HeldBackWire& value);
+QDBusArgument& operator<<(QDBusArgument& argument, const UpgradePreviewWire& value);
+const QDBusArgument& operator>>(const QDBusArgument& argument, UpgradePreviewWire& value);
 
 // Registers the types with the Qt meta-type and D-Bus systems. Idempotent.
 void registerHelperWireTypes();
@@ -91,6 +140,10 @@ void registerHelperWireTypes();
 // `expected_action` is the wire name of the requested action ("install" or "remove").
 [[nodiscard]] holonight_packages_domain::PrepareReply decodePrepareReply(const QDBusMessage& reply,
                                                                          std::string_view expected_action);
+// The reply of PrepareUpgrade: status, plan ID and the upgrade preview (system-upgrade REQ-F-019).
+[[nodiscard]] holonight_packages_domain::PrepareReply decodePrepareUpgradeReply(const QDBusMessage& reply);
+// The ProtocolVersion property read through org.freedesktop.DBus.Properties.Get.
+[[nodiscard]] holonight_packages_domain::VersionReply decodeProtocolVersionReply(const QDBusMessage& reply);
 [[nodiscard]] holonight_packages_domain::ExecuteReply decodeExecuteReply(const QDBusMessage& reply);
 [[nodiscard]] holonight_packages_domain::CancelReply decodeCancelReply(const QDBusMessage& reply);
 [[nodiscard]] std::optional<holonight_packages_domain::ProgressUpdate> decodeProgress(const QString& phase,
@@ -112,3 +165,12 @@ Q_DECLARE_METATYPE(QList<helper_wire::ChoiceWire>)
 Q_DECLARE_METATYPE(QList<helper_wire::PlanItemWire>)
 Q_DECLARE_METATYPE(QList<helper_wire::HookItemWire>)
 Q_DECLARE_METATYPE(QList<helper_wire::ChangeWire>)
+Q_DECLARE_METATYPE(helper_wire::UpgradeItemWire)
+Q_DECLARE_METATYPE(helper_wire::ReplacementWire)
+Q_DECLARE_METATYPE(helper_wire::NewDependencyWire)
+Q_DECLARE_METATYPE(helper_wire::HeldBackWire)
+Q_DECLARE_METATYPE(helper_wire::UpgradePreviewWire)
+Q_DECLARE_METATYPE(QList<helper_wire::UpgradeItemWire>)
+Q_DECLARE_METATYPE(QList<helper_wire::ReplacementWire>)
+Q_DECLARE_METATYPE(QList<helper_wire::NewDependencyWire>)
+Q_DECLARE_METATYPE(QList<helper_wire::HeldBackWire>)

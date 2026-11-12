@@ -5,6 +5,7 @@
 #include <QStringList>
 
 #include <expected>
+#include <filesystem>
 #include <string>
 
 namespace holonight_helper {
@@ -14,12 +15,12 @@ namespace holonight_helper {
 // (REQ-F-018). The defaults are the real system locations; tests and activation files override them.
 struct HelperConfig {
   holonight_packages_transaction::TransactionConfig transaction;
-  // libalpm keeps its lock file at <database directory>/db.lck.
-  [[nodiscard]] std::string lockFile() const;
+  // Where the system upgrade keeps its scratch roots: the unit's StateDirectory (system-upgrade REQ-F-008).
+  std::filesystem::path state_directory;
 };
 
 // `arguments` start with the program name, as QCoreApplication::arguments() does. Parses `--root`, `--dbpath`,
-// `--pacman-conf` and `--cache-dir`. Every path must be absolute.
+// `--pacman-conf`, `--cache-dir` and `--state-dir`. Every path must be absolute.
 [[nodiscard]] std::expected<HelperConfig, std::string> parseHelperConfig(const QStringList& arguments);
 
 }  // namespace holonight_helper

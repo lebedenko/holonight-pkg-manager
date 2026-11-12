@@ -54,11 +54,30 @@ struct PacmanRepositories {
   bool operator==(const PacmanRepositories&) const = default;
 };
 
+// What the system upgrade needs to refuse explicitly instead of ignoring (system-upgrade REQ-F-018, REQ-F-076). The
+// update check and the install and remove path never ask for it.
+struct PacmanDiagnostics {
+  // The first repository section that has no Server after Include expansion; empty if every repository has one.
+  std::string repository_without_server;
+  // Fixed option tokens that the upgrade does not support: "XferCommand", and "Usage" when a repository sets a Usage
+  // other than exactly "All". In file order, each token once.
+  std::vector<std::string> unsupported;
+  // [options] DBPath and RootDir as written (empty when not set); the helper compares them with its own paths.
+  std::string db_path;
+  std::string root_dir;
+
+  bool operator==(const PacmanDiagnostics&) const = default;
+};
+
 // Parses `[repo]` sections (Server, Include, SigLevel) and [options] GPGDir, Architecture and SigLevel. Fails closed:
 // an unreadable file or Include, a repeated repository name, a repository without servers or an unparseable
 // SigLevel token is an error, never a weaker level. `machine_architecture` resolves "auto" (uname -m).
 [[nodiscard]] std::expected<PacmanRepositories, std::string> parsePacmanRepositories(
     const std::filesystem::path& path, std::string_view machine_architecture);
+// The same, and fills `diagnostics` (when not null) with what it saw, also when it fails. The result is identical to
+// the overload above.
+[[nodiscard]] std::expected<PacmanRepositories, std::string> parsePacmanRepositories(
+    const std::filesystem::path& path, std::string_view machine_architecture, PacmanDiagnostics* diagnostics);
 
 // The machine architecture as reported by uname(2); empty if unavailable.
 [[nodiscard]] std::string machineArchitecture();

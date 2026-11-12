@@ -31,6 +31,12 @@ std::vector<RemovalKey> removalKeys(const ResolvedPlan& plan) {
   return keys;
 }
 
+bool sameUpgrade(const UpgradeDetail& left, const UpgradeDetail& right) {
+  return left.upgrades == right.upgrades && left.replacements == right.replacements &&
+         left.new_dependencies == right.new_dependencies && left.held_back == right.held_back &&
+         left.keyring_packages == right.keyring_packages;
+}
+
 }  // namespace
 
 std::string_view changeKindName(ChangeKind kind) noexcept {
@@ -46,6 +52,10 @@ std::string_view changeKindName(ChangeKind kind) noexcept {
 }
 
 bool samePlan(const ResolvedPlan& left, const ResolvedPlan& right) {
+  if (left.action == PlanAction::Upgrade || right.action == PlanAction::Upgrade) {
+    return left.action == right.action && left.upgrade.has_value() && right.upgrade.has_value() &&
+           sameUpgrade(*left.upgrade, *right.upgrade);
+  }
   return left.action == right.action && installKeys(left) == installKeys(right) &&
          removalKeys(left) == removalKeys(right) && left.hooks == right.hooks;
 }

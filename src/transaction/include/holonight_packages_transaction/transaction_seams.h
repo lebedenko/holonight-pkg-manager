@@ -1,6 +1,9 @@
 #pragma once
 
+#include <cstdint>
+#include <filesystem>
 #include <functional>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -27,6 +30,16 @@ struct TransactionSeams {
   // return 1 when the file is up to date, or -1 on failure. A test can block here to hold a transaction in its download
   // phase. Unset in production (REQ-F-027, H-004).
   std::function<int(const std::string& url, const std::string& destinationDirectory, bool force)> fetch;
+
+  // system-upgrade. Further observe() stages of an upgrade, in order: "alpm-initialize" (before alpm_initialize),
+  // "upgrade-fetch", "fetched", "lock-taken", "guard-checked", "promotion-starting", "promotion-done", "keyring-step",
+  // "main-step". Further inject_fault() stages: "promotion-rename-<k>" (before the k-th file, from 1, is replaced),
+  // "keyring-commit" and "main-commit" (instead of committing the step).
+
+  // Replaces statvfs for the disk-space estimate: the free bytes of the filesystem holding `path`.
+  std::function<std::optional<std::uint64_t>(const std::filesystem::path& path)> free_space;
+  // Promotes by copy-then-rename even when scratch and live are on one filesystem (REQ-F-077).
+  bool promote_by_copy = false;
 };
 
 }  // namespace holonight_packages_transaction

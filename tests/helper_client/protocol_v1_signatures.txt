@@ -1,0 +1,19 @@
+# The members of org.holonight.PackageHelper1.Transactions at ProtocolVersion 1. Version 2 (system-upgrade) may only
+# add members: every line here must still be in the interface XML, unchanged (system-upgrade REQ-C-002).
+method PreparePlan in action s
+method PreparePlan in names as
+method PreparePlan in options a{sv}
+method PreparePlan out status (sasa(ssas))
+method PreparePlan out plan_id s
+method PreparePlan out preview (sa(sssss)a(sssss)a(sssss)a(sb)x)
+method Execute in plan_id s
+method Execute out result (s(sasa(ssas))a(ssss)as)
+method Cancel in plan_id s
+method Cancel out status (sasa(ssas))
+signal Progress plan_id s
+signal Progress phase s
+signal Progress current u
+signal Progress total u
+signal Progress item s
+property ProtocolVersion u read
+property Busy b read

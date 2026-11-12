@@ -1,11 +1,11 @@
 #include "execution_driver.h"
 
-#include "download_classifier.h"
-#include "error_mapping.h"
 #include "fetch_seam.h"
 #include "plan_resolver.h"
 
 #include <algorithm>
+#include <string>
+#include <vector>
 
 namespace holonight_packages_transaction {
 namespace {
@@ -33,18 +33,6 @@ TransactionErrorCode reresolutionCode(TransactionErrorCode code) {
   }
 }
 
-bool isDownloadError(alpm_errno_t error) {
-  return error == ALPM_ERR_RETRIEVE || error == ALPM_ERR_LIBCURL || error == ALPM_ERR_EXTERNAL_DOWNLOAD;
-}
-
-bool logMentions(const std::vector<std::string>& lines, std::string_view text) {
-  return std::ranges::any_of(lines, [text](const std::string& line) { return line.contains(text); });
-}
-
-std::string fileNameOf(const char* path) {
-  return path == nullptr ? std::string() : std::filesystem::path(path).filename().string();
-}
-
 }  // namespace
 
 ExecutionDriver::ExecutionDriver(const TransactionConfig& config, LogSink journal, const TransactionSeams& seams,
@@ -56,7 +44,15 @@ ExecutionDriver::ExecutionDriver(const TransactionConfig& config, LogSink journa
       seams_(&seams),
       request_(&request),
       approved_(&approved),
-      context_(&context) {}
+      context_(&context),
+      reporter_([&approved] {
+        std::vector<std::string> names;
+        names.reserve(approved.changes.size());
+        for (const auto& change : approved.changes) {
+          names.push_back(change.name);
+        }
+        return names;
+      }()) {}
 
 void ExecutionDriver::observe(std::string_view stage) const {
   if (seams_->observe) {
@@ -118,7 +114,7 @@ ExecutionResult ExecutionDriver::run() {
     journal_(LogLevel::Info, "a corrupt package file was deleted; repeating the execution once");
     (*session)->questions().clear();
     (*session)->questions().setCorruptedAnswer(false);
-    stage_ = Stage::BeforeCommitPoint;
+    stage_ = CommitStage::BeforeCommitPoint;
     changed_.clear();
     warnings_.clear();
     interrupted_ = false;
@@ -154,7 +150,7 @@ ExecutionDriver::Attempt ExecutionDriver::attempt(AlpmSession& session, int numb
                           session.questions().lastCorruptedReason() == ALPM_ERR_PKG_INVALID ||
                           session.questions().lastCorruptedReason() == ALPM_ERR_PKG_OPEN);
   const bool retry = number == 1 && result.outcome == holonight_packages_domain::ExecutionOutcome::Failed &&
-                     stage_ == Stage::BeforeCommitPoint && corrupted;
+                     stage_ == CommitStage::BeforeCommitPoint && corrupted;
   session.releaseTransaction();
   return Attempt{.result = std::move(result), .retry = retry};
 }
@@ -165,11 +161,11 @@ void ExecutionDriver::onEvent(const alpm_event_t& event) {
     case ALPM_EVENT_TRANSACTION_START: {
       const bool preHook = event.type == ALPM_EVENT_HOOK_START && event.hook.when == ALPM_HOOK_PRE_TRANSACTION;
       const bool postHook = event.type == ALPM_EVENT_HOOK_START && !preHook;
-      if (postHook || stage_ != Stage::BeforeCommitPoint) {
+      if (postHook || stage_ != CommitStage::BeforeCommitPoint) {
         break;
       }
       // The commit point: from here libalpm may run external code or change the root (DESIGN 6.7).
-      stage_ = Stage::AtCommitPoint;
+      stage_ = CommitStage::AtCommitPoint;
       observe("commit-point");
       if (!gate_.tryCommit()) {
         // A cancel won the race. libalpm honours an interrupt only from TRANSACTION_START on (spike S-1), so a hook
@@ -186,7 +182,7 @@ void ExecutionDriver::onEvent(const alpm_event_t& event) {
       observe("downloading");
       break;
     case ALPM_EVENT_PACKAGE_OPERATION_START:
-      stage_ = Stage::AfterChange;
+      stage_ = CommitStage::AfterChange;
       break;
     case ALPM_EVENT_PACKAGE_OPERATION_DONE: {
       const auto& operation = event.package_operation;
@@ -244,77 +240,8 @@ ExecutionResult ExecutionDriver::commit(AlpmSession& session) {
   return failureResult(session, alpm_errno(handle_), data);
 }
 
-// The planned package a downloaded file belongs to (`<name>-<version>-<arch>.pkg.tar.*`), or the file name itself.
-std::string ExecutionDriver::packageNameFor(const std::string& file_name) const {
-  for (const auto& change : approved_->changes) {
-    if (file_name.starts_with(change.name + "-")) {
-      return change.name;
-    }
-  }
-  return file_name;
-}
-
-FailureContext ExecutionDriver::failureContext() const {
-  switch (stage_) {
-    case Stage::BeforeCommitPoint:
-      return FailureContext::BeforeCommitPoint;
-    case Stage::AtCommitPoint:
-      return FailureContext::AtCommitPointBeforeChange;
-    case Stage::AfterChange:
-      break;
-  }
-  return FailureContext::AfterChange;
-}
-
-// The packages a failure names, from libalpm's data list or the failed download.
-std::vector<std::string> ExecutionDriver::failureNames(alpm_errno_t error, alpm_list_t* data,
-                                                       const DownloadClassification& download,
-                                                       FailureContext context) const {
-  std::vector<std::string> names;
-  if (isDownloadError(error)) {
-    if (!download.file_name.empty() && context == FailureContext::BeforeCommitPoint) {
-      names.push_back(packageNameFor(download.file_name));
-    }
-    return names;
-  }
-  for (alpm_list_t* item = data; item != nullptr; item = item->next) {
-    if (error == ALPM_ERR_FILE_CONFLICTS) {
-      const auto* conflict = static_cast<const alpm_fileconflict_t*>(item->data);
-      if (conflict->target != nullptr) {
-        names.emplace_back(conflict->target);
-      }
-    } else if (error == ALPM_ERR_PKG_INVALID || error == ALPM_ERR_PKG_INVALID_CHECKSUM ||
-               error == ALPM_ERR_PKG_INVALID_SIG || error == ALPM_ERR_PKG_MISSING_SIG) {
-      names.push_back(fileNameOf(static_cast<const char*>(item->data)));
-    }
-  }
-  return names;
-}
-
 ExecutionResult ExecutionDriver::failureResult(AlpmSession& session, alpm_errno_t error, alpm_list_t* data) const {
-  const FailureContext context = failureContext();
-  DownloadClassification download;
-  if (isDownloadError(error)) {
-    download = classifyDownloadFailure(session.logLines(), &systemStatError);
-  }
-  TransactionErrorCode code = mapAlpmError(error, context, download.code);
-  // libalpm reports a missing signing key without an errno (spike S-6).
-  const bool unmapped = code == TransactionErrorCode::InternalError || code == TransactionErrorCode::TransactionFailed;
-  if (unmapped && logMentions(session.logLines(), "required key missing from keyring")) {
-    code = TransactionErrorCode::SignatureInvalid;
-  }
-  TransactionFailure failure{.code = code, .names = {}, .choices = {}};
-  if (stage_ != Stage::AfterChange && !session.questions().decisions().empty()) {
-    failure.code = TransactionErrorCode::NeedsDecision;
-    failure.choices = session.questions().decisions();
-    return ExecutionResult::failed(std::move(failure));
-  }
-  failure.names = failureNames(error, data, download, context);
-  ExecutionResult result = ExecutionResult::failed(std::move(failure));
-  if (code == TransactionErrorCode::TransactionFailed && stage_ == Stage::AfterChange) {
-    result.changed = changed_;
-  }
-  return result;
+  return reporter_.failureResult(session, error, data, stage_, changed_);
 }
 
 }  // namespace holonight_packages_transaction

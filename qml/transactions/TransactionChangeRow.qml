@@ -15,6 +15,8 @@ RowLayout {
     required property string newVersion
     required property string repository
     required property bool conditional
+    // A replacement's installed package (system-upgrade); empty otherwise.
+    required property string replaces
 
     readonly property string versionText: root.oldVersion.length > 0 && root.newVersion.length > 0
         ? root.oldVersion + " → " + root.newVersion
@@ -25,6 +27,10 @@ RowLayout {
         case "orphan": return qsTr("orphan")
         case "hook": return root.conditional ? qsTr("hook (conditional)") : qsTr("hook")
         case "changed": return root.action === "remove" ? qsTr("removed") : qsTr("installed")
+        case "upgrade": return qsTr("update")
+        case "replacement": return qsTr("replaces %1").arg(root.replaces)
+        case "newDependency": return qsTr("new")
+        case "heldBack": return qsTr("held back")
         default: return qsTr("target")
         }
     }

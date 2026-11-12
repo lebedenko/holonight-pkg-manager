@@ -21,6 +21,13 @@ add_library(holonight_packages_transaction STATIC
   src/event_mapper.cpp
   src/execution_driver.h
   src/execution_driver.cpp
+  src/failure_reporter.cpp
+  src/guard_snapshot.cpp
+  src/promotion.cpp
+  src/scratch_dbpath.cpp
+  src/sync_refresher.cpp
+  src/upgrade_driver.cpp
+  src/upgrade_resolver.cpp
   src/hook_preview.h
   src/hook_preview.cpp
   src/log_sink.cpp

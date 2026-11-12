@@ -51,11 +51,11 @@ TEST(TransactionMessages, TransactionFailedWordingDependsOnWhetherAnythingChange
             failureText(TransactionErrorCode::TransactionFailed, {}, PlanAction::Install, false));
 }
 
-TEST(TransactionMessages, PartialUpgradeRequiredNamesThePackagesAndSaysToUpdateOutsideTheApp) {
+TEST(TransactionMessages, PartialUpgradeRequiredNamesThePackagesAndPointsToUpdateSystem) {
   const QString text =
       failureText(TransactionErrorCode::PartialUpgradeRequired, {"glibc", "zlib"}, PlanAction::Install, false);
   EXPECT_TRUE(text.contains(QStringLiteral("glibc, zlib")));
-  EXPECT_TRUE(text.contains(QStringLiteral("outside this app")));
+  EXPECT_TRUE(text.contains(QStringLiteral("Update system")));  // system-upgrade REQ-F-089
 }
 
 TEST(TransactionMessages, BusyReadsAnotherPackageOperationIsRunning) {

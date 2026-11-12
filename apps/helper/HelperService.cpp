@@ -84,9 +84,38 @@ void HelperService::preparePlan(const QDBusMessage& message, const QString& acti
       });
 }
 
+void HelperService::prepareUpgrade(const QDBusMessage& message, const QVariantMap& options) {
+  const QString caller = message.service();
+  // Watched from the start: a disconnect during the preparation is a cancel (system-upgrade REQ-F-035).
+  watch(caller);
+  plans_->prepareUpgrade(caller.toStdString(), toStd(options.keys()),
+                         [this, message](std::expected<holonight_packages_application::PlanService::Prepared,
+                                                       holonight_packages_domain::TransactionFailure>
+                                             result) {
+                           if (!result) {
+                             reply(message, {QVariant::fromValue(toWire(result.error())), QString(),
+                                             QVariant::fromValue(UpgradePreviewWire{})});
+                             return;
+                           }
+                           reply(message, {
+                                              QVariant::fromValue(okStatus()),
+                                              QString::fromStdString(result->id),
+                                              QVariant::fromValue(toUpgradeWire(result->plan, result->expires_at)),
+                                          });
+                         });
+}
+
 void HelperService::execute(const QDBusMessage& message, const QString& planId) {
   plans_->execute(message.service().toStdString(), planId.toStdString(),
-                  [this, message](const holonight_packages_domain::ExecutionResult& result) {
+                  [this, message, planId](const holonight_packages_domain::ExecutionResult& result) {
+                    if (journal_) {
+                      std::string line = "plan " + planId.toStdString() + " ended: " +
+                                         std::string(holonight_packages_domain::executionOutcomeName(result.outcome));
+                      if (result.outcome == holonight_packages_domain::ExecutionOutcome::Failed) {
+                        line += " " + std::string(holonight_packages_domain::transactionErrorName(result.failure.code));
+                      }
+                      journal_(holonight_packages_transaction::LogLevel::Info, line);
+                    }
                     reply(message, {QVariant::fromValue(toWire(result))});
                   });
 }

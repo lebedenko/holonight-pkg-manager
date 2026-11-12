@@ -112,11 +112,29 @@ CASES = {
     "h003-fork-in-transaction": ("H-003", {"src/transaction/src/x.cpp": "pid_t p = fork();\n"}),
     "h004-db-update": ("H-004", {"src/transaction/src/x.cpp": "alpm_db_update(h, db, 0);\n"}),
     "h004-fetchcb-in-helper": ("H-004", {"apps/helper/HelperService.cpp": "alpm_option_set_fetchcb(h, cb, 0);\n"}),
+    "h004-db-update-in-helper": ("H-004", {"apps/helper/HelperService.cpp": "alpm_db_update(h, db, 0);\n"}),
+    "h004-fetch-pkgurl-in-sync-refresher": ("H-004", {
+        "src/transaction/src/sync_refresher.cpp": "alpm_fetch_pkgurl(h, urls, &out);\n"}),
+    "h004-fetchcb-in-sync-refresher": ("H-004", {
+        "src/transaction/src/sync_refresher.cpp": "alpm_option_set_fetchcb(h, cb, 0);\n"}),
+    "legit-db-update-in-sync-refresher": (None, {
+        "src/transaction/src/sync_refresher.cpp": "const int r = alpm_db_update(h, dbs, 0);\n"}),
     "h005-compare-versions": ("H-005", {"src/transaction/src/x.cpp": "int compareVersions(const char*, const char*);\n"}),
     "h005-vercmp-in-domain": ("H-005", {"src/domain/src/x.cpp": "int vercmp(a, b);\n"}),
-    "h006-upgrade-method": ("H-006", {"apps/helper/dbus/x.xml": '<method name="UpgradeSystem"/>\n'}),
+    "legit-prepare-upgrade-method": (None, {"apps/helper/dbus/x.xml": '<method name="PrepareUpgrade"/>\n'}),
+    "h006-refresh-method": ("H-006", {"apps/helper/dbus/x.xml": '<method name="RefreshDatabases"/>\n'}),
+    "h006-sync-method": ("H-006", {"apps/helper/dbus/x.xml": '<method name="SyncDatabases"/>\n'}),
+    "h006-rescan-method": ("H-006", {"apps/helper/dbus/x.xml": '<method name="RescanDatabases"/>\n'}),
     "h006-answer-method": ("H-006", {"apps/helper/dbus/x.xml": '<method name="AnswerQuestion"/>\n'}),
     "h006-packagekit": ("H-006", {"apps/helper/CMakeLists.txt": "find_package(PackageKit)\n"}),
+    "h013-promotion-outside-driver": ("H-013", {
+        "src/transaction/src/alpm_transaction_engine.cpp": "SyncPromotion promotion(live, scratch);\n"}),
+    "h013-promotion-in-helper": ("H-013", {"apps/helper/HelperService.cpp": "promoteSyncDatabases(a, b);\n"}),
+    "legit-promotion-in-driver": (None, {
+        "src/transaction/src/promotion.h": "class SyncPromotion {};\n",
+        "src/transaction/src/promotion.cpp": "SyncPromotion::SyncPromotion() {}\n",
+        "src/transaction/src/upgrade_driver.cpp": "SyncPromotion promotion(live, scratch);\n",
+    }),
     "h007-path-argument": ("H-007", {"apps/helper/dbus/x.xml": '<arg name="pacmanConfPath" type="s"/>\n'}),
     "h007-config-from-adaptor": ("H-007", {"apps/helper/HelperAdaptor.cpp": "TransactionConfig config{a, b, c, d};\n"}),
     "h008-seams-in-main": ("H-008", {"apps/helper/main.cpp": "TransactionSeams seams;\n"}),
@@ -128,6 +146,14 @@ CASES = {
     "h012-https-server-in-helper-tests": ("H-012", {"tests/helper/x_test.cpp": 'conf = "Server = https://mirror.example/x";\n'}),
     "h012-http-server-in-transaction-tests": ("H-012", {"tests/transaction/x_test.cpp": 'conf = "Server = http://127.0.0.1:1/x";\n'}),
     "h010-input-automation-in-helper-tests": ("C-010", {"tests/helper/x_test.cpp": "QTest::mouseClick(&w, Qt::LeftButton);\n"}),
+    # system-upgrade: the GUI's helper calls and its absent actions.
+    "u001-unknown-helper-method": ("U-001", {
+        "apps/packages/app/DBusTransactionService.cpp": 'QDBusMessage m = call(QStringLiteral("RefreshDatabases"));\n'}),
+    "legit-four-helper-methods": (None, {
+        "apps/packages/app/DBusTransactionService.cpp": 'call(QStringLiteral("PrepareUpgrade"));\ncall(QStringLiteral("Cancel"));\n'}),
+    "u002-per-package-upgrade": ("U-002", {"apps/packages/app/TransactionController.h": "Q_INVOKABLE void upgradePackage();\n"}),
+    "u002-standalone-refresh-in-qml": ("U-002", {"qml/updates/UpdatesView.qml": "onClicked: controller.refreshDatabases()\n"}),
+    "u003-focus-automation": ("U-003", {"tests/transactions/x_test.cpp": "item->forceActiveFocus();\n"}),
     # One comparison loop.
     "f007-second-vercmp": ("F-007", {"src/backends/src/other.cpp": "if (alpm_pkg_vercmp(a, b) > 0) {}\n"}),
 }

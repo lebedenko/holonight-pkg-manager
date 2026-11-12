@@ -5,10 +5,12 @@
 #include "holonight_packages_application/update_check_ports.h"
 #include "holonight_packages_domain/transaction_plan.h"
 #include "holonight_packages_domain/transaction_request.h"
+#include "holonight_packages_domain/upgrade_plan.h"
 
 #include <chrono>
 #include <cstddef>
 #include <expected>
+#include <functional>
 #include <map>
 #include <optional>
 #include <string>
@@ -32,6 +34,8 @@ struct StoredPlan {
   holonight_packages_domain::ResolvedPlan plan;
   std::chrono::system_clock::time_point created;
   PlanState state = PlanState::Pending;
+  // An upgrade plan's private scratch root and guard (system-upgrade); empty for install and remove.
+  std::optional<holonight_packages_domain::UpgradeWorkspace> workspace;
 };
 
 // What find() found. Unknown plans, plans of another caller and plans that were consumed all read as NotFound, so a
@@ -52,7 +56,12 @@ class PlanStore {
   [[nodiscard]] bool hasRoomFor(std::uint32_t uid) const;
   // Stores a plan and returns its ID. Check hasRoomFor() first; add() itself refuses beyond the limits.
   [[nodiscard]] std::optional<PlanId> add(const CallerIdentity& owner, holonight_packages_domain::PlanRequest request,
-                                          holonight_packages_domain::ResolvedPlan plan);
+                                          holonight_packages_domain::ResolvedPlan plan,
+                                          std::optional<holonight_packages_domain::UpgradeWorkspace> workspace = {});
+
+  // Called with every plan that leaves the store, whatever the reason: consumed, expired, swept or discarded by a
+  // disconnect. The one place where an upgrade plan's scratch root is removed (system-upgrade DESIGN 4.3).
+  void setDiscardObserver(std::function<void(const StoredPlan&)> observer) { observer_ = std::move(observer); }
 
   // A pending plan older than the lifetime is Expired and is discarded by this call. Exactly the lifetime is still
   // valid (REQ-F-005, REQ-F-006).
@@ -81,7 +90,10 @@ class PlanStore {
   PlanIdGenerator* generator_;
   StoreLimits limits_;
   std::chrono::seconds lifetime_;
+  void notifyDiscarded(const StoredPlan& plan) const;
+
   std::map<PlanId, StoredPlan> plans_;
+  std::function<void(const StoredPlan&)> observer_;
 };
 
 }  // namespace holonight_packages_application

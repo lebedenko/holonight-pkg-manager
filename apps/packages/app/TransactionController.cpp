@@ -14,6 +14,7 @@ using holonight_packages_application::FlowNotice;
 using holonight_packages_application::FlowState;
 using holonight_packages_domain::PlanAction;
 using holonight_packages_domain::PlanRequest;
+using holonight_packages_domain::ProgressPhase;
 using holonight_packages_domain::WarningToken;
 namespace messages = transaction_messages;
 
@@ -100,6 +101,9 @@ QString TransactionController::actionKind() const {
   if (flow_.state() == FlowState::Idle) {
     return {};
   }
+  if (flow_.isUpgrade()) {
+    return QStringLiteral("upgrade");
+  }
   return flow_.currentRequest().action == PlanAction::Remove ? QStringLiteral("remove") : QStringLiteral("install");
 }
 
@@ -112,11 +116,16 @@ QString TransactionController::title() const {
   if (flow_.state() == FlowState::Idle) {
     return {};
   }
+  if (flow_.isUpgrade()) {
+    return messages::upgradeText(messages::UpgradeKey::Title);
+  }
   const QString name = packageName();
   return flow_.currentRequest().action == PlanAction::Remove ? tr("Remove %1").arg(name) : tr("Install %1").arg(name);
 }
 
 QString TransactionController::message() const {
+  const QString keyringNote =
+      keyringChanged() ? QStringLiteral(" ") + messages::upgradeText(messages::UpgradeKey::KeyringUpdated) : QString();
   switch (flow_.state()) {
     case FlowState::Refused:
     case FlowState::Failed: {
@@ -124,9 +133,13 @@ QString TransactionController::message() const {
         return {};
       }
       return messages::failureText(flow_.failure()->code, flow_.failure()->names, flow_.currentRequest().action,
-                                   flow_.changed().empty());
+                                   flow_.changed().empty()) +
+             keyringNote;
     }
     case FlowState::Succeeded:
+      if (flow_.isUpgrade()) {
+        return messages::upgradeText(messages::UpgradeKey::Succeeded) + keyringNote;
+      }
       return messages::noteText(messages::Note::Succeeded);
     case FlowState::Cancelled:
       return messages::noteText(messages::Note::Cancelled);
@@ -135,6 +148,9 @@ QString TransactionController::message() const {
     case FlowState::HelperUnavailable:
       return messages::noteText(messages::Note::HelperUnavailable);
     case FlowState::Preparing:
+      if (flow_.isUpgrade() && flow_.progress().seen && flow_.progress().phase == ProgressPhase::Syncing) {
+        return messages::syncingText(flow_.progress().current, flow_.progress().total, flow_.progress().item);
+      }
       return messages::noteText(messages::Note::Preparing);
     default:
       return {};
@@ -169,12 +185,18 @@ QStringList TransactionController::actions() const {
       case FlowAction::Close:
         list.push_back(QStringLiteral("close"));
         break;
+      case FlowAction::UpdateSystem:
+        list.push_back(QStringLiteral("updateSystem"));
+        break;
     }
   }
   return list;
 }
 
 QString TransactionController::confirmLabel() const {
+  if (flow_.isUpgrade()) {
+    return messages::upgradeText(messages::UpgradeKey::ConfirmLabel);
+  }
   if (flow_.currentRequest().action == PlanAction::Remove) {
     const int count = flow_.prepared() ? static_cast<int>(flow_.prepared()->plan.changes.size()) : 1;
     return messages::removeConfirmLabel(std::max(count, 1));
@@ -229,7 +251,7 @@ qreal TransactionController::progressValue() const {
 
 bool TransactionController::progressIndeterminate() const { return flow_.progress().total == 0; }
 
-bool TransactionController::cancelEnabled() const { return flow_.cancelEnabled(); }
+bool TransactionController::cancelEnabled() const { return flow_.cancelEnabled() || flow_.preparationCancelEnabled(); }
 
 QString TransactionController::cancelLabel() const {
   return flow_.cancelling() ? messages::noteText(messages::Note::Cancelling) : tr("Cancel");
@@ -245,8 +267,121 @@ bool TransactionController::requestRemove(const QString& name) {
 
 void TransactionController::confirm() { flow_.confirm(); }
 void TransactionController::dismiss() { flow_.dismiss(); }
-void TransactionController::cancelRun() { flow_.cancelRun(); }
+void TransactionController::cancelRun() {
+  if (flow_.state() == FlowState::Preparing) {
+    flow_.cancelPreparation();
+    return;
+  }
+  flow_.cancelRun();
+}
 void TransactionController::tryAgain() { flow_.tryAgain(); }
+
+bool TransactionController::isUpgrade() const { return flow_.state() != FlowState::Idle && flow_.isUpgrade(); }
+
+bool TransactionController::helperTooOld() const { return helper_version_ && *helper_version_ < 2; }
+
+bool TransactionController::upgradeEnabled() const {
+  return flow_.allowNewRequest() && !helperTooOld() && !upgrade_probe_pending_;
+}
+
+QString TransactionController::upgradeDisabledReason() const {
+  return helperTooOld() ? messages::upgradeText(messages::UpgradeKey::HelperTooOld) : QString();
+}
+
+QString TransactionController::stepText() const {
+  const auto& progress = flow_.progress();
+  if (!flow_.isUpgrade() || progress.step_count == 0) {
+    return {};
+  }
+  return messages::stepText(progress.step_index, progress.step_count);
+}
+
+QString TransactionController::keyringNotice() const {
+  if (!flow_.prepared() || !flow_.prepared()->plan.upgrade || !flow_.prepared()->plan.upgrade->keyring()) {
+    return {};
+  }
+  QStringList names;
+  for (const std::string& name : flow_.prepared()->plan.upgrade->keyring_packages) {
+    names.push_back(QString::fromStdString(name));
+  }
+  return messages::upgradeText(messages::UpgradeKey::Keyring).arg(names.join(QStringLiteral(", ")));
+}
+
+QString TransactionController::downloadText() const {
+  if (!flow_.prepared() || !flow_.prepared()->plan.upgrade) {
+    return {};
+  }
+  return tr("Download: %1")
+      .arg(QLocale::system().formattedDataSize(static_cast<qint64>(flow_.prepared()->plan.upgrade->download_bytes)));
+}
+
+QString TransactionController::sizeChangeText() const {
+  if (!flow_.prepared() || !flow_.prepared()->plan.upgrade) {
+    return {};
+  }
+  const std::int64_t change = flow_.prepared()->plan.upgrade->size_change_bytes;
+  const QString size = QLocale::system().formattedDataSize(change < 0 ? -change : change);
+  return change < 0 ? tr("Installed size: %1 less").arg(size) : tr("Installed size: %1 more").arg(size);
+}
+
+QString TransactionController::previewHeading() const {
+  return isUpgrade() ? messages::upgradeText(messages::UpgradeKey::Preview) : QString();
+}
+
+QString TransactionController::heldBackHeading() { return messages::upgradeText(messages::UpgradeKey::HeldBack); }
+
+bool TransactionController::keyringChanged() const {
+  if (!flow_.isUpgrade()) {
+    return false;
+  }
+  return std::ranges::any_of(flow_.changed(), [](const holonight_packages_domain::ChangedPackage& change) {
+    return change.name == "archlinux-keyring" && change.action == holonight_packages_domain::ChangeAction::Install;
+  });
+}
+
+void TransactionController::probe(holonight_packages_domain::ProbeMode mode, std::function<void(bool)> then) {
+  const std::weak_ptr<int> alive = alive_;
+  service_.queryProtocolVersion(mode,
+                                [this, alive, then = std::move(then)](holonight_packages_domain::VersionReply reply) {
+                                  if (alive.expired()) {
+                                    return;
+                                  }
+                                  if (reply) {
+                                    helper_version_ = *reply;
+                                  }
+                                  if (then) {
+                                    then(reply.has_value());
+                                  }
+                                  emit changed();
+                                });
+}
+
+void TransactionController::probeHelper() { probe(holonight_packages_domain::ProbeMode::NoAutoStart, {}); }
+
+bool TransactionController::requestUpgrade() {
+  if (!upgradeEnabled()) {
+    return false;
+  }
+  if (helper_version_ && *helper_version_ >= 2) {
+    return flow_.requestUpgrade();
+  }
+  upgrade_probe_pending_ = true;
+  emit changed();
+  probe(holonight_packages_domain::ProbeMode::AutoStart, [this](bool answered) {
+    upgrade_probe_pending_ = false;
+    // An old helper never sees PrepareUpgrade (REQ-F-079); an unreachable one is reported by the flow.
+    if (!answered || !helperTooOld()) {
+      flow_.requestUpgrade();
+    }
+  });
+  return true;
+}
+
+void TransactionController::updateSystem() {
+  if (actions().contains(QStringLiteral("updateSystem"))) {
+    static_cast<void>(requestUpgrade());
+  }
+}
 
 holonight_packages_application::CloseDecision TransactionController::handleCloseRequest() {
   return flow_.closeRequested();

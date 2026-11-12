@@ -20,6 +20,14 @@ class AlpmTransactionEngine final : public holonight_packages_domain::Transactio
       const holonight_packages_domain::PlanRequest& request, const holonight_packages_domain::ResolvedPlan& approved,
       const holonight_packages_domain::ExecutionContext& context) override;
 
+  [[nodiscard]] holonight_packages_domain::UpgradePrepareOutcome prepareUpgrade(
+      const std::filesystem::path& scratch_root, const holonight_packages_domain::ExecutionContext& context) override;
+
+  [[nodiscard]] holonight_packages_domain::ExecutionResult executeUpgrade(
+      const holonight_packages_domain::ResolvedPlan& approved,
+      const holonight_packages_domain::UpgradeWorkspace& workspace,
+      const holonight_packages_domain::ExecutionContext& context) override;
+
  private:
   TransactionConfig config_;
   LogSink journal_;

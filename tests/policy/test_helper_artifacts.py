@@ -54,6 +54,15 @@ CASES = {
     "address-families-widened": ("A-004", UNIT, "AF_UNIX AF_INET AF_INET6 AF_NETLINK", "AF_UNIX AF_INET AF_INET6 AF_NETLINK AF_PACKET"),
     # REQ-F-017 and REQ-F-018: nothing in the interface takes a path.
     "execute-with-a-second-argument": ("A-001", XML, '<arg direction="out" name="result"', '<arg direction="in" name="extra" type="s"/>\n      <arg direction="out" name="result"'),
+    # system-upgrade: the upgrade action, the method list and the state directory.
+    "upgrade-action-removed": ("A-005", POLICY, 'id="org.holonight.packages.upgrade"', 'id="org.holonight.packages.other"'),
+    "upgrade-not-cached": ("A-005", POLICY, "<allow_active>auth_admin_keep</allow_active>\n    </defaults>\n  </action>\n\n  <!-- Removing", "<allow_active>auth_admin</allow_active>\n    </defaults>\n  </action>\n\n  <!-- Removing"),
+    "upgrade-action-in-service": ("A-006", SERVICE, '"org.holonight.packages.upgrade"', '"org.holonight.packages.syu"'),
+    "refresh-method-added": ("A-001", XML, '<method name="Cancel">', '<method name="Refresh"/>\n    <method name="Cancel">'),
+    "prepare-upgrade-takes-a-server": ("A-001", XML, '<arg direction="in" name="options" type="a{sv}"/>\n      <arg direction="out" name="status" type="(sasa(ssas))"/>\n      <arg direction="out" name="plan_id" type="s"/>\n      <arg direction="out" name="preview" type="(a(', '<arg direction="in" name="options" type="a{sv}"/>\n      <arg direction="in" name="mirror" type="s"/>\n      <arg direction="out" name="status" type="(sasa(ssas))"/>\n      <arg direction="out" name="plan_id" type="s"/>\n      <arg direction="out" name="preview" type="(a('),
+    "state-directory-removed": ("A-004", UNIT, "StateDirectory=holonight-package-helper\n", ""),
+    "state-directory-listable": ("A-004", UNIT, "StateDirectoryMode=0711", "StateDirectoryMode=0755"),
+    "read-write-paths-added": ("A-004", UNIT, "StateDirectoryMode=0711", "StateDirectoryMode=0711\nReadWritePaths=/var/lib/pacman"),
     "argument-named-path": ("A-001", XML, 'name="plan_id" type="s"/>\n      <arg direction="out" name="result"', 'name="pacman_conf_path" type="s"/>\n      <arg direction="out" name="result"'),
 }
 

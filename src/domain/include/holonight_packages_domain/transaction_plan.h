@@ -1,8 +1,10 @@
 #pragma once
 
 #include "holonight_packages_domain/transaction_request.h"
+#include "holonight_packages_domain/upgrade_plan.h"
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -37,13 +39,17 @@ struct ResolvedPlan {
   std::vector<PlannedChange> changes;     // sorted by (kind, name)
   std::vector<HookPreview> hooks;         // libalpm hook order
   std::vector<std::string> mirror_hosts;  // volatile: journal only
+  // Set exactly when action == Upgrade; `changes` and `hooks` stay empty then (system-upgrade DESIGN 4.1).
+  std::optional<UpgradeDetail> upgrade;
 
   [[nodiscard]] bool isRemoval() const noexcept { return action == PlanAction::Remove; }
 };
 
 // REQ-F-043: equal action; equal install sets by (name, new_version, repository), role-insensitive; equal removal sets
 // by (name, old_version) with the Target/Orphan role kept; equal ordered hook lists. Download sizes and mirror hosts
-// never take part.
+// never take part. For an upgrade (system-upgrade REQ-F-025): equal upgrades, replacements, new dependencies and
+// held-back packages by name, versions and repository, and an equal keyring list; download and size totals and mirror
+// hosts never take part.
 [[nodiscard]] bool samePlan(const ResolvedPlan& left, const ResolvedPlan& right);
 
 }  // namespace holonight_packages_domain

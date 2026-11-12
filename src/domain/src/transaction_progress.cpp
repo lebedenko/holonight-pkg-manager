@@ -18,6 +18,14 @@ std::string_view progressPhaseName(ProgressPhase phase) noexcept {
       return "Removing";
     case ProgressPhase::Done:
       return "Done";
+    case ProgressPhase::Syncing:
+      return "Syncing";
+    case ProgressPhase::Promoting:
+      return "Promoting";
+    case ProgressPhase::KeyringStep:
+      return "KeyringStep";
+    case ProgressPhase::MainStep:
+      return "MainStep";
   }
   return "Resolving";
 }
@@ -31,6 +39,10 @@ std::optional<ProgressPhase> parseProgressPhase(std::string_view name) noexcept 
            ProgressPhase::Installing,
            ProgressPhase::Removing,
            ProgressPhase::Done,
+           ProgressPhase::Syncing,
+           ProgressPhase::Promoting,
+           ProgressPhase::KeyringStep,
+           ProgressPhase::MainStep,
        }) {
     if (progressPhaseName(phase) == name) {
       return phase;

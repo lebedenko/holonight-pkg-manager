@@ -1,7 +1,10 @@
 #include "ExploreModel.h"
 #include "InstalledPackagesModel.h"
 #include "ModelListRefresh.h"
+#include "UpdatesModel.h"
 #include "fake_explore_source.h"
+#include "fake_update_check_client.h"
+#include "fake_update_source.h"
 #include "mock_package_source.h"
 
 #include <QTest>
@@ -85,6 +88,52 @@ TEST(ModelListRefresh, ARefreshDuringAnExploreLoadIsRepeatedAfterIt) {
   ASSERT_TRUE(QTest::qWaitFor([&] { return explore_source->callCount() == 2 && !explore.loading(); }, 3000));
   QTest::qWait(100);
   EXPECT_EQ(explore_source->callCount(), 2);
+}
+
+// system-upgrade T-069, REQ-F-088: an upgrade outcome re-reads every list and asks for a new update count once.
+TEST(ModelListRefresh, AnUpgradeOutcomeReReadsTheThreeListsAndCallsCheckNowOnce) {
+  auto mock_source = std::make_shared<MockPackageSource>();
+  std::atomic<int> installedCalls{0};
+  EXPECT_CALL(*mock_source, enumerateInstalledPackages()).WillRepeatedly([&installedCalls] {
+    ++installedCalls;
+    return std::expected<std::vector<Package>, holonight_packages_domain::PackageSourceError>(std::vector<Package>{});
+  });
+  InstalledPackagesModel installed(std::make_shared<PackageListUseCase>(mock_source));
+  auto explore_source = std::make_shared<FakeExploreSource>();
+  ExploreModel explore(explore_source);
+  auto update_source = std::make_shared<holonight_packages_testing::FakeUpdateSource>();
+  UpdatesModel updates(update_source);
+  holonight_packages_testing::FakeUpdateCheckClient check;
+  ASSERT_TRUE(QTest::qWaitFor(
+      [&] {
+        return !explore.loading() && !updates.loading() &&
+               installed.status() != InstalledPackagesModel::Status::Loading;
+      },
+      2000));
+  const int installedBefore = installedCalls.load();
+  const int exploreBefore = explore_source->callCount();
+  const int updatesBefore = update_source->callCount();
+  ModelListRefresh refresh(installed, explore);
+  refresh.setUpgradeTargets(&updates, &check);
+
+  refresh.refreshAfterUpgrade();
+  ASSERT_TRUE(QTest::qWaitFor(
+      [&] {
+        return installedCalls.load() == installedBefore + 1 && explore_source->callCount() == exploreBefore + 1 &&
+               update_source->callCount() == updatesBefore + 1 && !updates.loading() && !explore.loading();
+      },
+      3000));
+  QTest::qWait(100);
+  EXPECT_EQ(installedCalls.load(), installedBefore + 1);
+  EXPECT_EQ(explore_source->callCount(), exploreBefore + 1);
+  EXPECT_EQ(update_source->callCount(), updatesBefore + 1);
+  EXPECT_EQ(check.checkNowCalls(), 1);
+
+  // The install and remove refresh leaves the Updates list and the count alone.
+  refresh.refreshAfterOutcome();
+  QTest::qWait(150);
+  EXPECT_EQ(update_source->callCount(), updatesBefore + 1);
+  EXPECT_EQ(check.checkNowCalls(), 1);
 }
 
 }  // namespace

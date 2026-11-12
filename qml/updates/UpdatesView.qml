@@ -13,6 +13,15 @@ Item {
     required property UpdatesModel updatesModel
     // Optional: the online-check control. Null hides it and leaves the page exactly as it was.
     property var updateCheckModel: null
+    // Optional: the transaction view-model. Null hides "Update system…" (system-upgrade REQ-F-078).
+    property var transactionController: null
+
+    // The helper's protocol version, asked without starting the helper (system-upgrade DESIGN D-11).
+    Component.onCompleted: {
+        if (root.transactionController !== null) {
+            root.transactionController.probeHelper()
+        }
+    }
 
     readonly property bool hasResult: root.updatesModel.state === UpdatesModel.Updates
                                       || root.updatesModel.state === UpdatesModel.UpToDate
@@ -39,6 +48,24 @@ Item {
                 Controls.ToolTip.delay: 500
 
                 onClicked: root.updatesModel.reload()
+            }
+
+            // Enabled whatever the list shows: the list comes from the databases on disk, which may be stale, and only
+            // the helper's own sync knows (system-upgrade REQ-F-078). Disabled for an old helper (REQ-F-079) and while
+            // a transaction runs.
+            Controls.Button {
+                objectName: "updateSystemButton"
+                visible: root.transactionController !== null
+                text: qsTr("Update system…")
+                enabled: root.transactionController !== null && root.transactionController.upgradeEnabled
+                Controls.ToolTip.text: root.transactionController !== null
+                                       && root.transactionController.upgradeDisabledReason.length > 0
+                                       ? root.transactionController.upgradeDisabledReason
+                                       : qsTr("Download the newest package databases and update every package")
+                Controls.ToolTip.visible: hovered
+                Controls.ToolTip.delay: 500
+
+                onClicked: root.transactionController.requestUpgrade()
             }
         }
 

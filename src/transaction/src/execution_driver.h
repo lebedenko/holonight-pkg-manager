@@ -5,6 +5,7 @@
 #include "download_classifier.h"
 #include "error_mapping.h"
 #include "event_mapper.h"
+#include "failure_reporter.h"
 #include "holonight_packages_domain/transaction_engine.h"
 #include "holonight_packages_transaction/transaction_seams.h"
 
@@ -26,9 +27,6 @@ class ExecutionDriver {
   [[nodiscard]] holonight_packages_domain::ExecutionResult run();
 
  private:
-  // Where the commit is: decides how a libalpm failure is classified (DESIGN 10.2).
-  enum class Stage : unsigned char { BeforeCommitPoint, AtCommitPoint, AfterChange };
-
   void observe(std::string_view stage) const;
   void onEvent(const alpm_event_t& event);
   struct Attempt {
@@ -39,11 +37,6 @@ class ExecutionDriver {
   // because libalpm deleted a corrupt package file (REQ-F-055).
   [[nodiscard]] Attempt attempt(AlpmSession& session, int number);
   [[nodiscard]] holonight_packages_domain::ExecutionResult commit(AlpmSession& session);
-  [[nodiscard]] std::string packageNameFor(const std::string& file_name) const;
-  [[nodiscard]] FailureContext failureContext() const;
-  [[nodiscard]] std::vector<std::string> failureNames(alpm_errno_t error, alpm_list_t* data,
-                                                      const DownloadClassification& download,
-                                                      FailureContext context) const;
   [[nodiscard]] holonight_packages_domain::ExecutionResult failureResult(AlpmSession& session, alpm_errno_t error,
                                                                          alpm_list_t* data) const;
 
@@ -53,9 +46,10 @@ class ExecutionDriver {
   const holonight_packages_domain::PlanRequest* request_;
   const holonight_packages_domain::ResolvedPlan* approved_;
   const holonight_packages_domain::ExecutionContext* context_;
+  FailureReporter reporter_;
   CommitGate gate_;
   std::unique_ptr<EventMapper> mapper_;
-  Stage stage_ = Stage::BeforeCommitPoint;
+  CommitStage stage_ = CommitStage::BeforeCommitPoint;
   bool interrupted_ = false;
   int injectedFault_ = 0;
   alpm_handle_t* handle_ = nullptr;

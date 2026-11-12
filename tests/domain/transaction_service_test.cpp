@@ -24,7 +24,12 @@ class PortOnlyDouble final : public TransactionService {
     cancelled.push_back(plan_id);
     done({});
   }
+  void queryProtocolVersion(ProbeMode mode, VersionDone done) override {
+    probes.push_back(mode);
+    done(std::uint32_t{2});
+  }
   void emit(const std::string& plan_id, const ProgressUpdate& update) const { handler_(plan_id, update); }
+  std::vector<ProbeMode> probes;
 
   std::vector<std::vector<std::string>> prepared;
   std::vector<std::string> executed;

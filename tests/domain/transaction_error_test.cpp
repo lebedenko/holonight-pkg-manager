@@ -11,7 +11,7 @@
 namespace holonight_packages_domain {
 namespace {
 
-constexpr std::array<TransactionErrorCode, 24> kAll{
+constexpr std::array<TransactionErrorCode, 29> kAll{
     TransactionErrorCode::InvalidArgument,
     TransactionErrorCode::PackageNotFound,
     TransactionErrorCode::PackageIgnored,
@@ -36,9 +36,14 @@ constexpr std::array<TransactionErrorCode, 24> kAll{
     TransactionErrorCode::PastPointOfNoReturn,
     TransactionErrorCode::TransactionFailed,
     TransactionErrorCode::InternalError,
+    TransactionErrorCode::SyncFailed,
+    TransactionErrorCode::SyncDatabaseChanged,
+    TransactionErrorCode::KeyImportRequired,
+    TransactionErrorCode::UpgradePartiallyApplied,
+    TransactionErrorCode::Cancelled,
 };
 
-TEST(TransactionErrorTest, HasExactlyTheSpecifiedTwentyFourCodesWithUniqueNames) {
+TEST(TransactionErrorTest, HasExactlyTheSpecifiedTwentyNineCodesWithUniqueNames) {
   static_assert(kAll.size() == kTransactionErrorCodeCount);
   std::set<std::string> names;
   for (const TransactionErrorCode code : kAll) {
@@ -46,7 +51,21 @@ TEST(TransactionErrorTest, HasExactlyTheSpecifiedTwentyFourCodesWithUniqueNames)
     EXPECT_FALSE(name.empty());
     EXPECT_TRUE(names.insert(name).second) << "duplicate name " << name;
   }
-  EXPECT_EQ(names.size(), 24U);
+  EXPECT_EQ(names.size(), 29U);
+}
+
+// system-upgrade T-013: the five upgrade codes are appended, so every earlier ordinal keeps its wire meaning.
+TEST(TransactionErrorTest, UpgradeCodesAreAppendedAndExistingOrdinalsStay) {
+  static_assert(kTransactionErrorCodeCount == 29);
+  for (std::size_t index = 0; index < kAll.size(); ++index) {
+    EXPECT_EQ(static_cast<std::size_t>(kAll.at(index)), index);
+  }
+  EXPECT_EQ(static_cast<int>(TransactionErrorCode::InternalError), 23);
+  EXPECT_EQ(transactionErrorName(TransactionErrorCode::SyncFailed), "SyncFailed");
+  EXPECT_EQ(transactionErrorName(TransactionErrorCode::SyncDatabaseChanged), "SyncDatabaseChanged");
+  EXPECT_EQ(transactionErrorName(TransactionErrorCode::KeyImportRequired), "KeyImportRequired");
+  EXPECT_EQ(transactionErrorName(TransactionErrorCode::UpgradePartiallyApplied), "UpgradePartiallyApplied");
+  EXPECT_EQ(parseTransactionErrorCode("Cancelled"), TransactionErrorCode::Cancelled);
 }
 
 TEST(TransactionErrorTest, NamesRoundTripAndUnknownNamesAreRejected) {
@@ -94,6 +113,11 @@ TEST(TransactionResultTest, OutcomeActionPhaseAndWarningNamesAreEnumerated) {
   EXPECT_EQ(warningTokenName(WarningToken::HookFailed), "HookFailed");
   EXPECT_EQ(progressPhaseName(ProgressPhase::Resolving), "Resolving");
   EXPECT_EQ(progressPhaseName(ProgressPhase::Done), "Done");
+  for (const auto phase :
+       {ProgressPhase::Syncing, ProgressPhase::Promoting, ProgressPhase::KeyringStep, ProgressPhase::MainStep}) {
+    EXPECT_EQ(parseProgressPhase(progressPhaseName(phase)), phase);
+  }
+  EXPECT_EQ(progressPhaseName(ProgressPhase::MainStep), "MainStep");
   EXPECT_EQ(changeActionName(ChangeAction::Remove), "remove");
 }
 

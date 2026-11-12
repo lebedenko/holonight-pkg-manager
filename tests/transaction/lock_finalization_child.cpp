@@ -22,6 +22,19 @@ void checkpoint(const char* message) {
     std::_Exit(10);
   }
 }
+
+TransactionConfig fixtureConfig(const std::filesystem::path& base, bool scratch) {
+  if (scratch) {
+    std::filesystem::create_directories(base / "scratch" / "dbpath");
+    std::filesystem::create_directory_symlink(base / "db" / "local", base / "scratch" / "dbpath" / "local");
+  }
+  return {
+      .root = base / "root",
+      .database_path = scratch ? base / "scratch" / "dbpath" : base / "db",
+      .pacman_conf_path = base / "pacman.conf",
+      .cache_directory = base / "cache",
+  };
+}
 }  // namespace
 
 // Dedicated subprocess: no production switches, and every path belongs to the parent's temporary fixture.
@@ -36,12 +49,10 @@ int main(int argc, char* argv[]) {
   if (holonight_transaction_testing::FixtureRoot::rejectRoot(base, std::filesystem::temp_directory_path())) {
     return 3;
   }
-  const TransactionConfig config{
-      .root = base / "root",
-      .database_path = base / "db",
-      .pacman_conf_path = base / "pacman.conf",
-      .cache_directory = base / "cache",
-  };
+  // "scratch-owned" locks a second dbpath, as the upgrade's scratch handle does, while the parent holds a foreign
+  // live lock at <base>/db/db.lck.
+  const bool scratch = mode == "scratch-owned";
+  const TransactionConfig config = fixtureConfig(base, scratch);
   auto opened = AlpmSession::open(config, PlanAction::Remove, {});
   if (!opened) {
     return 4;
@@ -72,9 +83,13 @@ int main(int argc, char* argv[]) {
   if (guard.ownsLock() != expectedOwner) {
     return 7;
   }
-  if (guard.ownsLock()) {
+  if (scratch && guard.ownedLockPath() != base / "scratch" / "dbpath" / "db.lck") {
+    return 8;
+  }
+  // As the helper's terminator does: remove the owned lock path and nothing else.
+  if (const auto owned = guard.ownedLockPath(); owned && !owned->empty()) {
     std::error_code ignored;
-    std::filesystem::remove(base / "db/db.lck", ignored);
+    std::filesystem::remove(*owned, ignored);
   }
   if (mode == "release-blocked" || mode == "teardown-blocked" || mode == "init-blocked") {
     std::promise<void> attempting;

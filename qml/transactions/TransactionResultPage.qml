@@ -41,6 +41,14 @@ ColumnLayout {
         Layout.fillWidth: true
     }
 
+    HnLabel {
+        objectName: "upgradeDisabledReason"
+        rawText: root.controller.upgradeDisabledReason
+        visible: root.controller.actions.indexOf("updateSystem") >= 0 && rawText.length > 0
+        wrapMode: Text.Wrap
+        Layout.fillWidth: true
+    }
+
     ListView {
         objectName: "transactionResultList"
         model: root.controller.resultRows

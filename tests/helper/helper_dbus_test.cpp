@@ -434,13 +434,13 @@ TEST_F(HelperBusTest, DecisionChoicesTravelAsStructuredData) {
   EXPECT_EQ(prepared.status.choices[0].candidates, (QStringList{QStringLiteral("vi"), QStringLiteral("nano")}));
 }
 
-TEST_F(HelperBusTest, ProtocolVersionIsOne) {
+TEST_F(HelperBusTest, ProtocolVersionIsTwo) {
   QDBusMessage get = QDBusMessage::createMethodCall(kService, kPath, QStringLiteral("org.freedesktop.DBus.Properties"),
                                                     QStringLiteral("Get"));
   get << kInterface << QStringLiteral("ProtocolVersion");
   const QDBusMessage reply = await(client_.asyncCall(get));
   ASSERT_EQ(reply.type(), QDBusMessage::ReplyMessage);
-  EXPECT_EQ(reply.arguments().at(0).value<QDBusVariant>().variant().toUInt(), 1U);
+  EXPECT_EQ(reply.arguments().at(0).value<QDBusVariant>().variant().toUInt(), 2U);  // system-upgrade REQ-F-073
 }
 
 }  // namespace

@@ -24,9 +24,11 @@ class DBusTransactionService final : public QObject, public holonight_packages_d
 
   // Production defaults (REQ-F-041, REQ-F-042). Tests inject shorter values through the constructor only.
   struct Timeouts {
-    int prepare_ms = 30'000;     // helper XML: "above 10 seconds"
-    int execute_ms = 3'600'000;  // helper XML: "at least one hour"
-    int cancel_ms = -1;          // QtDBus default (25 s); deliberately not the one-hour value
+    int prepare_ms = 30'000;           // helper XML: "above 10 seconds"
+    int execute_ms = 3'600'000;        // helper XML: "at least one hour"
+    int cancel_ms = -1;                // QtDBus default (25 s); deliberately not the one-hour value
+    int upgrade_prepare_ms = 600'000;  // helper XML: "a call timeout of 10 minutes" (system-upgrade REQ-F-003)
+    int probe_ms = -1;
   };
   using ConnectionFactory = std::function<QDBusConnection()>;
 
@@ -44,6 +46,7 @@ class DBusTransactionService final : public QObject, public holonight_packages_d
   void preparePlan(const holonight_packages_domain::PlanRequest& request, PrepareDone done) override;
   void execute(const std::string& plan_id, ExecuteDone done) override;
   void cancel(const std::string& plan_id, CancelDone done) override;
+  void queryProtocolVersion(holonight_packages_domain::ProbeMode mode, VersionDone done) override;
 
   [[nodiscard]] const Timeouts& timeouts() const noexcept { return timeouts_; }
   // The match rule the Progress subscription installs (QtDBus does not expose the installed rule).

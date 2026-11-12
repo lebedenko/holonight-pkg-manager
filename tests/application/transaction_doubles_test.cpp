@@ -59,4 +59,27 @@ TEST(TransactionDoubles, RefreshCounterCountsRequests) {
   EXPECT_EQ(refresh.count(), 2);
 }
 
+// system-upgrade T-059: the probe and the upgrade refresh are recorded too.
+TEST(TransactionDoubles, AProbeIsRecordedWithItsModeAndAnsweredWhenReleased) {
+  holonight_packages_testing::FakeTransactionService service;
+  std::optional<holonight_packages_domain::VersionReply> answer;
+  service.setVersion(std::uint32_t{1});
+  service.queryProtocolVersion(holonight_packages_domain::ProbeMode::AutoStart,
+                               [&answer](holonight_packages_domain::VersionReply reply) { answer = reply; });
+  EXPECT_FALSE(answer.has_value());
+  ASSERT_EQ(service.probes().size(), 1U);
+  EXPECT_EQ(service.probes().front(), holonight_packages_domain::ProbeMode::AutoStart);
+  EXPECT_TRUE(service.calls().empty());  // a probe is not a transaction call
+  service.completeProbes();
+  ASSERT_TRUE(answer.has_value());
+  EXPECT_EQ(answer->value(), 1U);
+}
+
+TEST(TransactionDoubles, TheUpgradeRefreshIsCountedApart) {
+  holonight_packages_testing::FakePackageListRefresh refresh;
+  refresh.refreshAfterUpgrade();
+  EXPECT_EQ(refresh.upgradeCount(), 1);
+  EXPECT_EQ(refresh.count(), 0);
+}
+
 }  // namespace

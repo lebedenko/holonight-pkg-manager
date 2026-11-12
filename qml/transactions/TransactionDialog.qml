@@ -18,7 +18,10 @@ Controls.Popup {
     focus: true
     parent: Controls.Overlay.overlay
     anchors.centerIn: Controls.Overlay.overlay
-    width: Math.min(520, root.parent ? root.parent.width - 48 : 520)
+    // An upgrade preview lists many packages, so its dialog is wider (system-upgrade REQ-F-083).
+    readonly property int preferredWidth: root.controller !== null && root.controller.isUpgrade ? 640 : 520
+    width: Math.min(root.preferredWidth, root.parent ? root.parent.width - 48 : root.preferredWidth)
+    height: Math.min(implicitHeight, root.parent ? Math.max(0, root.parent.height - 48) : implicitHeight)
     padding: 20
     closePolicy: root.controller === null || root.controller.closable ? Controls.Popup.CloseOnEscape : Controls.Popup.NoAutoClose
 
@@ -93,13 +96,46 @@ Controls.Popup {
                 indeterminate: true
                 Layout.fillWidth: true
             }
+
+            // An upgrade's database sync can be cancelled; it has changed nothing (system-upgrade REQ-F-080).
+            RowLayout {
+                visible: root.controller.isUpgrade
+                Layout.fillWidth: true
+
+                Item {
+                    Layout.fillWidth: true
+                }
+
+                Controls.Button {
+                    objectName: "transactionPrepareCancelButton"
+                    enabled: root.controller.cancelEnabled
+                    text: root.controller.cancelLabel
+                    onClicked: root.controller.cancelRun()
+                }
+            }
         }
     }
 
     Component {
         id: confirmPage
 
+        Loader {
+            sourceComponent: root.controller.isUpgrade ? upgradePreview : installPreview
+        }
+    }
+
+    Component {
+        id: installPreview
+
         TransactionConfirmPage {
+            controller: root.controller
+        }
+    }
+
+    Component {
+        id: upgradePreview
+
+        UpgradePreviewPage {
             controller: root.controller
         }
     }

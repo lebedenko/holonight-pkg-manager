@@ -15,10 +15,13 @@ class FakePackageListRefresh final : public holonight_packages_application::Pack
   ~FakePackageListRefresh() override = default;
 
   void refreshAfterOutcome() override { ++count_; }
+  void refreshAfterUpgrade() override { ++upgradeCount_; }
   [[nodiscard]] int count() const { return count_; }
+  [[nodiscard]] int upgradeCount() const { return upgradeCount_; }
 
  private:
   int count_ = 0;
+  int upgradeCount_ = 0;
 };
 
 }  // namespace holonight_packages_testing

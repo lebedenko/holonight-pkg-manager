@@ -30,7 +30,8 @@ enum class FlowState : std::uint8_t {
 
 // The buttons a result or confirmation page may offer (REQ-F-021..024). The run-time Cancel control of the progress
 // page is not here: it is cancelEnabled()/cancelling().
-enum class FlowAction : std::uint8_t { Confirm, Cancel, TryAgain, Close };
+// UpdateSystem: the PartialUpgradeRequired refusal of an install offers the system upgrade (system-upgrade REQ-F-089).
+enum class FlowAction : std::uint8_t { Confirm, Cancel, TryAgain, Close, UpdateSystem };
 
 // What the window may do when the user asks to close it (REQ-F-033..035).
 enum class CloseDecision : std::uint8_t {
@@ -48,6 +49,9 @@ struct ProgressView {
   std::uint32_t current = 0;
   std::uint32_t total = 0;
   std::string item;
+  // system-upgrade: the step of the last KeyringStep or MainStep marker ("step 1 of 2"); 0 before any marker.
+  std::uint8_t step_index = 0;
+  std::uint8_t step_count = 0;
 };
 
 // The state machine of one install or remove request, from preparation to result. Qt-free and single-threaded: every
@@ -66,7 +70,13 @@ class TransactionFlow {
 
   // User intents. Each does nothing when the current state does not allow it (REQ-F-030).
   bool request(const holonight_packages_domain::PlanRequest& request);  // REQ-F-001, 002
-  void confirm();                                                       // Previewed -> Authorizing (REQ-F-005, 026)
+  // system-upgrade: a full system upgrade, which takes no package names (REQ-F-080).
+  bool requestUpgrade();
+  // The PartialUpgradeRequired refusal of an install: back to Idle, then the upgrade; the install is not retried.
+  void updateSystem();
+  // Cancel("") while the upgrade's databases sync (REQ-F-080); the Cancelled reply ends the preparation.
+  void cancelPreparation();
+  void confirm();    // Previewed -> Authorizing (REQ-F-005, 026)
   void dismiss();    // Previewed: Cancel call, -> Idle; terminal states: -> Idle  (REQ-F-006)
   void cancelRun();  // Authorizing/Executing with cancelEnabled                 (REQ-F-013)
   void tryAgain();   // Refused/Failed with Busy, PlanNotFound, PlanExpired      (REQ-F-023)
@@ -87,6 +97,10 @@ class TransactionFlow {
   }
   [[nodiscard]] const ProgressView& progress() const noexcept { return progress_; }
   [[nodiscard]] bool cancelEnabled() const noexcept;  // REQ-F-012 (the "cancel flag")
+  [[nodiscard]] bool preparationCancelEnabled() const noexcept;
+  [[nodiscard]] bool isUpgrade() const noexcept {
+    return request_.action == holonight_packages_domain::PlanAction::Upgrade;
+  }
   [[nodiscard]] bool cancelling() const noexcept { return cancel_pending_ && inRun(); }  // REQ-F-013
   [[nodiscard]] FlowNotice notice() const noexcept { return notice_; }
   [[nodiscard]] const std::vector<holonight_packages_domain::ChangedPackage>& changed() const noexcept {
@@ -127,9 +141,10 @@ class TransactionFlow {
   std::optional<holonight_packages_domain::PreparedPlan> prepared_;
   std::optional<holonight_packages_domain::TransactionFailure> failure_;
   ProgressView progress_;
-  bool cancel_latch_ = false;    // true from Authorizing until the first phase at or after Hooks
-  bool cancel_pending_ = false;  // a Cancel call is in flight for the running plan
-  bool close_pending_ = false;   // a window close waits for a Cancel reply
+  bool cancel_latch_ = false;                // true from Authorizing until the first phase at or after Hooks
+  bool cancel_pending_ = false;              // a Cancel call is in flight for the running plan
+  bool close_pending_ = false;               // a window close waits for a Cancel reply
+  bool preparation_cancel_pending_ = false;  // Cancel("") was sent for the upgrade preparation
   FlowNotice notice_ = FlowNotice::None;
   std::vector<holonight_packages_domain::ChangedPackage> changed_;
   std::vector<holonight_packages_domain::WarningToken> warnings_;

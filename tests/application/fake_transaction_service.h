@@ -25,6 +25,9 @@ class FakeTransactionService final : public holonight_packages_domain::Transacti
     std::string plan_id;                             // Execute and Cancel
   };
 
+  // What queryProtocolVersion() answers, synchronously deferred like every other reply.
+  void setVersion(holonight_packages_domain::VersionReply version) { version_ = std::move(version); }
+
   FakeTransactionService() = default;
   FakeTransactionService(const FakeTransactionService&) = delete;
   FakeTransactionService& operator=(const FakeTransactionService&) = delete;
@@ -45,6 +48,30 @@ class FakeTransactionService final : public holonight_packages_domain::Transacti
   void cancel(const std::string& plan_id, CancelDone done) override {
     calls_.push_back(Call{.kind = Call::Kind::Cancel, .request = {}, .plan_id = plan_id});
     cancel_.push_back(std::move(done));
+  }
+  // A protocol probe is a property read, not a transaction call: it is logged apart from calls().
+  void queryProtocolVersion(holonight_packages_domain::ProbeMode mode, VersionDone done) override {
+    probes_.push_back(mode);
+    probe_.push_back(std::move(done));
+  }
+  // Delivers every held probe with `version`.
+  void completeProbes() {
+    while (!probe_.empty()) {
+      VersionDone done = std::move(probe_.front());
+      probe_.erase(probe_.begin());
+      done(version_);
+    }
+  }
+  [[nodiscard]] std::size_t probeCalls() const { return probes_.size(); }
+  [[nodiscard]] const std::vector<holonight_packages_domain::ProbeMode>& probes() const { return probes_; }
+  [[nodiscard]] std::size_t upgradePrepareCalls() const {
+    std::size_t total = 0;
+    for (const auto& call : calls_) {
+      total += call.kind == Call::Kind::Prepare && call.request.action == holonight_packages_domain::PlanAction::Upgrade
+                   ? 1
+                   : 0;
+    }
+    return total;
   }
 
   // Delivers the oldest held completion of that kind. Returns false when none is held.
@@ -105,6 +132,7 @@ class FakeTransactionService final : public holonight_packages_domain::Transacti
   }
 
  private:
+  holonight_packages_domain::VersionReply version_ = std::uint32_t{2};
   template <typename Done, typename Reply>
   static bool complete(std::vector<Done>& held, Reply reply) {
     if (held.empty()) {
@@ -121,6 +149,8 @@ class FakeTransactionService final : public holonight_packages_domain::Transacti
   std::vector<PrepareDone> prepare_;
   std::vector<ExecuteDone> execute_;
   std::vector<CancelDone> cancel_;
+  std::vector<VersionDone> probe_;
+  std::vector<holonight_packages_domain::ProbeMode> probes_;
 };
 
 }  // namespace holonight_packages_testing

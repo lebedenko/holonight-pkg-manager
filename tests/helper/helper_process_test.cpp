@@ -19,6 +19,7 @@
 
 #include <chrono>
 #include <csignal>
+#include <filesystem>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <sys/types.h>
@@ -79,7 +80,8 @@ class HelperProcessTest : public ::testing::Test {
                              << " --root " << QString::fromStdString(world_.installRoot().string()) << " --dbpath "
                              << QString::fromStdString(world_.dbPath().string()) << " --pacman-conf "
                              << QString::fromStdString(world_.confPath().string()) << " --cache-dir "
-                             << QString::fromStdString(world_.cacheDir().string()) << "\n";
+                             << QString::fromStdString(world_.cacheDir().string()) << " --state-dir "
+                             << QString::fromStdString((world_.base() / "state").string()) << "\n";
     activation.close();
 
     QFile configuration(root + QStringLiteral("/bus.conf"));
@@ -184,6 +186,26 @@ TEST_F(HelperProcessTest, APlanFromBeforeARestartIsGone) {
   const pid_t second = helperPid();
   EXPECT_GT(second, 0);
   EXPECT_NE(second, first);
+}
+
+// system-upgrade T-053, REQ-F-015, REQ-F-016, REQ-F-077: what a killed helper left behind is gone before the first
+// call is answered, and the live databases are untouched.
+TEST_F(HelperProcessTest, LeftoversOfAKilledUpgradeAreSweptAtStart) {
+  const std::filesystem::path stale = world_.base() / "state" / "upgrade-stale";
+  std::filesystem::create_directories(stale / "dbpath" / "sync");
+  ASSERT_TRUE(
+      QFile(QString::fromStdString((stale / "dbpath" / "sync" / "core.db").string())).open(QIODevice::WriteOnly));
+  std::filesystem::create_directories(world_.base() / "state" / "keep");
+  const std::filesystem::path temporary = world_.syncDbPath() / ".hn-promote-core.db.tmp";
+  ASSERT_TRUE(QFile(QString::fromStdString(temporary.string())).open(QIODevice::WriteOnly));
+  const auto coreBefore = std::filesystem::file_size(world_.syncDbPath() / "core.db");
+  const QDBusMessage reply = call(QStringLiteral("PreparePlan"),
+                                  {QStringLiteral("install"), QStringList{QStringLiteral("app")}, QVariantMap()});
+  ASSERT_EQ(reply.type(), QDBusMessage::ReplyMessage) << reply.errorMessage().toStdString();
+  EXPECT_FALSE(std::filesystem::exists(stale));
+  EXPECT_FALSE(std::filesystem::exists(temporary));
+  EXPECT_TRUE(std::filesystem::exists(world_.base() / "state" / "keep"));
+  EXPECT_EQ(std::filesystem::file_size(world_.syncDbPath() / "core.db"), coreBefore);
 }
 
 }  // namespace

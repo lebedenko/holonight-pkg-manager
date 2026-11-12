@@ -1,6 +1,7 @@
 #pragma once
 
 #include "holonight_packages_application/plan_service.h"
+#include "holonight_packages_transaction/log_sink.h"
 
 #include <QDBusConnection>
 #include <QDBusMessage>
@@ -36,9 +37,14 @@ class HelperService : public QObject {
 
   [[nodiscard]] bool busy() const;
 
+  // Where every Execute outcome is recorded (plan ID, outcome, code), also when its owner has gone (system-upgrade
+  // REQ-F-059). Production passes the journal.
+  void setJournal(holonight_packages_transaction::LogSink journal) { journal_ = std::move(journal); }
+
   // Called by the adaptor. PreparePlan and Execute answer later through `message`; Cancel answers at once.
   void preparePlan(const QDBusMessage& message, const QString& action, const QStringList& names,
                    const QVariantMap& options);
+  void prepareUpgrade(const QDBusMessage& message, const QVariantMap& options);
   void execute(const QDBusMessage& message, const QString& planId);
   void cancel(const QDBusMessage& message, const QString& planId);
 
@@ -52,6 +58,7 @@ class HelperService : public QObject {
   holonight_packages_application::PlanService* plans_;
   HelperAdaptor* adaptor_;
   QHash<QString, QDBusServiceWatcher*> watchers_;
+  holonight_packages_transaction::LogSink journal_;
 };
 
 }  // namespace holonight_helper

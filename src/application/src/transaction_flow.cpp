@@ -16,10 +16,16 @@ using holonight_packages_domain::TransactionFailure;
 constexpr std::array<FlowAction, 2> kConfirmActions{FlowAction::Confirm, FlowAction::Cancel};
 constexpr std::array<FlowAction, 2> kRetryActions{FlowAction::TryAgain, FlowAction::Close};
 constexpr std::array<FlowAction, 1> kCloseOnly{FlowAction::Close};
+constexpr std::array<FlowAction, 2> kUpdateSystemActions{FlowAction::UpdateSystem, FlowAction::Close};
 
+// SyncDatabaseChanged only comes from an upgrade: a new preparation starts from fresh databases (REQ-F-091).
 bool isRetryCode(TransactionErrorCode code) {
   return code == TransactionErrorCode::Busy || code == TransactionErrorCode::PlanNotFound ||
-         code == TransactionErrorCode::PlanExpired;
+         code == TransactionErrorCode::PlanExpired || code == TransactionErrorCode::SyncDatabaseChanged;
+}
+
+bool isStepMarker(ProgressPhase phase) {
+  return phase == ProgressPhase::KeyringStep || phase == ProgressPhase::MainStep;
 }
 
 bool isPreCommitPhase(ProgressPhase phase) {
@@ -61,6 +67,10 @@ bool TransactionFlow::closable() const noexcept {
 
 bool TransactionFlow::cancelEnabled() const noexcept { return inRun() && cancel_latch_ && !cancel_pending_; }
 
+bool TransactionFlow::preparationCancelEnabled() const noexcept {
+  return state_ == FlowState::Preparing && isUpgrade() && !preparation_cancel_pending_;
+}
+
 bool TransactionFlow::retryable() const noexcept {
   return (state_ == FlowState::Refused || state_ == FlowState::Failed) && failure_ && isRetryCode(failure_->code);
 }
@@ -70,6 +80,10 @@ std::span<const FlowAction> TransactionFlow::actions() const noexcept {
     case FlowState::Previewed:
       return kConfirmActions;
     case FlowState::Refused:
+      if (failure_ && failure_->code == TransactionErrorCode::PartialUpgradeRequired && !isUpgrade()) {
+        return kUpdateSystemActions;
+      }
+      return retryable() ? std::span<const FlowAction>(kRetryActions) : std::span<const FlowAction>(kCloseOnly);
     case FlowState::Failed:
       return retryable() ? std::span<const FlowAction>(kRetryActions) : std::span<const FlowAction>(kCloseOnly);
     case FlowState::Succeeded:
@@ -94,7 +108,11 @@ void TransactionFlow::notify() {
 
 void TransactionFlow::requestRefresh() {
   ++refresh_requests_;
-  refresh_.refreshAfterOutcome();
+  if (isUpgrade()) {
+    refresh_.refreshAfterUpgrade();
+  } else {
+    refresh_.refreshAfterOutcome();
+  }
 }
 
 void TransactionFlow::changeState(FlowState next) {
@@ -109,6 +127,7 @@ void TransactionFlow::clearRequestData() {
   cancel_latch_ = false;
   cancel_pending_ = false;
   close_pending_ = false;
+  preparation_cancel_pending_ = false;
   notice_ = FlowNotice::None;
   changed_.clear();
   warnings_.clear();
@@ -131,12 +150,40 @@ void TransactionFlow::startPrepare() {
 }
 
 bool TransactionFlow::request(const holonight_packages_domain::PlanRequest& request) {
-  if (!allowNewRequest() || request.names.size() != 1 || request.names.front().empty()) {
+  const bool upgrade = request.action == holonight_packages_domain::PlanAction::Upgrade;
+  const bool shape = upgrade ? request.names.empty() : request.names.size() == 1 && !request.names.front().empty();
+  if (!allowNewRequest() || !shape) {
     return false;
   }
   request_ = request;
   startPrepare();
   return true;
+}
+
+bool TransactionFlow::requestUpgrade() {
+  return request(
+      holonight_packages_domain::PlanRequest{.action = holonight_packages_domain::PlanAction::Upgrade, .names = {}});
+}
+
+void TransactionFlow::updateSystem() {
+  if (state_ != FlowState::Refused || !failure_ || failure_->code != TransactionErrorCode::PartialUpgradeRequired ||
+      isUpgrade()) {
+    return;
+  }
+  ++generation_;
+  clearRequestData();
+  changeState(FlowState::Idle);
+  requestUpgrade();
+}
+
+void TransactionFlow::cancelPreparation() {
+  if (!preparationCancelEnabled()) {
+    return;
+  }
+  preparation_cancel_pending_ = true;
+  // The Cancelled reply of PrepareUpgrade ends the preparation; the Cancel reply itself carries nothing more.
+  service_.cancel(std::string(), [](const holonight_packages_domain::CancelReply&) {});
+  notify();
 }
 
 void TransactionFlow::tryAgain() {
@@ -208,7 +255,9 @@ CloseDecision TransactionFlow::closeRequested() {
     case FlowState::Cancelled:
     case FlowState::Unknown:
     case FlowState::HelperUnavailable:
+      return CloseDecision::AcceptNow;
     case FlowState::Preparing:
+      cancelPreparation();  // nothing changed yet; the helper stops syncing for no one
       return CloseDecision::AcceptNow;
     case FlowState::Previewed:
     case FlowState::Authorizing:
@@ -252,18 +301,36 @@ void TransactionFlow::resolveDeferredClose() {
 }
 
 void TransactionFlow::onProgress(const std::string& plan_id, const holonight_packages_domain::ProgressUpdate& update) {
+  // The upgrade's database sync reports with an empty plan ID while it is being prepared (REQ-F-080).
+  if (state_ == FlowState::Preparing && isUpgrade() && plan_id.empty() && update.phase == ProgressPhase::Syncing) {
+    progress_ = ProgressView{
+        .seen = true,
+        .phase = update.phase,
+        .current = update.current,
+        .total = update.total,
+        .item = update.item,
+        .step_index = 0,
+        .step_count = 0,
+    };
+    notify();
+    return;
+  }
   if (!inRun() || !prepared_ || plan_id != prepared_->plan_id) {
     return;
   }
   if (progress_.seen && update.phase == progress_.phase && update.current < progress_.current) {
     return;
   }
+  // A step marker carries the step in current and total; the step then stays until the next marker (REQ-F-057).
+  const bool marker = isStepMarker(update.phase);
   progress_ = ProgressView{
       .seen = true,
       .phase = update.phase,
-      .current = update.current,
-      .total = update.total,
+      .current = marker ? 0 : update.current,
+      .total = marker ? 0 : update.total,
       .item = update.item,
+      .step_index = marker ? static_cast<std::uint8_t>(update.current) : progress_.step_index,
+      .step_count = marker ? static_cast<std::uint8_t>(update.total) : progress_.step_count,
   };
   cancel_latch_ = cancel_latch_ && isPreCommitPhase(update.phase);
   state_ = FlowState::Executing;
@@ -283,7 +350,15 @@ void TransactionFlow::onPrepared(int generation, holonight_packages_domain::Prep
   switch (reply.error().kind) {
     case ServiceError::Kind::Refused:
       failure_ = std::move(reply.error().failure);
-      changeState(FlowState::Refused);
+      if (isUpgrade() && failure_->code == TransactionErrorCode::Cancelled) {
+        failure_.reset();
+        changeState(FlowState::Cancelled);  // Cancel("") ended the preparation
+      } else {
+        changeState(FlowState::Refused);
+      }
+      if (isUpgrade()) {
+        requestRefresh();  // after every upgrade outcome, refusals and NothingToDo included (REQ-F-088)
+      }
       return;
     case ServiceError::Kind::HelperUnavailable:
       changeState(FlowState::HelperUnavailable);

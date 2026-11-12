@@ -35,6 +35,7 @@ class HelperAdaptor : public QDBusAbstractAdaptor {
   // NOLINTBEGIN(readability-identifier-naming)
   void PreparePlan(const QString& action, const QStringList& names, const QVariantMap& options,
                    const QDBusMessage& message);
+  void PrepareUpgrade(const QVariantMap& options, const QDBusMessage& message);
   void Execute(const QString& planId, const QDBusMessage& message);
   void Cancel(const QString& planId, const QDBusMessage& message);
   // NOLINTEND(readability-identifier-naming)

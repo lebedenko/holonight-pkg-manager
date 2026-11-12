@@ -26,8 +26,8 @@ constexpr std::array<const char*, holonight_packages_domain::kTransactionErrorCo
                       "The change needs a choice (provider, replacement or conflict) that this app does not make. Use "
                       "pacman for it. Nothing was changed."),
     QT_TRANSLATE_NOOP("TransactionMessages",
-                      "This change would upgrade installed packages: %1. Update the system first, outside this app. "
-                      "This app does not upgrade the system. Nothing was changed."),
+                      "This change would upgrade installed packages: %1. Update the system first with "
+                      "\u201cUpdate system\u2026\u201d, then install again. Nothing was changed."),
     QT_TRANSLATE_NOOP("TransactionMessages",
                       "A repository is configured without strict signature checks: %1. Installation is refused until "
                       "the configuration is fixed outside this app. Nothing was changed."),
@@ -53,6 +53,19 @@ constexpr std::array<const char*, holonight_packages_domain::kTransactionErrorCo
     QT_TRANSLATE_NOOP("TransactionMessages",
                       "The transaction failed. The packages listed were changed before the failure."),
     QT_TRANSLATE_NOOP("TransactionMessages", "An unexpected error stopped the operation. Nothing was changed."),
+    QT_TRANSLATE_NOOP("TransactionMessages",
+                      "The package databases could not be synchronized. Check the network connection. Nothing was "
+                      "changed."),
+    QT_TRANSLATE_NOOP("TransactionMessages",
+                      "The package databases changed after the preview. Nothing was changed. Prepare the update "
+                      "again."),
+    QT_TRANSLATE_NOOP("TransactionMessages",
+                      "A signing key for %1 is not in the keyring. This app does not import keys. Nothing was "
+                      "changed."),
+    QT_TRANSLATE_NOOP("TransactionMessages",
+                      "The update stopped partway. Some packages were updated. Press \u201cUpdate system\u2026\u201d "
+                      "again to finish it."),
+    QT_TRANSLATE_NOOP("TransactionMessages", "Cancelled. Nothing was changed."),
 };
 
 constexpr const char* kPackageNotFoundRemove =
@@ -76,6 +89,26 @@ constexpr std::array<const char*, kNoteCount> kNoteSource{
     QT_TRANSLATE_NOOP("TransactionMessages", "Waiting for authorization"),
 };
 
+constexpr std::array<const char*, kUpgradeKeyCount> kUpgradeSource{
+    QT_TRANSLATE_NOOP("TransactionMessages", "The package helper is too old for system updates."),
+    QT_TRANSLATE_NOOP("TransactionMessages", "Syncing repository %1 of %2"),
+    QT_TRANSLATE_NOOP("TransactionMessages", "System is up to date."),
+    QT_TRANSLATE_NOOP("TransactionMessages", "These packages will be updated:"),
+    QT_TRANSLATE_NOOP("TransactionMessages", "Held back by the pacman configuration (IgnorePkg or IgnoreGroup):"),
+    QT_TRANSLATE_NOOP("TransactionMessages", "The keyring is updated first: %1."),
+    QT_TRANSLATE_NOOP("TransactionMessages",
+                      "The keyring update failed after the package databases were updated. No package was updated. "
+                      "Press \u201cUpdate system\u2026\u201d again."),
+    QT_TRANSLATE_NOOP("TransactionMessages",
+                      "The update stopped partway: the packages listed were updated, the others were not. Press "
+                      "\u201cUpdate system\u2026\u201d again to finish it."),
+    QT_TRANSLATE_NOOP("TransactionMessages", "System updated. The packages listed were changed."),
+    QT_TRANSLATE_NOOP("TransactionMessages", "The keyring was updated."),
+    QT_TRANSLATE_NOOP("TransactionMessages", "Step %1 of %2"),
+    QT_TRANSLATE_NOOP("TransactionMessages", "Update system"),
+    QT_TRANSLATE_NOOP("TransactionMessages", "Update"),
+};
+
 QString tr(const char* source) { return QCoreApplication::translate(kContext, source); }
 
 // Names are inserted as plain text: the result is never interpreted as markup.
@@ -97,6 +130,14 @@ QString failureText(TransactionErrorCode code, const std::vector<std::string>& n
     return tr(kFailureSource.at(static_cast<std::size_t>(TransactionErrorCode::InternalError)));
   }
   const char* source = kFailureSource.at(index);
+  if (action == PlanAction::Upgrade && code == TransactionErrorCode::NothingToDo) {
+    return upgradeText(UpgradeKey::SystemUpToDate);  // NothingToDo.Upgrade
+  }
+  if (code == TransactionErrorCode::UpgradePartiallyApplied) {
+    // The step token is the only name (REQ-F-060, REQ-F-061).
+    const bool keyring = !names.empty() && names.front() == "keyring";
+    return upgradeText(keyring ? UpgradeKey::PartialKeyring : UpgradeKey::PartialMain);
+  }
   if (code == TransactionErrorCode::PackageNotFound && action == PlanAction::Remove) {
     source = kPackageNotFoundRemove;
   } else if (code == TransactionErrorCode::TransactionFailed && changed_empty) {
@@ -128,8 +169,30 @@ QString phaseLabel(ProgressPhase phase) {
       return QCoreApplication::translate(kContext, "Removing");
     case ProgressPhase::Done:
       return QCoreApplication::translate(kContext, "Done");
+    case ProgressPhase::Syncing:
+      return QCoreApplication::translate(kContext, "Synchronizing package databases");
+    case ProgressPhase::Promoting:
+      return QCoreApplication::translate(kContext, "Updating package databases");
+    case ProgressPhase::KeyringStep:
+      return QCoreApplication::translate(kContext, "Updating the keyring");
+    case ProgressPhase::MainStep:
+      return QCoreApplication::translate(kContext, "Updating packages");
   }
   return {};
+}
+
+QString upgradeText(UpgradeKey key) {
+  const auto index = static_cast<std::size_t>(key);
+  return index < kUpgradeSource.size() ? tr(kUpgradeSource.at(index)) : QString();
+}
+
+QString syncingText(std::uint32_t current, std::uint32_t total, const std::string& repository) {
+  const QString line = upgradeText(UpgradeKey::Syncing).arg(current).arg(total);
+  return repository.empty() ? line : line + QStringLiteral(": ") + QString::fromStdString(repository);
+}
+
+QString stepText(std::uint32_t index, std::uint32_t count) {
+  return upgradeText(UpgradeKey::Step).arg(index).arg(count);
 }
 
 QString removeConfirmLabel(int package_count) {

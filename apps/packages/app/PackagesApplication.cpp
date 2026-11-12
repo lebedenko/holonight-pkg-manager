@@ -95,6 +95,7 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
     return QDBusConnection::connectToBus(QDBusConnection::SystemBus, QStringLiteral("holonight-package-helper-client"));
   });
   list_refresh_ = std::make_unique<ModelListRefresh>(*installed_packages_model_, *explore_model_);
+  list_refresh_->setUpgradeTargets(updates_model_.get(), update_check_client_.get());
   transaction_controller_ = std::make_unique<TransactionController>(*transaction_service_, *list_refresh_);
 
   view_ = std::make_unique<QQuickView>();

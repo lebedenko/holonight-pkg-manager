@@ -112,5 +112,55 @@ TEST(SamePlanTest, HookOrderAndConditionalityTakePart) {
 
 TEST(SamePlanTest, DifferentActionsAreUnequal) { EXPECT_FALSE(samePlan(installPlan(), removalPlan())); }
 
+// ---- system-upgrade REQ-F-025: upgrade plan equality ----
+
+ResolvedPlan upgradePlan() {
+  ResolvedPlan plan;
+  plan.action = PlanAction::Upgrade;
+  plan.upgrade = UpgradeDetail{
+      .upgrades = {UpgradeEntry{.name = "app", .old_version = "1.0-1", .new_version = "2.0-1", .repository = "core"}},
+      .replacements = {ReplacementEntry{
+          .old_name = "old", .old_version = "1.0-1", .new_name = "new", .new_version = "1.0-1", .repository = "extra"}},
+      .new_dependencies = {NewDependencyEntry{.name = "lib", .version = "1.0-1", .repository = "core"}},
+      .held_back = {HeldBackEntry{.name = "kept", .installed_version = "1.0-1"}},
+      .keyring_packages = {},
+      .download_bytes = 100,
+      .size_change_bytes = 10,
+  };
+  plan.mirror_hosts = {"mirror.one"};
+  return plan;
+}
+
+TEST(UpgradePlanEqualityTest, MirrorHostsAndSizesDoNotTakePart) {
+  ResolvedPlan other = upgradePlan();
+  other.mirror_hosts = {"mirror.two"};
+  other.upgrade->download_bytes = 999;
+  other.upgrade->size_change_bytes = -5;
+  EXPECT_TRUE(samePlan(upgradePlan(), other));
+}
+
+TEST(UpgradePlanEqualityTest, ANewVersionAHeldBackVersionOrTheKeyringMakesThemUnequal) {
+  ResolvedPlan newVersion = upgradePlan();
+  newVersion.upgrade->upgrades.front().new_version = "2.0-2";
+  EXPECT_FALSE(samePlan(upgradePlan(), newVersion));
+  ResolvedPlan heldBack = upgradePlan();
+  heldBack.upgrade->held_back.front().installed_version = "1.0-2";
+  EXPECT_FALSE(samePlan(upgradePlan(), heldBack));
+  ResolvedPlan keyring = upgradePlan();
+  keyring.upgrade->keyring_packages = {"archlinux-keyring"};
+  EXPECT_FALSE(samePlan(upgradePlan(), keyring));
+  EXPECT_EQ(keyring.upgrade->stepCount(), 2);
+  EXPECT_EQ(upgradePlan().upgrade->stepCount(), 1);
+}
+
+TEST(UpgradePlanEqualityTest, AnUpgradeIsNeverEqualToAnInstallOrAPlanWithoutDetail) {
+  ResolvedPlan install;
+  install.action = PlanAction::Install;
+  EXPECT_FALSE(samePlan(upgradePlan(), install));
+  ResolvedPlan missing = upgradePlan();
+  missing.upgrade.reset();
+  EXPECT_FALSE(samePlan(upgradePlan(), missing));
+}
+
 }  // namespace
 }  // namespace holonight_packages_domain

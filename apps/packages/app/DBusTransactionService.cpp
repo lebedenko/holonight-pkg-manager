@@ -93,6 +93,20 @@ void DBusTransactionService::send(const QDBusMessage& message, int timeout_ms, D
 }
 
 void DBusTransactionService::preparePlan(const holonight_packages_domain::PlanRequest& request, PrepareDone done) {
+  if (request.action == holonight_packages_domain::PlanAction::Upgrade) {
+    // Exactly one argument, an empty options map (system-upgrade REQ-F-002). Syncing progress has an empty plan ID.
+    QDBusMessage message = call(QStringLiteral("PrepareUpgrade"));
+    message << QVariantMap{};
+    active_plan_id_.clear();
+    send<PrepareReply>(message, timeouts_.upgrade_prepare_ms, std::move(done), [this](const QDBusMessage& reply) {
+      PrepareReply decoded = helper_wire::decodePrepareUpgradeReply(reply);
+      if (decoded) {
+        active_plan_id_ = decoded->plan_id;
+      }
+      return decoded;
+    });
+    return;
+  }
   QDBusMessage message = call(QStringLiteral("PreparePlan"));
   const std::string action{holonight_packages_domain::planActionName(request.action)};
   // Exactly the declared arguments: an action, the names and an empty options map (REQ-C-004).
@@ -118,6 +132,18 @@ void DBusTransactionService::cancel(const std::string& plan_id, CancelDone done)
   message << QString::fromStdString(plan_id);
   send<CancelReply>(message, timeouts_.cancel_ms, std::move(done),
                     [](const QDBusMessage& reply) { return helper_wire::decodeCancelReply(reply); });
+}
+
+void DBusTransactionService::queryProtocolVersion(holonight_packages_domain::ProbeMode mode, VersionDone done) {
+  QDBusMessage message =
+      QDBusMessage::createMethodCall(QLatin1String(kServiceName), QLatin1String(kObjectPath),
+                                     QStringLiteral("org.freedesktop.DBus.Properties"), QStringLiteral("Get"));
+  message << QLatin1String(kInterfaceName) << QStringLiteral("ProtocolVersion");
+  // The page asks without starting the root helper; a click may start it (system-upgrade DESIGN D-11).
+  message.setAutoStartService(mode == holonight_packages_domain::ProbeMode::AutoStart);
+  send<holonight_packages_domain::VersionReply>(
+      message, timeouts_.probe_ms, std::move(done),
+      [](const QDBusMessage& reply) { return helper_wire::decodeProtocolVersionReply(reply); });
 }
 
 void DBusTransactionService::onProgress(const QString& plan_id, const QString& phase, uint current, uint total,

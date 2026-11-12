@@ -7,12 +7,14 @@
 #include "JournalLogger.h"
 #include "PolkitAuthorizer.h"
 #include "QtWorkRunner.h"
+#include "StateDirScratchRoots.h"
 #include "holonight_packages_application/idle_monitor.h"
 #include "holonight_packages_application/plan_id_generator.h"
 #include "holonight_packages_application/plan_service.h"
 #include "holonight_packages_application/update_check_runtime.h"
 #include "holonight_packages_transaction/alpm_transaction_engine.h"
 #include "holonight_packages_transaction/database_lock.h"
+#include "holonight_packages_transaction/upgrade_recovery.h"
 
 #include <QCoreApplication>
 #include <QDBusConnection>
@@ -47,18 +49,26 @@ int main(int argc, char* argv[]) {
     return kExitFailure;
   }
 
+  // REQ-F-015, REQ-F-016: whatever a killed helper left behind goes before the first call is accepted.
+  holonight_helper::StateDirScratchRoots scratch(config->state_directory);
+  scratch.removeAll();
+  holonight_packages_transaction::sweepUpgradeLeftovers(config->transaction);
+
   holonight_packages_transaction::AlpmTransactionEngine engine(config->transaction, holonight_helper::journalSink());
   holonight_helper::PolkitAuthorizer authorizer(bus);
   holonight_helper::DBusCallerIdentity identities(bus);
   holonight_packages_application::SystemPlanIdGenerator ids;
   holonight_packages_application::SystemClock clock;
   holonight_helper::QtWorkRunner runner;
-  holonight_helper::HelperTerminator terminator([lockFile = config->lockFile()] {
+  holonight_helper::HelperTerminator terminator([&scratch] {
     const holonight_packages_transaction::DatabaseLockGuard guard;
     std::error_code ignored;
-    if (guard.ownsLock()) {
-      std::filesystem::remove(lockFile, ignored);
+    // Only the lock file this process's own session holds: a foreign live lock is never removed (REQ-F-050).
+    if (const auto owned = guard.ownedLockPath(); owned && !owned->empty()) {
+      std::filesystem::remove(*owned, ignored);
     }
+    // A cancelled upgrade's scratch root went with the reply; this catches a root a stuck worker still wrote to.
+    scratch.removeAll();
     // Do not release the guard: worker acquisition and cleanup stay blocked until process exit.
     std::_Exit(0);
   });
@@ -71,8 +81,10 @@ int main(int argc, char* argv[]) {
       .clock = clock,
       .runner = runner,
       .terminator = terminator,
+      .scratch = &scratch,
   });
   holonight_helper::HelperService service(bus, plans);
+  service.setJournal(holonight_helper::journalSink());
 
   holonight_packages_application::QtOneShotTimer idleTimer;
   holonight_packages_application::QtOneShotTimer expiryTimer;

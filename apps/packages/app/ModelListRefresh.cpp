@@ -2,6 +2,8 @@
 
 #include "ExploreModel.h"
 #include "InstalledPackagesModel.h"
+#include "UpdateCheckClient.h"
+#include "UpdatesModel.h"
 
 ModelListRefresh::ModelListRefresh(InstalledPackagesModel& installed, ExploreModel& explore, QObject* parent)
     : QObject(parent), installed_(installed), explore_(explore) {
@@ -14,6 +16,35 @@ ModelListRefresh::~ModelListRefresh() = default;
 void ModelListRefresh::refreshAfterOutcome() {
   refreshInstalled();
   refreshExplore();
+}
+
+void ModelListRefresh::setUpgradeTargets(UpdatesModel* updates, UpdateCheckClient* check) {
+  updates_ = updates;
+  check_ = check;
+  if (updates_ != nullptr) {
+    connect(updates_, &UpdatesModel::stateChanged, this, &ModelListRefresh::onUpdatesStateChanged);
+  }
+}
+
+void ModelListRefresh::refreshAfterUpgrade() {
+  refreshAfterOutcome();
+  if (updates_ != nullptr) {
+    if (updates_->loading()) {
+      updates_pending_ = true;
+    } else {
+      updates_->reload();
+    }
+  }
+  if (check_ != nullptr) {
+    check_->checkNow();  // the session update count drops without waiting for the next timer
+  }
+}
+
+void ModelListRefresh::onUpdatesStateChanged() {
+  if (updates_pending_ && updates_ != nullptr && !updates_->loading()) {
+    updates_pending_ = false;
+    updates_->reload();
+  }
 }
 
 void ModelListRefresh::refreshInstalled() {

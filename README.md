@@ -13,11 +13,14 @@ page searches every package in configured sync repositories, including third-par
 Both pages' Reload buttons only re-read the databases, so they must be synced with your package manager outside the
 application. The GUI can **install** one package from the Explore details panel and **remove** one package from the
 Installed details panel: it asks the privileged `holonight-package-helper` for a plan, shows what will change in a
-confirmation dialog, and runs the plan only after you confirm (polkit asks for authorization). There is no update
-action yet, and an install that would need a newer version of an installed package (a partial upgrade) is refused:
-update the system outside the app first. The Updates page has an opt-in **Check now** control, and `holonight-packaged` checks online on a schedule: it refreshes a private copy of the sync databases under `$XDG_CACHE_HOME/holonight-packages/checkdb`, never the system databases. Updating packages from the GUI,
-AUR support and transaction history are not implemented yet; see `apps/packages/README.md` for the manual verification
-checklist of install and remove.
+confirmation dialog, and runs the plan only after you confirm (polkit asks for authorization). The Updates page has an
+**Update system…** button that runs a full system upgrade (`pacman -Syu`) through the same helper: the helper syncs a
+private copy of the databases, shows every upgrade, replacement, new and held-back package in a preview, and changes
+the system only after you confirm. An install that would need a newer version of an installed package (a partial
+upgrade) is refused, and its dialog offers **Update system…**. The Updates page also has an opt-in **Check now**
+control, and `holonight-packaged` checks online on a schedule: it refreshes a private copy of the sync databases under
+`$XDG_CACHE_HOME/holonight-packages/checkdb`, never the system databases. Per-package updates, AUR support and
+transaction history are not implemented; see `apps/packages/README.md` for the manual verification checklist.
 
 ## Requirements
 

@@ -102,5 +102,30 @@ TEST(ValidateRequestTest, OffendingValuesAreSanitized) {
   EXPECT_THAT(request.error().names, ElementsAre("bad?name"));
 }
 
+// ---- system-upgrade REQ-F-002: PrepareUpgrade takes an empty options map only ----
+
+TEST(UpgradeRequestTest, AnEmptyOptionsMapIsAnUpgradeRequest) {
+  const auto request = validateUpgradeRequest({});
+  ASSERT_TRUE(request.has_value());
+  EXPECT_EQ(request->action, PlanAction::Upgrade);
+  EXPECT_TRUE(request->names.empty());
+  EXPECT_EQ(planActionName(PlanAction::Upgrade), "upgrade");
+}
+
+TEST(UpgradeRequestTest, AnyOptionKeyIsInvalidArgument) {
+  for (const auto& keys : {std::vector<std::string>{"noconfirm"}, std::vector<std::string>{"IgnorePkg"}}) {
+    const auto request = validateUpgradeRequest(keys);
+    ASSERT_FALSE(request.has_value());
+    EXPECT_EQ(request.error().code, TransactionErrorCode::InvalidArgument);
+    EXPECT_EQ(request.error().names, keys);
+  }
+}
+
+TEST(UpgradeRequestTest, PreparePlanRefusesTheUpgradeAction) {
+  const auto request = validateRequest("upgrade", {"app"}, {});
+  ASSERT_FALSE(request.has_value());
+  EXPECT_EQ(request.error().code, TransactionErrorCode::InvalidArgument);
+}
+
 }  // namespace
 }  // namespace holonight_packages_domain

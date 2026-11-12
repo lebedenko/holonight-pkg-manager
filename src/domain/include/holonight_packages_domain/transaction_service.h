@@ -40,6 +40,12 @@ using PrepareReply = std::expected<PreparedPlan, ServiceError>;
 // A domain failure of Execute (NotAuthorized, PlanExpired, ...) is a successful reply whose outcome is Failed.
 using ExecuteReply = std::expected<ExecutionResult, ServiceError>;
 using CancelReply = std::expected<void, ServiceError>;
+// The helper's ProtocolVersion property (system-upgrade REQ-F-073, REQ-F-079).
+using VersionReply = std::expected<std::uint32_t, ServiceError>;
+
+// How a protocol probe may reach the helper: the Updates page asks without starting the helper, a click asks with it
+// (system-upgrade DESIGN D-11).
+enum class ProbeMode : std::uint8_t { NoAutoStart, AutoStart };
 
 // The port the GUI drives. Implemented by DBusTransactionService (apps/packages) and by FakeTransactionService (tests).
 // Contract: every completion callback is called exactly once, on the caller's thread, and never from inside the call
@@ -49,6 +55,7 @@ class TransactionService {
   using PrepareDone = std::function<void(PrepareReply)>;
   using ExecuteDone = std::function<void(ExecuteReply)>;
   using CancelDone = std::function<void(CancelReply)>;
+  using VersionDone = std::function<void(VersionReply)>;
   // Called for every Progress signal of the plan the service prepared last (REQ-F-044), in arrival order.
   using ProgressHandler = std::function<void(const std::string& plan_id, const ProgressUpdate&)>;
 
@@ -60,10 +67,14 @@ class TransactionService {
   virtual ~TransactionService();
 
   virtual void setProgressHandler(ProgressHandler handler) = 0;
+  // An install or remove calls PreparePlan; a request with PlanAction::Upgrade calls PrepareUpgrade with an empty
+  // options map and reports its Syncing progress with an empty plan ID (system-upgrade REQ-F-080).
   virtual void preparePlan(const PlanRequest& request, PrepareDone done) = 0;
   // Only the plan ID goes over the wire (REQ-F-005).
   virtual void execute(const std::string& plan_id, ExecuteDone done) = 0;
+  // An empty plan ID cancels this caller's upgrade preparation (system-upgrade REQ-F-032).
   virtual void cancel(const std::string& plan_id, CancelDone done) = 0;
+  virtual void queryProtocolVersion(ProbeMode mode, VersionDone done) = 0;
 };
 
 }  // namespace holonight_packages_domain

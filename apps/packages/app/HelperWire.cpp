@@ -141,6 +141,81 @@ const QDBusArgument& operator>>(const QDBusArgument& argument, ResultWire& value
   return argument;
 }
 
+QDBusArgument& operator<<(QDBusArgument& argument, const UpgradeItemWire& value) {
+  argument.beginStructure();
+  argument << value.name << value.old_version << value.new_version << value.repository;
+  argument.endStructure();
+  return argument;
+}
+const QDBusArgument& operator>>(const QDBusArgument& argument, UpgradeItemWire& value) {
+  argument.beginStructure();
+  argument >> value.name >> value.old_version >> value.new_version >> value.repository;
+  argument.endStructure();
+  return argument;
+}
+
+QDBusArgument& operator<<(QDBusArgument& argument, const ReplacementWire& value) {
+  argument.beginStructure();
+  argument << value.old_name << value.old_version << value.new_name << value.new_version << value.repository;
+  argument.endStructure();
+  return argument;
+}
+const QDBusArgument& operator>>(const QDBusArgument& argument, ReplacementWire& value) {
+  argument.beginStructure();
+  argument >> value.old_name >> value.old_version >> value.new_name >> value.new_version >> value.repository;
+  argument.endStructure();
+  return argument;
+}
+
+QDBusArgument& operator<<(QDBusArgument& argument, const NewDependencyWire& value) {
+  argument.beginStructure();
+  argument << value.name << value.version << value.repository;
+  argument.endStructure();
+  return argument;
+}
+const QDBusArgument& operator>>(const QDBusArgument& argument, NewDependencyWire& value) {
+  argument.beginStructure();
+  argument >> value.name >> value.version >> value.repository;
+  argument.endStructure();
+  return argument;
+}
+
+QDBusArgument& operator<<(QDBusArgument& argument, const HeldBackWire& value) {
+  argument.beginStructure();
+  argument << value.name << value.installed_version;
+  argument.endStructure();
+  return argument;
+}
+const QDBusArgument& operator>>(const QDBusArgument& argument, HeldBackWire& value) {
+  argument.beginStructure();
+  argument >> value.name >> value.installed_version;
+  argument.endStructure();
+  return argument;
+}
+
+QDBusArgument& operator<<(QDBusArgument& argument, const UpgradePreviewWire& value) {
+  argument.beginStructure();
+  writeList(argument, value.upgrades);
+  writeList(argument, value.replacements);
+  writeList(argument, value.new_dependencies);
+  writeList(argument, value.held_back);
+  argument << value.keyring << value.keyring_packages << value.download_bytes << value.size_change_bytes
+           << value.expires_at;
+  argument.endStructure();
+  return argument;
+}
+const QDBusArgument& operator>>(const QDBusArgument& argument, UpgradePreviewWire& value) {
+  argument.beginStructure();
+  readList(argument, value.upgrades);
+  readList(argument, value.replacements);
+  readList(argument, value.new_dependencies);
+  readList(argument, value.held_back);
+  argument >> value.keyring >> value.keyring_packages >> value.download_bytes >> value.size_change_bytes >>
+      value.expires_at;
+  argument.endStructure();
+  return argument;
+}
+
 void registerHelperWireTypes() {
   static const bool registered = [] {
     qDBusRegisterMetaType<ChoiceWire>();
@@ -154,6 +229,15 @@ void registerHelperWireTypes() {
     qDBusRegisterMetaType<ChangeWire>();
     qDBusRegisterMetaType<QList<ChangeWire>>();
     qDBusRegisterMetaType<ResultWire>();
+    qDBusRegisterMetaType<UpgradeItemWire>();
+    qDBusRegisterMetaType<QList<UpgradeItemWire>>();
+    qDBusRegisterMetaType<ReplacementWire>();
+    qDBusRegisterMetaType<QList<ReplacementWire>>();
+    qDBusRegisterMetaType<NewDependencyWire>();
+    qDBusRegisterMetaType<QList<NewDependencyWire>>();
+    qDBusRegisterMetaType<HeldBackWire>();
+    qDBusRegisterMetaType<QList<HeldBackWire>>();
+    qDBusRegisterMetaType<UpgradePreviewWire>();
     return true;
   }();
   static_cast<void>(registered);
@@ -176,6 +260,7 @@ using holonight_packages_domain::TransactionFailure;
 constexpr const char* kStatusSignature = "(sasa(ssas))";
 constexpr const char* kPreviewSignature = "(sa(sssss)a(sssss)a(sssss)a(sb)x)";
 constexpr const char* kResultSignature = "(s(sasa(ssas))a(ssss)as)";
+constexpr const char* kUpgradePreviewSignature = "(a(ssss)a(sssss)a(sss)a(ss)bastxx)";
 
 ServiceError noReply() { return ServiceError{.kind = ServiceError::Kind::NoReply, .failure = {}}; }
 
@@ -296,6 +381,81 @@ holonight_packages_domain::PrepareReply decodePrepareReply(const QDBusMessage& r
       .plan = std::move(plan),
       .expires_at = std::chrono::system_clock::time_point{std::chrono::seconds{preview.expires_at}},
   };
+}
+
+holonight_packages_domain::PrepareReply decodePrepareUpgradeReply(const QDBusMessage& reply) {
+  if (reply.type() == QDBusMessage::ErrorMessage) {
+    return std::unexpected(classifyBusError(QDBusError(reply)));
+  }
+  if (!replyIsUsable(reply, 3)) {
+    return std::unexpected(noReply());
+  }
+  const QVariantList arguments = reply.arguments();
+  StatusWire status;
+  QString plan_id;
+  UpgradePreviewWire preview;
+  if (!extract(arguments.at(0), kStatusSignature, status) || !extractString(arguments.at(1), plan_id) ||
+      !extract(arguments.at(2), kUpgradePreviewSignature, preview)) {
+    return std::unexpected(noReply());
+  }
+  if (!status.code.isEmpty()) {
+    return std::unexpected(refusal(status));
+  }
+  if (plan_id.isEmpty()) {
+    return std::unexpected(noReply());
+  }
+  holonight_packages_domain::UpgradeDetail detail;
+  for (const UpgradeItemWire& item : preview.upgrades) {
+    detail.upgrades.push_back({.name = s(item.name),
+                               .old_version = s(item.old_version),
+                               .new_version = s(item.new_version),
+                               .repository = s(item.repository)});
+  }
+  for (const ReplacementWire& item : preview.replacements) {
+    detail.replacements.push_back({.old_name = s(item.old_name),
+                                   .old_version = s(item.old_version),
+                                   .new_name = s(item.new_name),
+                                   .new_version = s(item.new_version),
+                                   .repository = s(item.repository)});
+  }
+  for (const NewDependencyWire& item : preview.new_dependencies) {
+    detail.new_dependencies.push_back(
+        {.name = s(item.name), .version = s(item.version), .repository = s(item.repository)});
+  }
+  for (const HeldBackWire& item : preview.held_back) {
+    detail.held_back.push_back({.name = s(item.name), .installed_version = s(item.installed_version)});
+  }
+  // The keyring list is the flag: a set flag without packages, or packages without the flag, is not trusted.
+  if (preview.keyring == preview.keyring_packages.isEmpty()) {
+    return std::unexpected(noReply());
+  }
+  for (const QString& name : preview.keyring_packages) {
+    detail.keyring_packages.push_back(s(name));
+  }
+  detail.download_bytes = preview.download_bytes;
+  detail.size_change_bytes = preview.size_change_bytes;
+  holonight_packages_domain::ResolvedPlan plan;
+  plan.action = PlanAction::Upgrade;
+  plan.upgrade = std::move(detail);
+  return PreparedPlan{
+      .plan_id = s(plan_id),
+      .plan = std::move(plan),
+      .expires_at = std::chrono::system_clock::time_point{std::chrono::seconds{preview.expires_at}},
+  };
+}
+
+holonight_packages_domain::VersionReply decodeProtocolVersionReply(const QDBusMessage& reply) {
+  if (reply.type() == QDBusMessage::ErrorMessage) {
+    return std::unexpected(classifyBusError(QDBusError(reply)));
+  }
+  if (!replyIsUsable(reply, 1)) {
+    return std::unexpected(noReply());
+  }
+  const QVariant value = reply.arguments().at(0).value<QDBusVariant>().variant();
+  if (value.metaType() != QMetaType::fromType<uint>()) {
+    return std::unexpected(noReply());
+  }
+  return static_cast<std::uint32_t>(value.toUInt());
 }
 
 ExecuteReply decodeExecuteReply(const QDBusMessage& reply) {

@@ -2,7 +2,10 @@
 #include "helper_bus_fixture.h"
 
 #include <QElapsedTimer>
+#include <QFile>
+#include <QSet>
 #include <QTimer>
+#include <QXmlStreamReader>
 
 #include <optional>
 
@@ -263,6 +266,23 @@ class DBusTransactionServiceProgress : public DBusTransactionServiceCalls {
   }
 };
 
+// system-upgrade REQ-F-080: the sync of a preparation reports with an empty plan ID, before any plan exists.
+TEST_F(DBusTransactionServiceProgress, SyncingWithAnEmptyPlanIdArrivesWhileAnUpgradeIsPrepared) {
+  FakeHelperObject& fake = startFakeHelper();
+  fake.script(QStringLiteral("PrepareUpgrade"), {.mode = Mode::Never, .delay_ms = 0, .reply = {}});
+  Seen seen;
+  auto service = makeService();
+  service->setProgressHandler(
+      [&seen](const std::string& plan_id, const ProgressUpdate& update) { seen.events.emplace_back(plan_id, update); });
+  service->preparePlan(PlanRequest{.action = PlanAction::Upgrade, .names = {}}, [](PrepareReply) {});
+  ASSERT_TRUE(waitFor([&] { return fake.calls(QStringLiteral("PrepareUpgrade")) == 1; }));
+  fake.emitProgress(QString(), QStringLiteral("Syncing"), 1, 2, QStringLiteral("core"));
+  ASSERT_TRUE(waitFor([&] { return !seen.events.empty(); }));
+  EXPECT_EQ(seen.events.front().first, "");
+  EXPECT_EQ(seen.events.front().second.phase, ProgressPhase::Syncing);
+  EXPECT_EQ(seen.events.front().second.item, "core");
+}
+
 TEST_F(DBusTransactionServiceProgress, MatchRuleNamesTheInterfaceTheMemberAndTheHelpersWellKnownName) {
   const QString rule = DBusTransactionService::progressMatchRule();
   EXPECT_TRUE(rule.contains(QStringLiteral("interface='org.holonight.PackageHelper1.Transactions'")));
@@ -311,6 +331,144 @@ TEST_F(DBusTransactionServiceProgress, AnEventForAnotherPlanIsDropped) {
   QTest::qWait(200);
   ASSERT_EQ(seen.events.size(), 1U);
   EXPECT_EQ(seen.events[0].second.phase, ProgressPhase::Done);
+}
+
+// ---- system-upgrade T-065: PrepareUpgrade, its preview, the probe and the version 1 contract ----
+
+helper_wire::UpgradePreviewWire upgradePreview() {
+  helper_wire::UpgradePreviewWire preview;
+  preview.upgrades.push_back({.name = QStringLiteral("app"),
+                              .old_version = QStringLiteral("1"),
+                              .new_version = QStringLiteral("2"),
+                              .repository = QStringLiteral("core")});
+  preview.replacements.push_back({.old_name = QStringLiteral("old"),
+                                  .old_version = QStringLiteral("1"),
+                                  .new_name = QStringLiteral("new"),
+                                  .new_version = QStringLiteral("3"),
+                                  .repository = QStringLiteral("extra")});
+  preview.new_dependencies.push_back(
+      {.name = QStringLiteral("dep"), .version = QStringLiteral("4"), .repository = QStringLiteral("core")});
+  preview.held_back.push_back({.name = QStringLiteral("kept"), .installed_version = QStringLiteral("5")});
+  preview.keyring = true;
+  preview.keyring_packages = {QStringLiteral("archlinux-keyring")};
+  preview.download_bytes = 1234;
+  preview.size_change_bytes = -56;
+  preview.expires_at = 1700000300;
+  return preview;
+}
+
+TEST_F(DBusTransactionServiceCalls, PrepareUpgradeSendsAnEmptyOptionsMapWithATenMinuteTimeout) {
+  EXPECT_EQ(DBusTransactionService::Timeouts{}.upgrade_prepare_ms, 600'000);
+  FakeHelperObject& fake = startFakeHelper();
+  fake.script(QStringLiteral("PrepareUpgrade"),
+              {.mode = Mode::Immediate,
+               .delay_ms = 0,
+               .reply = {QVariant::fromValue(helper_wire::StatusWire{}), QStringLiteral("plan-u"),
+                         QVariant::fromValue(upgradePreview())}});
+  const auto service = makeService();
+  Captured<PrepareReply> prepared;
+  service->preparePlan(PlanRequest{.action = PlanAction::Upgrade, .names = {}},
+                       [&](PrepareReply reply) { prepared.reply = std::move(reply); });
+  ASSERT_TRUE(waitFor([&] { return prepared.done(); }));
+  EXPECT_TRUE(fake.rejected().isEmpty());
+  EXPECT_EQ(fake.calls(QStringLiteral("PreparePlan")), 0);
+  ASSERT_EQ(fake.argumentsOf(QStringLiteral("PrepareUpgrade")).size(), 1);
+  const QVariantList sent = fake.argumentsOf(QStringLiteral("PrepareUpgrade")).front();
+  ASSERT_EQ(sent.size(), 1);
+  EXPECT_TRUE(qdbus_cast<QVariantMap>(sent.at(0)).isEmpty());
+
+  ASSERT_TRUE(prepared.reply->has_value()) << static_cast<int>(prepared.reply->error().kind);
+  const PreparedPlan& plan = **prepared.reply;
+  EXPECT_EQ(plan.plan_id, "plan-u");
+  ASSERT_TRUE(plan.plan.upgrade.has_value());
+  const UpgradeDetail& detail = *plan.plan.upgrade;
+  ASSERT_EQ(detail.upgrades.size(), 1U);
+  EXPECT_EQ(detail.upgrades[0].new_version, "2");
+  ASSERT_EQ(detail.replacements.size(), 1U);
+  EXPECT_EQ(detail.replacements[0].old_name, "old");
+  ASSERT_EQ(detail.new_dependencies.size(), 1U);
+  ASSERT_EQ(detail.held_back.size(), 1U);
+  EXPECT_EQ(detail.keyring_packages, std::vector<std::string>{"archlinux-keyring"});
+  EXPECT_EQ(detail.download_bytes, 1234U);
+  EXPECT_EQ(detail.size_change_bytes, -56);
+}
+
+TEST_F(DBusTransactionServiceCalls, AnUpgradeRefusalIsADomainRefusal) {
+  FakeHelperObject& fake = startFakeHelper();
+  helper_wire::StatusWire status;
+  status.code = QStringLiteral("NothingToDo");
+  fake.script(QStringLiteral("PrepareUpgrade"), {.mode = Mode::Immediate,
+                                                 .delay_ms = 0,
+                                                 .reply = {QVariant::fromValue(status), QString(),
+                                                           QVariant::fromValue(helper_wire::UpgradePreviewWire{})}});
+  const auto service = makeService();
+  Captured<PrepareReply> prepared;
+  service->preparePlan(PlanRequest{.action = PlanAction::Upgrade, .names = {}},
+                       [&](PrepareReply reply) { prepared.reply = std::move(reply); });
+  ASSERT_TRUE(waitFor([&] { return prepared.done(); }));
+  ASSERT_FALSE(prepared.reply->has_value());
+  EXPECT_EQ(prepared.reply->error().kind, ServiceError::Kind::Refused);
+  EXPECT_EQ(prepared.reply->error().failure.code, TransactionErrorCode::NothingToDo);
+}
+
+TEST_F(DBusTransactionServiceCalls, TheProbeReadsTheProtocolVersion) {
+  FakeHelperObject& fake = startFakeHelper();
+  fake.setProtocolVersion(1);
+  const auto service = makeService();
+  std::optional<VersionReply> version;
+  service->queryProtocolVersion(ProbeMode::NoAutoStart, [&](VersionReply reply) { version = reply; });
+  ASSERT_TRUE(waitFor([&] { return version.has_value(); }));
+  ASSERT_TRUE(version->has_value());
+  EXPECT_EQ(version->value(), 1U);
+  EXPECT_EQ(fake.propertyReads(), 1);
+}
+
+TEST_F(DBusTransactionServiceCalls, AProbeWithoutAutoStartOfAMissingHelperIsHelperUnavailable) {
+  const auto service = makeService();
+  std::optional<VersionReply> version;
+  service->queryProtocolVersion(ProbeMode::NoAutoStart, [&](VersionReply reply) { version = reply; });
+  ASSERT_TRUE(waitFor([&] { return version.has_value(); }));
+  ASSERT_FALSE(version->has_value());
+  EXPECT_EQ(version->error().kind, ServiceError::Kind::HelperUnavailable);
+}
+
+TEST(HelperProtocol, VersionTwoKeepsEveryMemberOfVersionOneUnchanged) {
+  QFile golden(QString::fromLatin1(HOLONIGHT_PROTOCOL_V1_SIGNATURES));
+  ASSERT_TRUE(golden.open(QIODevice::ReadOnly | QIODevice::Text));
+  QFile xmlFile(QString::fromLatin1(HOLONIGHT_HELPER_DBUS_XML));
+  ASSERT_TRUE(xmlFile.open(QIODevice::ReadOnly));
+  QSet<QString> members;
+  QXmlStreamReader xml(&xmlFile);
+  QString owner;
+  while (!xml.atEnd()) {
+    xml.readNext();
+    if (!xml.isStartElement()) {
+      continue;
+    }
+    const auto attributes = xml.attributes();
+    const QString name = attributes.value(QLatin1String("name")).toString();
+    if (xml.name() == QLatin1String("method") || xml.name() == QLatin1String("signal")) {
+      owner = xml.name().toString() + QLatin1Char(' ') + name;
+    } else if (xml.name() == QLatin1String("arg")) {
+      const QString direction = attributes.value(QLatin1String("direction")).toString();
+      members.insert(owner + (direction.isEmpty() ? QString() : QLatin1Char(' ') + direction) + QLatin1Char(' ') +
+                     name + QLatin1Char(' ') + attributes.value(QLatin1String("type")).toString());
+    } else if (xml.name() == QLatin1String("property")) {
+      members.insert(QStringLiteral("property %1 %2 %3")
+                         .arg(name, attributes.value(QLatin1String("type")).toString(),
+                              attributes.value(QLatin1String("access")).toString()));
+    }
+  }
+  int lines = 0;
+  while (!golden.atEnd()) {
+    const QString line = QString::fromUtf8(golden.readLine()).trimmed();
+    if (line.isEmpty() || line.startsWith(QLatin1Char('#'))) {
+      continue;
+    }
+    ++lines;
+    EXPECT_TRUE(members.contains(line)) << line.toStdString();
+  }
+  EXPECT_EQ(lines, 17);
 }
 
 }  // namespace

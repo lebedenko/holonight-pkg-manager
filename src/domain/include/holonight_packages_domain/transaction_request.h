@@ -11,7 +11,7 @@
 
 namespace holonight_packages_domain {
 
-enum class PlanAction : std::uint8_t { Install, Remove };
+enum class PlanAction : std::uint8_t { Install, Remove, Upgrade };
 
 [[nodiscard]] std::string_view planActionName(PlanAction action) noexcept;
 
@@ -36,6 +36,11 @@ inline constexpr std::size_t kMaxOffendingValueBytes = 256;
 
 // An offending value as it may be echoed to the caller: at most 256 bytes, control characters replaced (REQ-F-014).
 [[nodiscard]] std::string sanitizeOffendingValue(std::string_view value);
+
+// Validates the options of PrepareUpgrade: the map must be empty (system-upgrade REQ-F-002). A failure is
+// InvalidArgument naming the sanitized keys. Runs before libalpm is touched.
+[[nodiscard]] std::expected<PlanRequest, TransactionFailure> validateUpgradeRequest(
+    const std::vector<std::string>& optionKeys);
 
 // Validates what a caller sent to PreparePlan before libalpm is touched: the action, 1 to 64 unique valid names, and no
 // options (REQ-F-014..016). A failure is InvalidArgument whose `names` hold the sanitized offending values.

@@ -14,6 +14,11 @@ void HelperAdaptor::PreparePlan(const QString& action, const QStringList& names,
   service_->preparePlan(message, action, names, options);
 }
 
+void HelperAdaptor::PrepareUpgrade(const QVariantMap& options, const QDBusMessage& message) {
+  message.setDelayedReply(true);
+  service_->prepareUpgrade(message, options);
+}
+
 void HelperAdaptor::Execute(const QString& planId, const QDBusMessage& message) {
   message.setDelayedReply(true);
   service_->execute(message, planId);

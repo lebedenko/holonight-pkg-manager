@@ -110,5 +110,58 @@ TEST(WireTypesTest, AResultCarriesOutcomeCodeChangesAndEnumeratedWarnings) {
   EXPECT_EQ(toWire(ExecutionResult::cancelled()).outcome, QStringLiteral("Cancelled"));
 }
 
+// ---- system-upgrade T-048: the upgrade preview ----
+
+TEST(WireTypesTest, TheUpgradePreviewHasTheSignatureOfTheInterfaceXml) {
+  registerWireTypes();
+  EXPECT_EQ(QByteArray(QDBusMetaType::typeToSignature(QMetaType::fromType<UpgradePreviewWire>())),
+            QByteArray("(a(ssss)a(sssss)a(sss)a(ss)bastxx)"));
+}
+
+TEST(WireTypesTest, AnUpgradePlanIsMappedFieldByField) {
+  registerWireTypes();
+  ResolvedPlan plan;
+  plan.action = PlanAction::Upgrade;
+  plan.upgrade = holonight_packages_domain::UpgradeDetail{
+      .upgrades = {{.name = "app", .old_version = "1", .new_version = "2", .repository = "core"}},
+      .replacements =
+          {{.old_name = "old", .old_version = "1", .new_name = "new", .new_version = "3", .repository = "extra"}},
+      .new_dependencies = {{.name = "dep", .version = "4", .repository = "core"}},
+      .held_back = {{.name = "kept", .installed_version = "5"}},
+      .keyring_packages = {"archlinux-keyring"},
+      .download_bytes = 1234,
+      .size_change_bytes = -56,
+  };
+  const auto expires = std::chrono::system_clock::time_point(std::chrono::seconds(1'700'000'000));
+  // The bus round trip is covered by helper_upgrade_dbus_test; here the mapping of every field.
+  const UpgradePreviewWire back = toUpgradeWire(plan, expires);
+  ASSERT_EQ(back.upgrades.size(), 1);
+  EXPECT_EQ(back.upgrades[0].name, QStringLiteral("app"));
+  EXPECT_EQ(back.upgrades[0].new_version, QStringLiteral("2"));
+  ASSERT_EQ(back.replacements.size(), 1);
+  EXPECT_EQ(back.replacements[0].old_name, QStringLiteral("old"));
+  EXPECT_EQ(back.replacements[0].new_name, QStringLiteral("new"));
+  ASSERT_EQ(back.new_dependencies.size(), 1);
+  EXPECT_EQ(back.new_dependencies[0].repository, QStringLiteral("core"));
+  ASSERT_EQ(back.held_back.size(), 1);
+  EXPECT_EQ(back.held_back[0].installed_version, QStringLiteral("5"));
+  EXPECT_TRUE(back.keyring);
+  EXPECT_EQ(back.keyring_packages, QStringList{QStringLiteral("archlinux-keyring")});
+  EXPECT_EQ(back.download_bytes, 1234U);
+  EXPECT_EQ(back.size_change_bytes, -56);
+  EXPECT_EQ(back.expires_at, 1'700'000'000);
+}
+
+TEST(WireTypesTest, TheCodeTableHasTwentyNineCodesIncludingCancelled) {
+  for (std::size_t index = 0; index < holonight_packages_domain::kTransactionErrorCodeCount; ++index) {
+    const auto code = static_cast<TransactionErrorCode>(index);
+    const StatusWire status = toWire(TransactionFailure{.code = code, .names = {}, .choices = {}});
+    EXPECT_FALSE(status.code.isEmpty());
+  }
+  EXPECT_EQ(holonight_packages_domain::kTransactionErrorCodeCount, 29U);
+  EXPECT_EQ(toWire(TransactionFailure{.code = TransactionErrorCode::Cancelled, .names = {}, .choices = {}}).code,
+            QStringLiteral("Cancelled"));
+}
+
 }  // namespace
 }  // namespace holonight_helper

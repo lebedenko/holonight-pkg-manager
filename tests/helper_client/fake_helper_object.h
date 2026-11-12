@@ -43,6 +43,9 @@ class FakeHelperObject final : public QDBusVirtualObject {
   }
 
   void script(const QString& method, Script script) { scripts_.insert(method, std::move(script)); }
+  // What a Properties.Get of ProtocolVersion answers (system-upgrade REQ-F-073).
+  void setProtocolVersion(uint version) { protocol_version_ = version; }
+  [[nodiscard]] int propertyReads() const { return property_reads_; }
   [[nodiscard]] int calls(const QString& method) const { return calls_.value(method, 0); }
   [[nodiscard]] QStringList rejected() const { return rejected_; }
   [[nodiscard]] QList<QVariantList> argumentsOf(const QString& method) const { return arguments_.value(method); }
@@ -61,6 +64,14 @@ class FakeHelperObject final : public QDBusVirtualObject {
   [[nodiscard]] QString introspect(const QString& /*path*/) const override { return {}; }
 
   bool handleMessage(const QDBusMessage& message, const QDBusConnection& connection) override {
+    if (message.type() == QDBusMessage::MethodCallMessage &&
+        message.interface() == QLatin1String("org.freedesktop.DBus.Properties") &&
+        message.member() == QLatin1String("Get") && message.arguments().size() == 2 &&
+        message.arguments().at(1).toString() == QLatin1String("ProtocolVersion")) {
+      ++property_reads_;
+      connection.send(message.createReply(QVariant::fromValue(QDBusVariant(QVariant::fromValue(protocol_version_)))));
+      return true;
+    }
     if (message.type() != QDBusMessage::MethodCallMessage || message.interface() != interfaceName()) {
       return false;
     }
@@ -121,6 +132,8 @@ class FakeHelperObject final : public QDBusVirtualObject {
   QHash<QString, int> calls_;
   QHash<QString, QList<QVariantList>> arguments_;
   QStringList rejected_;
+  uint protocol_version_ = 2;
+  int property_reads_ = 0;
 };
 
 }  // namespace holonight_packages_testing

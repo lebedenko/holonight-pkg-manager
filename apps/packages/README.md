@@ -1,23 +1,41 @@
 # holonight-packages
 
 The Qt Quick GUI of HoloNight Packages. It shows the Installed, Updates and Explore pages and can **install** one
-official-repository package (Explore details panel) or **remove** one (Installed details panel). It never changes
+official-repository package (Explore details panel), **remove** one (Installed details panel), or **update the whole
+system** ("Update system…" on the Updates page). It never changes
 packages itself: every change is a request to the privileged `holonight-package-helper` on the system bus
 (`apps/helper/README.md` has the helper's client contract). The design and the requirements are in
-`docs/sdd/gui-package-transactions/` (`SPEC.md`, `DESIGN.md`, `TASKS.md`).
+`docs/sdd/gui-package-transactions/` and, for the system upgrade, `docs/sdd/system-upgrade/` (`SPEC.md`, `DESIGN.md`,
+`TASKS.md`).
 
 ## How a change runs
 
 1. The user activates Install or Remove. The GUI calls `PreparePlan(action, [name], {})` and shows the helper's preview
    in a confirmation dialog: the packages that will be installed or removed, the hooks that will run and when the
    confirmation expires.
-2. A refusal (for example `PartialUpgradeRequired`: the system must be updated outside this app first) is shown at this
-   step, before any authorization prompt, and has no Confirm button.
+2. A refusal is shown at this step, before any authorization prompt, and has no Confirm button. A
+   `PartialUpgradeRequired` refusal (the system must be updated first) offers "Update system…", which starts the system
+   upgrade below; the install is not retried.
 3. Confirm calls `Execute(plan_id)`. The helper asks polkit for authorization, re-resolves the plan and runs it. A modal
    progress dialog shows the phase and the current item. Cancel is available until the first `Hooks` phase; after
    that the window cannot be closed until the transaction ends.
 4. The dialog ends in a result (done, failed, cancelled, outcome unknown, or helper unavailable) with a fixed message
    per code, and the Installed list and the Explore index are re-read. The selected Explore details update their Installed indicator too.
+
+## How a system upgrade runs
+
+1. The Updates page asks the helper's `ProtocolVersion` without starting it. "Update system…" is enabled whatever the
+   list shows (the list comes from the databases on disk, which may be stale), except for a version 1 helper, which
+   disables it with "The package helper is too old for system updates", and while a transaction runs.
+2. A click asks the version again (now starting the helper if needed), then calls `PrepareUpgrade({})`. The dialog shows
+   "Syncing repository i of n" and offers Cancel (`Cancel("")`). "System is up to date" ends it when nothing changes.
+3. The preview lists upgrades, replacements, new packages and held-back packages in sections, the keyring notice, the
+   download size, the installed-size change and the expiry. Confirm calls `Execute(plan_id)` (polkit
+   `org.holonight.packages.upgrade`).
+4. The progress dialog shows "Step i of n" for an upgrade with a keyring step. Cancel is available until the databases
+   are replaced (`Promoting`); from then on the window cannot be closed until the result.
+5. Every outcome, refusals and "up to date" included, re-reads the Installed, Updates and Explore lists and calls
+   `CheckNow()` of `holonight-packaged`, so the session update count follows at once.
 
 The transaction dialog receives keyboard focus when opened. Escape dismisses confirmation and result pages;
 it is disabled while a transaction executes.

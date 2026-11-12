@@ -12,8 +12,10 @@ add_executable(test_holonight_packages_checks
   application/transaction_ports_test.cpp
   application/plan_store_test.cpp
   application/plan_service_test.cpp
+  application/plan_service_upgrade_test.cpp
   application/transaction_doubles_test.cpp
   application/transaction_flow_test.cpp
+  application/transaction_flow_upgrade_test.cpp
   application/idle_monitor_test.cpp
   application/snapshot_selection_test.cpp
   application/update_age_format_test.cpp
@@ -58,6 +60,7 @@ add_executable(test_holonight_packages
   backends/file_repo_fixture_test.cpp
   backends/pacman_config_test.cpp
   backends/scratch_dir_test.cpp
+  backends/pacman_diagnostics_test.cpp
   backends/pacman_repositories_test.cpp
   backends/pacman_settings_test.cpp
   backends/pending_update_computation_test.cpp
@@ -269,6 +272,8 @@ add_executable(test_holonight_transaction
   transaction/hook_preview_test.cpp
   transaction/plan_resolver_test.cpp
   transaction/question_policy_test.cpp
+  transaction/upgrade_execute_test.cpp
+  transaction/upgrade_prepare_test.cpp
   transaction/version_policy_test.cpp
 )
 target_include_directories(test_holonight_transaction PRIVATE
@@ -296,7 +301,9 @@ add_executable(test_holonight_package_helper
   helper/helper_config_test.cpp
   helper/helper_dbus_test.cpp
   helper/helper_process_test.cpp
+  helper/helper_upgrade_dbus_test.cpp
   helper/journal_terminator_test.cpp
+  helper/state_dir_scratch_roots_test.cpp
   helper/wire_types_test.cpp
 )
 set_target_properties(test_holonight_package_helper PROPERTIES AUTOMOC ON)
@@ -320,6 +327,7 @@ add_executable(test_holonight_packages_transactions
   transactions/main.cpp
   transactions/transaction_row_model_test.cpp
   transactions/transaction_controller_test.cpp
+  transactions/transaction_controller_upgrade_test.cpp
   transactions/window_close_guard_test.cpp
   transactions/transaction_dialog_view_test.cpp
   transactions/transaction_buttons_test.cpp
@@ -368,7 +376,8 @@ target_include_directories(test_holonight_packages_helper_client PRIVATE
   ${PROJECT_SOURCE_DIR}/apps/packages/app)
 target_compile_features(test_holonight_packages_helper_client PRIVATE cxx_std_23)
 target_compile_definitions(test_holonight_packages_helper_client PRIVATE
-  HOLONIGHT_HELPER_DBUS_XML="${PROJECT_SOURCE_DIR}/apps/helper/dbus/org.holonight.PackageHelper1.xml")
+  HOLONIGHT_HELPER_DBUS_XML="${PROJECT_SOURCE_DIR}/apps/helper/dbus/org.holonight.PackageHelper1.xml"
+  HOLONIGHT_PROTOCOL_V1_SIGNATURES="${CMAKE_CURRENT_SOURCE_DIR}/helper_client/protocol_v1_signatures.txt")
 target_link_libraries(test_holonight_packages_helper_client PRIVATE
   GTest::gtest GTest::gmock Qt6::Core Qt6::DBus Qt6::Test holonight_packages_domain holonight_package_helper_service
   holonight_transaction_test_support)

@@ -34,14 +34,16 @@ In scope:
 
 ## Non-goals
 
-- System upgrade (`-Syu` or any upgrade of the whole system) and any partial upgrade.
+- System upgrade (`-Syu` or any upgrade of the whole system) and any partial upgrade. *Superseded for the upgrade action
+  only by `docs/sdd/system-upgrade/SPEC.md` (2026-11-12); install and remove still never upgrade anything.*
 - AUR packages, PKGBUILD handling and any build step.
 - Transaction history (a persisted record of past transactions).
 - An interactive question protocol. Questions are never sent to the caller; they get safe defaults or become `NeedsDecision` (REQ-F-053).
 - GUI wiring of the Installed, Explore or Updates pages to the helper.
 - `-U` and local-file installs (`pacman -U`, paths to `.pkg.tar` files, URLs).
 - PackageKit or any other cross-distribution adapter.
-- Refreshing sync databases (`-Sy`), including as part of an install.
+- Refreshing sync databases (`-Sy`), including as part of an install. *Superseded for the upgrade action only: the
+  system upgrade refreshes them into its scratch root and promotes them (REQ-F-027 as amended).*
 - Caller-supplied configuration, paths, repositories, servers or resolved package lists.
 - Disk-space delta in the preview. Replacements of installed packages are refused with `NeedsDecision`, not previewed (REQ-F-024).
 - Making `XferCommand` or any other pacman frontend key work. The helper ignores `DBPath`, `RootDir`, `XferCommand`, `CleanMethod` and `Color` (REQ-F-019).
@@ -247,10 +249,10 @@ In scope:
 - With `vi-impl 1.0` installed and providing `editor`, installing `tool`, which requires `editor`, does not return `PartialUpgradeRequired`, and the preview lists only the new packages.
 - With `editor-impl` installed as a package named `editor` at an older version, the same install returns `PartialUpgradeRequired`.
 
-### REQ-F-027: The sync databases are never refreshed [U]
-**Statement:** The helper shall never refresh the sync databases. During `PreparePlan` and `Execute` it shall not call a libalpm database-update function and shall not download database files.
+### REQ-F-027: The sync databases are refreshed only by the system upgrade [U]
+**Statement:** The helper shall not refresh the sync databases during `PreparePlan`, `Execute` of an install or remove plan, or `Cancel`: it shall not call a libalpm database-update function and shall not download database files. The live sync databases are refreshed only by the system upgrade action (REQ-F-071 of `docs/sdd/system-upgrade/SPEC.md`), whose sync download writes only into its scratch root. (Amended 2026-11-12 by the system-upgrade SPEC.)
 **Acceptance criteria:**
-- A source search finds no database-update call, no `alpm_fetch_pkgurl` and no fetch-callback setter in the helper code, other than the test seam header, and the test hook counts zero database-update calls during a full install.
+- A source search finds no database-update call, no `alpm_fetch_pkgurl` and no fetch-callback setter in the install and remove code paths, other than the test seam header and the system-upgrade code, and the test hook counts zero database-update calls during a full install.
 - A manifest of the fixture sync directory (names, sizes, SHA-256) is identical before and after a successful install.
 
 ### REQ-F-028: Stale mirror is reported as stale [X]
@@ -731,6 +733,15 @@ Each refusal or failure is returned as one code. The reply carries the code, the
 | `PastPointOfNoReturn` | `Cancel` after the commit point | REQ-F-058 | None |
 | `TransactionFailed` | libalpm failed (corruption after one retry, PreTransaction hook failure, or any failure after the commit point); the changed list shows what completed | REQ-F-060, REQ-F-055, REQ-F-073 | Changed packages |
 | `InternalError` | Unexpected error before commit, or protected-set cap exceeded; rolled back | REQ-F-061, REQ-F-072, REQ-F-035 | None |
+| `SyncFailed` | System upgrade: the sync databases could not be fetched (mirror, internal timeout, size cap) | system-upgrade REQ-F-003, REQ-F-009, REQ-F-010 | None |
+| `SyncDatabaseChanged` | System upgrade: a live sync database changed after the preparation | system-upgrade REQ-F-051 | None |
+| `KeyImportRequired` | System upgrade: a signing key is missing from the keyring; key import refused | system-upgrade REQ-F-029 | Package names |
+| `UpgradePartiallyApplied` | System upgrade: a step failed after the point of no return | system-upgrade REQ-F-060, REQ-F-061 | Step token, changed packages |
+| `Cancelled` | System upgrade: the caller cancelled its own `PrepareUpgrade`, or disconnected | system-upgrade REQ-F-032, REQ-F-035 | None |
+
+The last five rows were added by `docs/sdd/system-upgrade/SPEC.md` (2026-11-12) and are returned for the upgrade
+action only. They raise the interface's `ProtocolVersion` property from 1 to 2; the methods, signals and signatures
+of version 1 are unchanged (system-upgrade REQ-F-073, REQ-C-002).
 
 Outcome values of `Execute` (not errors): `Succeeded`, `Failed` (carries one of the codes above), `Cancelled` (REQ-F-056). Warning tokens: `HookFailed` (REQ-F-073). Codes that `PreparePlan` can return: `InvalidArgument`, `PackageNotFound`, `PackageIgnored`, `ProtectedPackage`, `BreaksDependents`, `NeedsDecision`, `PartialUpgradeRequired`, `InsecureSigLevel`, `DatabaseUnavailable`, `ConfigurationError`, `NothingToDo`, `Busy`, `InternalError`. `Cancel` returns success, `PlanNotFound` or `PastPointOfNoReturn`.
 

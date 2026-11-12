@@ -337,11 +337,110 @@ TEST_F(RuntimeTransactionDialogs, EachRefusalOffersTheRightActions) {  // comple
     service_.completePrepare(FakeTransactionService::refusal(code, {"vim"}));
     settle();
     const bool retry = code == TransactionErrorCode::Busy || code == TransactionErrorCode::PlanNotFound ||
-                       code == TransactionErrorCode::PlanExpired;
+                       code == TransactionErrorCode::PlanExpired || code == TransactionErrorCode::SyncDatabaseChanged;
     EXPECT_TRUE(visible("transactionCloseButton")) << index;
     EXPECT_EQ(visible("transactionTryAgainButton"), retry) << index;
+    // system-upgrade REQ-F-089: only a partial upgrade offers the system upgrade.
+    EXPECT_EQ(visible("transactionUpdateSystemButton"), code == TransactionErrorCode::PartialUpgradeRequired) << index;
     EXPECT_FALSE(visible("transactionConfirmButton")) << index;
     EXPECT_FALSE(text("transactionMessage").isEmpty()) << index;
+    controller_->dismiss();
+    settle();
+  }
+}
+
+// ---- system-upgrade T-074: the upgrade dialogs, in both styles -----------------------------------------------------
+
+ResolvedPlan upgradePlan(int upgrades, bool keyring) {
+  ResolvedPlan plan;
+  plan.action = PlanAction::Upgrade;
+  UpgradeDetail detail;
+  for (int index = 0; index < upgrades; ++index) {
+    detail.upgrades.push_back(UpgradeEntry{.name = "package-" + std::to_string(index),
+                                           .old_version = "1.0-1",
+                                           .new_version = "1.1-1",
+                                           .repository = "extra"});
+  }
+  detail.replacements = {ReplacementEntry{
+      .old_name = "oldpkg", .old_version = "1-1", .new_name = "newpkg", .new_version = "2-1", .repository = "extra"}};
+  detail.new_dependencies = {NewDependencyEntry{.name = "dep", .version = "1-1", .repository = "core"}};
+  detail.held_back = {HeldBackEntry{.name = "kept", .installed_version = "1-1"}};
+  if (keyring) {
+    detail.keyring_packages = {"archlinux-keyring"};
+  }
+  detail.download_bytes = 123456789;
+  detail.size_change_bytes = 4567890;
+  plan.upgrade = detail;
+  return plan;
+}
+
+TEST_F(RuntimeTransactionDialogs, TheUpdatesPageOffersUpdateSystemForAnEmptyList) {  // probeHelper + completeProbes
+  view_.rootObject()->setProperty("currentPage", QStringLiteral("updates"));
+  settle();
+  service_.setVersion(2);
+  service_.completeProbes();
+  settle();
+  ASSERT_TRUE(visible("updateSystemButton"));
+  EXPECT_TRUE(enabled("updateSystemButton"));  // the Updates list is empty, the button is not (REQ-F-078)
+}
+
+TEST_F(RuntimeTransactionDialogs, ThePreviewOfFiveHundredUpgradesAndTheStepCounterRender) {  // requestUpgrade
+  service_.setVersion(2);
+  ASSERT_TRUE(controller_->requestUpgrade());
+  service_.completeProbes();
+  settle();
+  service_.emitProgress("", ProgressUpdate{.phase = ProgressPhase::Syncing, .current = 1, .total = 2, .item = "core"});
+  settle();
+  EXPECT_TRUE(text("transactionMessage").contains(QStringLiteral("1 of 2")));
+  EXPECT_TRUE(visible("transactionPrepareCancelButton"));
+  ASSERT_TRUE(service_.completePrepare(FakeTransactionService::previewOf("plan-u", upgradePlan(500, true))));
+  settle();
+  auto* list = find("upgradePreviewList");
+  ASSERT_NE(list, nullptr);
+  EXPECT_EQ(list->property("count").toInt(), 503);
+  EXPECT_TRUE(visible("upgradeKeyringNotice"));
+  EXPECT_FALSE(text("upgradeDownloadSize").isEmpty());
+  EXPECT_EQ(find("transactionConfirmButton")->property("text").toString(), QStringLiteral("Update"));
+
+  controller_->confirm();
+  settle();
+  service_.emitProgress("plan-u", ProgressUpdate{.phase = ProgressPhase::Promoting});
+  service_.emitProgress("plan-u", ProgressUpdate{.phase = ProgressPhase::KeyringStep, .current = 1, .total = 2});
+  settle();
+  EXPECT_TRUE(text("transactionStep").contains(QStringLiteral("1 of 2")));
+  EXPECT_FALSE(enabled("transactionRunCancelButton"));
+  service_.emitProgress("plan-u", ProgressUpdate{.phase = ProgressPhase::MainStep, .current = 2, .total = 2});
+  service_.emitProgress(
+      "plan-u", ProgressUpdate{.phase = ProgressPhase::Installing, .current = 3, .total = 500, .item = "package-3"});
+  settle();
+  EXPECT_TRUE(text("transactionStep").contains(QStringLiteral("2 of 2")));
+  service_.completeExecute(ExecutionResult::succeeded({ChangedPackage{
+      .name = "archlinux-keyring", .action = ChangeAction::Install, .old_version = "1", .new_version = "2"}}));
+  settle();
+  EXPECT_TRUE(text("transactionMessage").contains(QStringLiteral("keyring")));
+  EXPECT_TRUE(visible("transactionCloseButton"));
+}
+
+TEST_F(RuntimeTransactionDialogs, LongUpgradePreviewsKeepActionsInsideASmallWindow) {
+  view_.resize(720, 480);
+  for (const bool keyring : {false, true}) {
+    service_.setVersion(2);
+    ASSERT_TRUE(controller_->requestUpgrade());
+    service_.completeProbes();
+    ASSERT_TRUE(service_.completePrepare(FakeTransactionService::previewOf("plan-u", upgradePlan(500, keyring))));
+    settle();
+    auto* list = qobject_cast<QQuickItem*>(find("upgradePreviewList"));
+    ASSERT_NE(list, nullptr);
+    EXPECT_GT(list->height(), 0);
+    EXPECT_GT(list->property("contentHeight").toReal(), list->height());
+    for (const auto* name :
+         {"transactionConfirmButton", "transactionCancelButton", "upgradeDownloadSize", "transactionExpires"}) {
+      auto* item = qobject_cast<QQuickItem*>(find(name));
+      ASSERT_NE(item, nullptr);
+      const auto bounds = item->mapRectToScene(item->boundingRect());
+      EXPECT_GE(bounds.top(), 0) << name;
+      EXPECT_LE(bounds.bottom(), 480) << name;
+    }
     controller_->dismiss();
     settle();
   }

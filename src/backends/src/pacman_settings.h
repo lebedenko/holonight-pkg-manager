@@ -22,5 +22,9 @@ struct PacmanSettings {
 // `machine_architecture` resolves "auto".
 [[nodiscard]] std::expected<PacmanSettings, std::string> loadPacmanSettings(const std::filesystem::path& path,
                                                                             std::string_view machine_architecture);
+// The same, and fills `diagnostics` (when not null) for the system upgrade's configuration checks.
+[[nodiscard]] std::expected<PacmanSettings, std::string> loadPacmanSettings(const std::filesystem::path& path,
+                                                                            std::string_view machine_architecture,
+                                                                            PacmanDiagnostics* diagnostics);
 
 }  // namespace holonight_packages_backends

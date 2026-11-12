@@ -289,20 +289,26 @@ TEST_F(TransactionControllerResult, ActionsAreExactlyCloseForEveryCodeExceptTheR
     local_service.completePrepare(FakeTransactionService::refusal(code, {"app"}));
     EXPECT_EQ(local.state(), State::Refused);
     const bool retry = code == TransactionErrorCode::Busy || code == TransactionErrorCode::PlanNotFound ||
-                       code == TransactionErrorCode::PlanExpired;
-    const QStringList expected =
-        retry ? QStringList{QStringLiteral("tryAgain"), QStringLiteral("close")} : QStringList{QStringLiteral("close")};
+                       code == TransactionErrorCode::PlanExpired || code == TransactionErrorCode::SyncDatabaseChanged;
+    const bool partial = code == TransactionErrorCode::PartialUpgradeRequired;  // system-upgrade REQ-F-089
+    QStringList expected{QStringLiteral("close")};
+    if (partial) {
+      expected.prepend(QStringLiteral("updateSystem"));
+    } else if (retry) {
+      expected.prepend(QStringLiteral("tryAgain"));
+    }
     EXPECT_EQ(local.actions(), expected) << index;
     EXPECT_FALSE(local.message().isEmpty());
   }
 }
 
-TEST_F(TransactionControllerResult, PartialUpgradeRequiredOffersOnlyCloseAndNamesThePackages) {
+// GUI REQ-F-022 as amended by system-upgrade REQ-F-089.
+TEST_F(TransactionControllerResult, PartialUpgradeRequiredOffersUpdateSystemAndNamesThePackages) {
   ASSERT_TRUE(controller.requestInstall(QStringLiteral("app")));
   service.completePrepare(FakeTransactionService::refusal(TransactionErrorCode::PartialUpgradeRequired, {"glibc"}));
-  EXPECT_EQ(controller.actions(), QStringList{QStringLiteral("close")});
+  EXPECT_EQ(controller.actions(), (QStringList{QStringLiteral("updateSystem"), QStringLiteral("close")}));
   EXPECT_TRUE(controller.message().contains(QStringLiteral("glibc")));
-  EXPECT_TRUE(controller.message().contains(QStringLiteral("outside this app")));
+  EXPECT_TRUE(controller.message().contains(QStringLiteral("Update system")));
 }
 
 TEST_F(TransactionControllerResult, TryAgainAfterBusyRecordsOnePrepare) {

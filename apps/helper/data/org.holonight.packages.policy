@@ -15,6 +15,17 @@
     </defaults>
   </action>
 
+  <!-- A full system upgrade, kept apart from install so that administrators can set it on its own. -->
+  <action id="org.holonight.packages.upgrade">
+    <description>Update the system</description>
+    <message>Authentication is required to update the system: $(upgrades) upgrades, $(new_packages) new packages</message>
+    <defaults>
+      <allow_any>auth_admin_keep</allow_any>
+      <allow_inactive>auth_admin_keep</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
+
   <!-- Removing packages is the more destructive operation: every removal asks again (auth_admin, never cached). -->
   <action id="org.holonight.packages.remove">
     <description>Remove packages</description>

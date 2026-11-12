@@ -126,6 +126,9 @@ struct Parser {
   std::vector<std::string> architectures;
   SigSetting global_sig;
   std::vector<RawRepository> repositories;
+  PacmanDiagnostics diagnostics;
+
+  void noteUnsupported(std::string_view token);
 
   std::expected<void, std::string> readFile(const std::filesystem::path& path, int depth, std::string& section);
   std::expected<void, std::string> beginSection(std::string_view line, std::string& section,
@@ -195,8 +198,20 @@ std::expected<void, std::string> Parser::readFile(const std::filesystem::path& p
   return {};
 }
 
+void Parser::noteUnsupported(std::string_view token) {
+  if (std::ranges::find(diagnostics.unsupported, token) == diagnostics.unsupported.end()) {
+    diagnostics.unsupported.emplace_back(token);
+  }
+}
+
 std::expected<void, std::string> Parser::handleOption(std::string_view key, std::string_view value) {
-  if (key == "GPGDir") {
+  if (key == "XferCommand") {
+    noteUnsupported("XferCommand");
+  } else if (key == "DBPath") {
+    diagnostics.db_path = std::string(value);
+  } else if (key == "RootDir") {
+    diagnostics.root_dir = std::string(value);
+  } else if (key == "GPGDir") {
     gpgdir = std::string(value);
   } else if (key == "Architecture") {
     for (std::string& word : words(value)) {
@@ -253,6 +268,8 @@ std::expected<void, std::string> Parser::handle(std::string& section, std::strin
     auto& sig = repositories.back().sig;
     sig.value = merge(*level, sig.value);
     sig.mask |= level->mask;
+  } else if (key == "Usage" && value != "All") {
+    noteUnsupported("Usage");
   }
   return {};
 }
@@ -280,11 +297,41 @@ std::string machineArchitecture() {
 
 std::expected<PacmanRepositories, std::string> parsePacmanRepositories(const std::filesystem::path& path,
                                                                        std::string_view machine_architecture) {
+  return parsePacmanRepositories(path, machine_architecture, nullptr);
+}
+
+std::expected<PacmanRepositories, std::string> parsePacmanRepositories(const std::filesystem::path& path,
+                                                                       std::string_view machine_architecture,
+                                                                       PacmanDiagnostics* diagnostics) {
   Parser parser{};
   std::string section;
   parser.machine = std::string(machine_architecture);
+  // Hands over what the parser saw on every return path.
+  class Report {
+   public:
+    Report(Parser& parser, PacmanDiagnostics* out) : parser_(&parser), out_(out) {}
+    Report(const Report&) = delete;
+    Report& operator=(const Report&) = delete;
+    Report(Report&&) = delete;
+    Report& operator=(Report&&) = delete;
+    ~Report() {
+      if (out_ != nullptr) {
+        *out_ = std::move(parser_->diagnostics);
+      }
+    }
+
+   private:
+    Parser* parser_;
+    PacmanDiagnostics* out_;
+  } report(parser, diagnostics);
   if (auto read = parser.readFile(path, 0, section); !read) {
     return std::unexpected(read.error());
+  }
+  for (const RawRepository& raw : parser.repositories) {
+    if (raw.servers.empty()) {
+      parser.diagnostics.repository_without_server = raw.name;
+      break;
+    }
   }
 
   PacmanRepositories result;

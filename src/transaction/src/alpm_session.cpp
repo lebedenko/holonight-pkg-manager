@@ -1,6 +1,7 @@
 #include "alpm_session.h"
 
 #include "holonight_packages_transaction/database_lock.h"
+#include "signature_policy.h"
 
 #include <cstdarg>
 #include <cstdio>
@@ -72,8 +73,8 @@ void configurePolicy(alpm_handle_t* handle, const holonight_packages_backends::P
 }
 
 std::expected<std::vector<AlpmSession::Repository>, TransactionFailure> registerRepositories(
-    alpm_handle_t* handle, const holonight_packages_backends::PacmanRepositories& repositories,
-    const LogSink& journal) {
+    alpm_handle_t* handle, const holonight_packages_backends::PacmanRepositories& repositories, const LogSink& journal,
+    bool withServers) {
   std::vector<AlpmSession::Repository> registered;
   for (const auto& repository : repositories.repositories) {
     // A repository without any SigLevel is registered at libalpm's own default, 0, as REQ-F-039 words it: its
@@ -87,8 +88,14 @@ std::expected<std::vector<AlpmSession::Repository>, TransactionFailure> register
       }
       return std::unexpected(failure(TransactionErrorCode::DatabaseUnavailable));
     }
-    for (const std::string& server : repository.servers) {
-      alpm_db_add_server(database, server.c_str());
+    if (withServers) {
+      for (const std::string& server : repository.servers) {
+        alpm_db_add_server(database, server.c_str());
+      }
+    } else {
+      // libalpm refuses a commit for a repository without any server, even when every file is cached, so the live
+      // upgrade handle gets one server that cannot answer: a download it ever needed would fail (REQ-F-056).
+      alpm_db_add_server(database, AlpmSession::kNoDownloadServer);
     }
     registered.push_back(AlpmSession::Repository{
         .name = repository.name,
@@ -122,15 +129,106 @@ std::expected<std::unique_ptr<AlpmSession>, TransactionFailure> AlpmSession::ope
     }
     return std::unexpected(failure(TransactionErrorCode::ConfigurationError));
   }
+  return initialize(config, config.database_path, std::move(*settings), action == PlanAction::Install, true,
+                    std::move(logSink));
+}
 
+namespace {
+
+// "/srv/db/" and "/srv/db" name the same directory.
+std::string normalizedDirectory(const std::filesystem::path& path) {
+  std::string text = path.lexically_normal().string();
+  while (text.size() > 1 && text.back() == '/') {
+    text.pop_back();
+  }
+  return text;
+}
+
+}  // namespace
+
+std::expected<holonight_packages_backends::PacmanSettings, TransactionFailure> AlpmSession::loadUpgradeSettings(
+    const TransactionConfig& config, const LogSink& logSink) {
+  holonight_packages_backends::PacmanDiagnostics diagnostics;
+  auto settings = holonight_packages_backends::loadPacmanSettings(
+      config.pacman_conf_path, holonight_packages_backends::machineArchitecture(), &diagnostics);
+  std::vector<std::string> unsupported = diagnostics.unsupported;
+  // The helper takes its paths from its command line; a pacman.conf that names other ones describes another system.
+  if (!diagnostics.db_path.empty() &&
+      normalizedDirectory(diagnostics.db_path) != normalizedDirectory(config.database_path)) {
+    unsupported.emplace_back("DBPath");
+  }
+  if (!diagnostics.root_dir.empty() && normalizedDirectory(diagnostics.root_dir) != normalizedDirectory(config.root)) {
+    unsupported.emplace_back("RootDir");
+  }
+  if (!unsupported.empty()) {
+    if (logSink) {
+      logSink(LogLevel::Error, "pacman.conf sets options the system upgrade does not support");
+    }
+    return std::unexpected(TransactionFailure{
+        .code = TransactionErrorCode::ConfigurationError,
+        .names = std::move(unsupported),
+        .choices = {},
+    });
+  }
+  if (!diagnostics.repository_without_server.empty()) {
+    if (logSink) {
+      logSink(LogLevel::Error, "repository " + diagnostics.repository_without_server + " has no Server");
+    }
+    return std::unexpected(TransactionFailure{
+        .code = TransactionErrorCode::ConfigurationError,
+        .names = {diagnostics.repository_without_server},
+        .choices = {},
+    });
+  }
+  if (!settings) {
+    if (logSink) {
+      logSink(LogLevel::Error, redactUrlCredentials("cannot load pacman.conf: " + settings.error()));
+    }
+    return std::unexpected(failure(TransactionErrorCode::ConfigurationError));
+  }
+  return std::move(*settings);
+}
+
+std::expected<std::unique_ptr<AlpmSession>, TransactionFailure> AlpmSession::openUpgrade(
+    const TransactionConfig& config, UpgradeRole role, const std::filesystem::path& database_path,
+    const TransactionSeams* seams, LogSink logSink) {
+  auto settings = loadUpgradeSettings(config, logSink);
+  if (!settings) {
+    return std::unexpected(std::move(settings.error()));
+  }
+  if (seams != nullptr && seams->observe) {
+    seams->observe("alpm-initialize");
+  }
+  auto session =
+      initialize(config, database_path, std::move(*settings), true, role == UpgradeRole::Scratch, std::move(logSink));
+  if (!session) {
+    return session;
+  }
+  std::vector<RepositoryLevel> levels;
+  for (const auto& repository : (*session)->repositories()) {
+    levels.push_back(RepositoryLevel{
+        .name = repository.name,
+        .level = repository.sig_level,
+        .explicit_level = repository.sig_level_explicit,
+    });
+  }
+  if (auto weak = checkInstallSignatureLevels(levels, (*session)->logSink_)) {
+    return std::unexpected(std::move(*weak));
+  }
+  return session;
+}
+
+std::expected<std::unique_ptr<AlpmSession>, TransactionFailure> AlpmSession::initialize(
+    const TransactionConfig& config, const std::filesystem::path& database_path,
+    holonight_packages_backends::PacmanSettings settings, bool registerSync, bool withServers, LogSink logSink) {
   std::unique_ptr<AlpmSession> session(new AlpmSession());
-  session->settings_ = std::move(*settings);
+  session->settings_ = std::move(settings);
   session->logSink_ = std::move(logSink);
   const auto& options = session->settings_.options;
   const auto& repositories = session->settings_.repositories;
 
   alpm_errno_t error = ALPM_ERR_OK;
-  session->handle_ = alpm_initialize(config.root.c_str(), config.database_path.c_str(), &error);
+  session->handle_ = alpm_initialize(config.root.c_str(), database_path.c_str(), &error);
   if (session->handle_ == nullptr) {
     if (session->logSink_) {
       session->logSink_(LogLevel::Error, std::string("alpm_initialize failed: ") + alpm_strerror(error));
@@ -146,8 +244,8 @@ std::expected<std::unique_ptr<AlpmSession>, TransactionFailure> AlpmSession::ope
 
   configurePaths(handle, config, options, repositories, session->hookDirs_);
   configurePolicy(handle, options, repositories);
-  if (action == PlanAction::Install) {
-    auto registered = registerRepositories(handle, repositories, session->logSink_);
+  if (registerSync) {
+    auto registered = registerRepositories(handle, repositories, session->logSink_, withServers);
     if (!registered) {
       return std::unexpected(registered.error());
     }
@@ -161,6 +259,7 @@ struct LifecycleState {
   std::mutex mutex;
   // A NOLOCK preview can coexist with the owning session.
   const AlpmSession* owner = nullptr;
+  std::filesystem::path owner_lock;  // the lock file libalpm created for `owner`
 };
 
 LifecycleState& lifecycleState() {
@@ -173,6 +272,13 @@ DatabaseLockGuard::DatabaseLockGuard() : lock_(lifecycleState().mutex) {}
 
 bool DatabaseLockGuard::ownsLock() const noexcept { return lock_.owns_lock() && lifecycleState().owner != nullptr; }
 
+std::optional<std::filesystem::path> DatabaseLockGuard::ownedLockPath() const {
+  if (!ownsLock()) {
+    return std::nullopt;
+  }
+  return lifecycleState().owner_lock;
+}
+
 AlpmSession::~AlpmSession() {
   const std::scoped_lock lock(lifecycleState().mutex);
   if (handle_ != nullptr) {
@@ -182,6 +288,7 @@ AlpmSession::~AlpmSession() {
     alpm_release(handle_);
     if (lifecycleState().owner == this) {
       lifecycleState().owner = nullptr;
+      lifecycleState().owner_lock.clear();
     }
   }
 }
@@ -194,6 +301,8 @@ bool AlpmSession::beginTransaction(int flags) {
   transactionOpen_ = alpm_trans_init(handle_, flags) == 0;
   if (transactionOpen_ && (flags & ALPM_TRANS_FLAG_NOLOCK) == 0) {
     lifecycleState().owner = this;
+    const char* lock_path = alpm_option_get_lockfile(handle_);
+    lifecycleState().owner_lock = lock_path != nullptr ? std::filesystem::path(lock_path) : std::filesystem::path();
   }
   return transactionOpen_;
 }
@@ -205,6 +314,7 @@ void AlpmSession::releaseTransaction() {
     transactionOpen_ = false;
     if (lifecycleState().owner == this) {
       lifecycleState().owner = nullptr;
+      lifecycleState().owner_lock.clear();
     }
   }
 }

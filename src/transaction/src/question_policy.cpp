@@ -17,6 +17,7 @@ void QuestionPolicy::clear() {
   asked_.clear();
   corruptedReason_ = static_cast<alpm_errno_t>(0);
   keyImportRefused_ = false;
+  replacements_.clear();
 }
 
 void QuestionPolicy::handle(alpm_question_t* question) {
@@ -28,6 +29,11 @@ void QuestionPolicy::handle(alpm_question_t* question) {
       break;
     case ALPM_QUESTION_REPLACE_PKG:
       asked_.emplace_back("replace-package");
+      if (upgradeMode_) {
+        question->replace.replace = 1;
+        replacements_.emplace_back(nameOf(question->replace.oldpkg), nameOf(question->replace.newpkg));
+        break;
+      }
       question->replace.replace = 0;
       decisions_.push_back(NeedsDecisionChoice{
           .kind = NeedsDecisionChoice::Kind::Replace,

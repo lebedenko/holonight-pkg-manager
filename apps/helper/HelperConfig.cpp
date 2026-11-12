@@ -13,10 +13,9 @@ namespace holonight_helper {
 namespace {
 
 constexpr const char* kDefaultCacheDirectory = "/var/cache/pacman/pkg";
+constexpr const char* kDefaultStateDirectory = "/var/lib/holonight-package-helper";
 
 }  // namespace
-
-std::string HelperConfig::lockFile() const { return (transaction.database_path / "db.lck").string(); }
 
 std::expected<HelperConfig, std::string> parseHelperConfig(const QStringList& arguments) {
   using namespace holonight_packages_backends;
@@ -29,7 +28,9 @@ std::expected<HelperConfig, std::string> parseHelperConfig(const QStringList& ar
                                 QStringLiteral("file"), QString::fromUtf8(kDefaultPacmanConfPath));
   const QCommandLineOption cache(QStringLiteral("cache-dir"), QStringLiteral("Fallback package cache."),
                                  QStringLiteral("dir"), QString::fromUtf8(kDefaultCacheDirectory));
-  parser.addOptions({root, dbpath, conf, cache});
+  const QCommandLineOption state(QStringLiteral("state-dir"), QStringLiteral("Directory for upgrade scratch roots."),
+                                 QStringLiteral("dir"), QString::fromUtf8(kDefaultStateDirectory));
+  parser.addOptions({root, dbpath, conf, cache, state});
   if (!parser.parse(arguments)) {
     return std::unexpected(parser.errorText().toStdString());
   }
@@ -37,12 +38,13 @@ std::expected<HelperConfig, std::string> parseHelperConfig(const QStringList& ar
     return std::unexpected("unexpected argument " + parser.positionalArguments().first().toStdString());
   }
   HelperConfig config;
-  const std::array<std::pair<const QCommandLineOption*, std::filesystem::path*>, 4> targets{
+  const std::array<std::pair<const QCommandLineOption*, std::filesystem::path*>, 5> targets{
       {
           {&root, &config.transaction.root},
           {&dbpath, &config.transaction.database_path},
           {&conf, &config.transaction.pacman_conf_path},
           {&cache, &config.transaction.cache_directory},
+          {&state, &config.state_directory},
       },
   };
   for (const auto& [option, target] : targets) {

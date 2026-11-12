@@ -22,7 +22,15 @@ TransactionFailure invalid(std::vector<std::string> offending) {
 }  // namespace
 
 std::string_view planActionName(PlanAction action) noexcept {
-  return action == PlanAction::Install ? "install" : "remove";
+  switch (action) {
+    case PlanAction::Install:
+      return "install";
+    case PlanAction::Remove:
+      return "remove";
+    case PlanAction::Upgrade:
+      return "upgrade";
+  }
+  return "install";
 }
 
 bool matchesPackageNameGrammar(std::string_view name) noexcept {
@@ -47,6 +55,18 @@ std::string sanitizeOffendingValue(std::string_view value) {
     result.push_back(control ? '?' : character);
   }
   return result;
+}
+
+std::expected<PlanRequest, TransactionFailure> validateUpgradeRequest(const std::vector<std::string>& optionKeys) {
+  if (!optionKeys.empty()) {
+    std::vector<std::string> keys;
+    keys.reserve(optionKeys.size());
+    for (const std::string& key : optionKeys) {
+      keys.push_back(sanitizeOffendingValue(key));
+    }
+    return std::unexpected(invalid(std::move(keys)));
+  }
+  return PlanRequest{.action = PlanAction::Upgrade, .names = {}};
 }
 
 std::expected<PlanRequest, TransactionFailure> validateRequest(std::string_view action,

@@ -45,7 +45,7 @@ TEST_P(DatabaseFinalizationTest, SerializesLifecycleAndPreservesForeignReplaceme
   const FixtureRoot world;
   world.writeConf(std::vector<std::string>{});
   const std::string mode(GetParam());
-  if (mode == "foreign") {
+  if (mode == "foreign" || mode == "scratch-owned") {
     std::ofstream(world.lockPath()) << "foreign";
   }
   QProcess child;
@@ -79,8 +79,15 @@ TEST_P(DatabaseFinalizationTest, SerializesLifecycleAndPreservesForeignReplaceme
   }
   ASSERT_EQ(line(), mode == "release-blocked" || mode == "teardown-blocked" || mode == "init-blocked" ? "blocked"
                                                                                                       : "finalized");
-  const bool preserved = mode == "foreign" || mode == "released";
+  const bool preserved = mode == "foreign" || mode == "released" || mode == "scratch-owned";
   EXPECT_EQ(fs::exists(world.lockPath()), preserved);
+  if (mode == "scratch-owned") {
+    // F-2 of system-upgrade: the owned scratch lock is removed, the foreign live lock stays.
+    EXPECT_FALSE(fs::exists(world.base() / "scratch" / "dbpath" / "db.lck"));
+    std::string content;
+    std::ifstream(world.lockPath()) >> content;
+    EXPECT_EQ(content, "foreign");
+  }
   if (mode == "release-blocked" || mode == "teardown-blocked" || mode == "init-blocked") {
     std::ofstream(world.lockPath()) << "replacement";
   }
@@ -94,7 +101,7 @@ TEST_P(DatabaseFinalizationTest, SerializesLifecycleAndPreservesForeignReplaceme
 
 INSTANTIATE_TEST_SUITE_P(Races, DatabaseFinalizationTest,
                          ::testing::Values("released", "release-blocked", "init-blocked", "owned", "foreign", "missing",
-                                           "acquired-worker", "teardown-blocked"));
+                                           "acquired-worker", "teardown-blocked", "scratch-owned"));
 
 }  // namespace
 }  // namespace holonight_packages_transaction

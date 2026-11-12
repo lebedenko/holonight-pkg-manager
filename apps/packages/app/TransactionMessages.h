@@ -8,6 +8,7 @@
 #include <QtGlobal>
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -31,7 +32,7 @@ enum class Note : quint8 {
 
 inline constexpr std::size_t kNoteCount = 10;
 
-// One entry per TransactionErrorCode (24). `names` are package or repository names, inserted as plain text.
+// One entry per TransactionErrorCode (29). `names` are package or repository names, inserted as plain text.
 // `action` selects the wording of PackageNotFound (install vs remove); `changed_empty` selects the wording of
 // TransactionFailed.
 [[nodiscard]] QString failureText(holonight_packages_domain::TransactionErrorCode code,
@@ -40,5 +41,28 @@ inline constexpr std::size_t kNoteCount = 10;
 [[nodiscard]] QString noteText(Note note);
 [[nodiscard]] QString phaseLabel(holonight_packages_domain::ProgressPhase phase);
 [[nodiscard]] QString removeConfirmLabel(int package_count);  // "Remove 1 package" | "Remove N packages"
+
+// system-upgrade REQ-F-094: the upgrade entries of the same table. Only names, versions, counts and step numbers are
+// inserted, as plain text.
+enum class UpgradeKey : quint8 {
+  HelperTooOld,
+  Syncing,         // "Syncing repository %1 of %2" (+ the repository name)
+  SystemUpToDate,  // also NothingToDo.Upgrade
+  Preview,         // the preview's heading
+  HeldBack,        // the held-back section
+  Keyring,         // the keyring notice, %1 = the keyring packages
+  PartialKeyring,  // UpgradePartiallyApplied.keyring
+  PartialMain,     // UpgradePartiallyApplied.main
+  Succeeded,       // "System updated"
+  KeyringUpdated,  // appended to a success or partial result whose changed list holds the keyring package
+  Step,            // "Step %1 of %2"
+  Title,           // "Update system"
+  ConfirmLabel,    // "Update"
+};
+inline constexpr std::size_t kUpgradeKeyCount = 13;
+
+[[nodiscard]] QString upgradeText(UpgradeKey key);
+[[nodiscard]] QString syncingText(std::uint32_t current, std::uint32_t total, const std::string& repository);
+[[nodiscard]] QString stepText(std::uint32_t index, std::uint32_t count);
 
 }  // namespace transaction_messages

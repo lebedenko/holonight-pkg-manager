@@ -38,6 +38,8 @@ REQUIRED_UNIT = {
     "ProtectHostname": "yes",
     "ProtectKernelLogs": "yes",
     "ProtectControlGroups": "yes",
+    "StateDirectory": "holonight-package-helper",
+    "StateDirectoryMode": "0711",
 }
 FORBIDDEN_UNIT = (
     "ProtectSystem", "ProtectHome", "PrivateTmp", "ReadWritePaths", "RestrictSUIDSGID", "ProtectKernelTunables",
@@ -78,10 +80,12 @@ def check(root: Path) -> list[str]:
     names = identity_constants(identity_text)
     bus, interface = names.get("kBusName"), names.get("kInterfaceName")
     install_id, remove_id, unit_name = names.get("kInstallActionId"), names.get("kRemoveActionId"), names.get("kUnitName")
-    for key in ("kBusName", "kObjectPath", "kInterfaceName", "kInstallActionId", "kRemoveActionId", "kUnitName"):
+    upgrade_id = names.get("kUpgradeActionId")
+    for key in ("kBusName", "kObjectPath", "kInterfaceName", "kInstallActionId", "kRemoveActionId", "kUpgradeActionId",
+                "kUnitName"):
         if key not in names:
             fail("A-000", IDENTITY, f"constant {key} is missing")
-    if not (bus and interface and install_id and remove_id and unit_name):
+    if not (bus and interface and install_id and remove_id and upgrade_id and unit_name):
         return problems
 
     # A-001: introspection XML.
@@ -98,17 +102,21 @@ def check(root: Path) -> list[str]:
             if interface not in interfaces:
                 fail("A-001", INTERFACE_XML, f"interface {interface} not declared (found {interfaces})")
             methods = {element.get("name") for element in tree.iter("method")}
-            for required in ("PreparePlan", "Execute", "Cancel"):
-                if required not in methods:
-                    fail("A-001", INTERFACE_XML, f"method {required} missing")
+            # system-upgrade REQ-F-072: exactly these methods, so no standalone refresh can be added unnoticed.
+            expected_methods = {"PreparePlan", "PrepareUpgrade", "Execute", "Cancel"}
+            if methods != expected_methods:
+                fail("A-001", INTERFACE_XML, f"methods must be exactly {sorted(expected_methods)}, found {sorted(methods)}")
             for element in tree.iter("arg"):
                 if any(word in (element.get("name") or "").lower() for word in FORBIDDEN_ARGUMENT_WORDS):
                     fail("A-001", INTERFACE_XML, f"argument {element.get('name')} names a path, repository, server or config")
             for method in tree.iter("method"):
+                inputs = [arg for arg in method.iter("arg") if arg.get("direction") == "in"]
                 if method.get("name") == "Execute":
-                    inputs = [arg for arg in method.iter("arg") if arg.get("direction") == "in"]
                     if len(inputs) != 1 or inputs[0].get("type") != "s":
                         fail("A-001", INTERFACE_XML, "Execute must take exactly one input of type s")
+                if method.get("name") == "PrepareUpgrade":
+                    if [(arg.get("name"), arg.get("type")) for arg in inputs] != [("options", "a{sv}")]:
+                        fail("A-001", INTERFACE_XML, "PrepareUpgrade must take exactly one input: options a{sv}")
 
     # A-002 and A-006: system bus policy (anyone calls, only root owns).
     conf_text = read(root, BUS_CONF)
@@ -179,9 +187,11 @@ def check(root: Path) -> list[str]:
             fail("A-005", POLICY, f"not well-formed: {error}")
         else:
             actions = {action.get("id"): action for action in policy.iter("action")}
-            if set(actions) != {install_id, remove_id}:
-                fail("A-005", POLICY, f"actions must be exactly {install_id} and {remove_id}, found {sorted(actions)}")
-            for action_id, wanted in ((install_id, "auth_admin_keep"), (remove_id, "auth_admin")):
+            if set(actions) != {install_id, remove_id, upgrade_id}:
+                fail("A-005", POLICY,
+                     f"actions must be exactly {install_id}, {remove_id} and {upgrade_id}, found {sorted(actions)}")
+            for action_id, wanted in ((install_id, "auth_admin_keep"), (remove_id, "auth_admin"),
+                                      (upgrade_id, "auth_admin_keep")):
                 action = actions.get(action_id)
                 if action is None:
                     continue
@@ -196,7 +206,7 @@ def check(root: Path) -> list[str]:
     if service_text is None:
         fail("A-006", PLAN_SERVICE, "missing")
     else:
-        for field, expected in (("install", install_id), ("remove", remove_id)):
+        for field, expected in (("install", install_id), ("remove", remove_id), ("upgrade", upgrade_id)):
             match = re.search(rf'std::string {field} = "([^"]+)";', service_text)
             if not match or match.group(1) != expected:
                 fail("A-006", PLAN_SERVICE, f"AuthorizationActions::{field} must be {expected}")

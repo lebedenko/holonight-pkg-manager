@@ -147,9 +147,15 @@ TEST_F(TransactionFlowPrepare, EveryTaxonomyCodeRefusalOffersCloseOnlyUnlessRetr
     EXPECT_EQ(local.state(), FlowState::Refused) << transactionErrorName(code);
     EXPECT_EQ(local_service.executeCalls(), 0U) << transactionErrorName(code);
     const bool retry = code == TransactionErrorCode::Busy || code == TransactionErrorCode::PlanNotFound ||
-                       code == TransactionErrorCode::PlanExpired;
-    const std::vector<FlowAction> expected = retry ? std::vector<FlowAction>{FlowAction::TryAgain, FlowAction::Close}
-                                                   : std::vector<FlowAction>{FlowAction::Close};
+                       code == TransactionErrorCode::PlanExpired || code == TransactionErrorCode::SyncDatabaseChanged;
+    // system-upgrade REQ-F-089 amends GUI REQ-F-022: a partial upgrade offers the system upgrade.
+    const bool partial = code == TransactionErrorCode::PartialUpgradeRequired;
+    std::vector<FlowAction> expected{FlowAction::Close};
+    if (partial) {
+      expected.insert(expected.begin(), FlowAction::UpdateSystem);
+    } else if (retry) {
+      expected.insert(expected.begin(), FlowAction::TryAgain);
+    }
     EXPECT_EQ(actionsOf(local), expected) << transactionErrorName(code);
     ASSERT_TRUE(local.failure().has_value());
     EXPECT_EQ(local.failure()->code, code);
@@ -379,6 +385,7 @@ TEST_F(TransactionFlowExecute, ARefreshIsRequestedAfterTheResultStateIsEntered) 
    public:
     explicit Probe(std::function<void()> on_refresh) : on_refresh_(std::move(on_refresh)) {}
     void refreshAfterOutcome() override { on_refresh_(); }
+    void refreshAfterUpgrade() override { on_refresh_(); }
     std::function<void()> on_refresh_;
   };
   FakeTransactionService local_service;

@@ -4,6 +4,7 @@
 
 #include <alpm.h>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace holonight_packages_transaction {
@@ -15,9 +16,17 @@ namespace holonight_packages_transaction {
 //   install an ignored package      -> answered "no", recorded
 //   corrupted package               -> answered per setCorruptedAnswer(), recorded
 //   import a key                    -> always "no"
+// In upgrade mode (system-upgrade REQ-F-020, REQ-F-030) a replacement is accepted, as pacman's default answer is,
+// and recorded as a replacement instead of a decision. Everything else is answered as above.
 class QuestionPolicy {
  public:
   void handle(alpm_question_t* question);
+
+  void setUpgradeMode(bool upgrade) { upgradeMode_ = upgrade; }
+  // Replacements accepted in upgrade mode: (installed package, replacing package).
+  [[nodiscard]] const std::vector<std::pair<std::string, std::string>>& acceptedReplacements() const {
+    return replacements_;
+  }
 
   // Whether the next corrupted-package question deletes the cached file (so a retry downloads it again).
   void setCorruptedAnswer(bool remove) { corruptedRemove_ = remove; }
@@ -44,6 +53,8 @@ class QuestionPolicy {
   alpm_errno_t corruptedReason_ = static_cast<alpm_errno_t>(0);
   bool corruptedRemove_ = true;
   bool keyImportRefused_ = false;
+  bool upgradeMode_ = false;
+  std::vector<std::pair<std::string, std::string>> replacements_;
 };
 
 }  // namespace holonight_packages_transaction
