@@ -94,15 +94,22 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('mode', choices=['check', 'integration', 'format'], default='check', nargs='?')
     parser.add_argument('--siblings', type=Path, help='Explicitly test current provider checkouts, including edits')
+    parser.add_argument('--image-id', help='Explicit local sha256 image ID for unpublished image acceptance')
     args = parser.parse_args()
     image = (ROOT / 'scripts/ci/image.txt').read_text().strip()
     if not re.fullmatch(r'[^\s]+@sha256:[0-9a-f]{64}', image):
         parser.error('scripts/ci/image.txt must pin an image digest')
+    if args.image_id:
+        if not re.fullmatch(r'sha256:[0-9a-f]{64}', args.image_id):
+            parser.error('--image-id requires an immutable local sha256 image ID')
+        image = args.image_id
     for tool in ('docker', 'git', 'tar'):
         if not shutil.which(tool):
             parser.error(f'Missing required launcher tool: {tool}')
     if subprocess.run(['docker', 'image', 'inspect', image], stdout=subprocess.DEVNULL,
                       stderr=subprocess.DEVNULL).returncode:
+        if args.image_id:
+            parser.error(f'Local acceptance image is not available: {image}')
         run('docker', 'pull', '--platform', 'linux/amd64', image)
     output = ROOT / 'build/acceptance'
     output.mkdir(parents=True, exist_ok=True)

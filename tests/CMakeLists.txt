@@ -433,3 +433,12 @@ add_test(NAME userns_skip_policy
   COMMAND sh "${CMAKE_CURRENT_SOURCE_DIR}/transaction/userns_policy.sh" skip $<TARGET_FILE:test_holonight_transaction_userns>)
 add_test(NAME userns_require_policy
   COMMAND sh "${CMAKE_CURRENT_SOURCE_DIR}/transaction/userns_policy.sh" require $<TARGET_FILE:test_holonight_transaction_userns>)
+
+add_test(NAME installed_icon_consumer
+  COMMAND ${CMAKE_COMMAND}
+    -DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/icon-consumer
+    -DPROVIDER_BUILD=${PROJECT_BINARY_DIR}
+    -DTEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/icon-consumer-test
+    "-DDEPENDENCY_PREFIX=${CMAKE_PREFIX_PATH}"
+    -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/icons/icon.jxl
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/icon-consumer/check.cmake)

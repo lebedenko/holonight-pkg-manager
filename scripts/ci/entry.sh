@@ -24,6 +24,8 @@ if [[ "$1" == format ]]; then
   python3 scripts/quality.py format
   exit
 fi
+# Supported Arch installation dependencies; never install during acceptance.
+pacman -Q archlinux-appstream-data kimageformats
 export CMAKE_PREFIX_PATH="$PWD/build/deps/prefix"
 export QML_IMPORT_PATH="$CMAKE_PREFIX_PATH/lib/qt6/qml"
 export LD_LIBRARY_PATH="$CMAKE_PREFIX_PATH/lib"

@@ -8,8 +8,9 @@ clangd uses `build/dev/compile_commands.json`.
 
 The GUI requires AppStreamQt (`appstream-qt` on Arch) in addition to the Qt and ALPM dependencies. The acceptance
 image must include it; older image digests without AppStreamQt fail configuration and need to be rebuilt before
-running the container gate. The catalog (`archlinux-appstream-data`) and JXL Qt decoder (`kimageformats`) are optional.
-Integration tests verify JXL decoding when the plugin is discoverable, and tile fallback otherwise.
+running the container gate. HolonightImages is a required installed GUI dependency. The supported Arch installation and acceptance image
+require the catalog (`archlinux-appstream-data`) and JXL Qt decoder (`kimageformats`).
+Integration requires successful JXL decoding; incomplete installations retain tile fallback.
 
 `task format` uses the pinned image. `task check` is the acceptance gate: fresh provider
 builds, build, tests, format, static analysis, applicable QML checks and REUSE.
@@ -31,3 +32,7 @@ an independently installed package in the shared image and is not owned by our i
 
 Routine fixes need tests and a commit explanation. Substantial designs use one SDD;
 cross-project work uses one umbrella contract note. Keep execution logs out of Git.
+
+Before publishing a replacement acceptance image, test its immutable local image ID with
+`task check:integration -- --image-id sha256:...`. This explicit override leaves the
+shared registry pin unchanged. Publish and update shared pins only when authorized.

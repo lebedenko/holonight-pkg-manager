@@ -1,6 +1,6 @@
 add_library(holonight_package_icons STATIC app/PackageIconResolver.cpp app/PackageIconResolver.h)
 target_include_directories(holonight_package_icons PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/app")
-target_link_libraries(holonight_package_icons PUBLIC holonight_packages_domain Qt6::Gui Qt6::Concurrent PRIVATE AppStreamQt)
+target_link_libraries(holonight_package_icons PUBLIC holonight_packages_domain Qt6::Gui Qt6::Concurrent PRIVATE AppStreamQt HolonightImages::Images)
 
 qt_add_executable(holonight-packages
   main.cpp
@@ -99,3 +99,11 @@ install(FILES "${PROJECT_SOURCE_DIR}/data/applications/org.holonight.Packages.de
   DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
 install(FILES "${PROJECT_SOURCE_DIR}/assets/holonight-pkg-manager.svg"
   DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps")
+
+# Private staged-consumer seam, excluded from the delivered application payload.
+install(TARGETS holonight_package_icons ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  COMPONENT icon-probe EXCLUDE_FROM_ALL)
+install(FILES app/PackageIconResolver.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  COMPONENT icon-probe EXCLUDE_FROM_ALL)
+install(FILES "${PROJECT_SOURCE_DIR}/src/domain/include/holonight_packages_domain/package.h"
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/holonight_packages_domain COMPONENT icon-probe EXCLUDE_FROM_ALL)

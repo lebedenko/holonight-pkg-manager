@@ -16,13 +16,20 @@ struct PackageIcon {
   QUrl source;
 };
 
-// GUI-owned cache. Workers read local metadata only; role reads are hash lookups.
+// GUI-owned cache. Workers parse metadata and decode local files; role reads are hash lookups.
 class PackageIconResolver : public QObject {
   Q_OBJECT
 
  public:
   // A non-null catalog directory replaces system locations (isolated fixtures).
   explicit PackageIconResolver(QObject* parent = nullptr, QString catalogDirectory = {});
+  ~PackageIconResolver() override;
+
+  PackageIconResolver(const PackageIconResolver&) = delete;
+  PackageIconResolver& operator=(const PackageIconResolver&) = delete;
+  PackageIconResolver(PackageIconResolver&&) = delete;
+  PackageIconResolver& operator=(PackageIconResolver&&) = delete;
+
   void setInstalledPackages(const std::vector<holonight_packages_domain::Package>& packages);
   [[nodiscard]] PackageIcon icon(const QString& package, bool allowCatalog = true) const;
 
@@ -36,9 +43,14 @@ class PackageIconResolver : public QObject {
     QHash<QString, PackageIcon> installed;
     QHash<QString, PackageIcon> catalog;
   };
+  struct LoadedIcons {
+    QHash<QString, QList<PackageIcon>> installed;
+    QHash<QString, QList<PackageIcon>> catalog;
+  };
   void reload();
-  static Icons load(const std::vector<holonight_packages_domain::Package>& packages, const QString& catalogDirectory);
-  QFutureWatcher<Icons> watcher_;
+  static LoadedIcons load(const std::vector<holonight_packages_domain::Package>& packages,
+                          const QString& catalogDirectory);
+  QFutureWatcher<LoadedIcons> watcher_;
   QString catalog_directory_;
   std::vector<holonight_packages_domain::Package> packages_;
   Icons icons_;

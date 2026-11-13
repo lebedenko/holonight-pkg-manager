@@ -28,10 +28,11 @@ transaction history are not implemented; see `apps/packages/README.md` for the m
 - libalpm (ships with `pacman` on Arch Linux; no separate `-dev` package needed)
 - ICU (`uc`, for Unicode case-insensitive Explore search)
 - AppStreamQt >=1.0 (`appstream-qt` on Arch Linux, required for the GUI)
+- Installed [`holonight-images`](../holonight-images) (`HolonightImages::Images`, GUI only)
 - CMake 3.25+
 - Ninja
 - [Task](https://taskfile.dev/)
-- [`holonight-qt`](../holonight-qt) and [`holonight-config`](../holonight-config) checked out at the revisions in Taskfile.yml
+- [`holonight-qt`](../holonight-qt) and [`holonight-config`](../holonight-config) installed at the revisions in scripts/ci/providers.json
 - Python 3 and ripgrep for acceptance/policy checks
 - Installed GTest >=1.14 CONFIG with GMock and Qt Test/QmlPrivate (only when tests are enabled); private Qt must match public Qt exactly
 - clang-format, clang-tidy, REUSE and dbus/ldd test helpers; gcovr only for coverage
@@ -39,11 +40,13 @@ transaction history are not implemented; see `apps/packages/README.md` for the m
 ## Package icons
 
 Installed, Updates and Explore use local application icons, preserving their original colors. Installed icons come
-from package-owned visible desktop entries. Exact AppStream package associations provide icons for uninstalled official
+from package-owned visible desktop entries, followed by NoDisplay entries (Hidden entries are excluded). Exact AppStream package associations provide icons for uninstalled official
 applications. Libraries, command-line tools and unmatched packages retain initial-letter tiles; detail panels are unchanged.
+Candidates are tried in deterministic order until decoded pixels are available. Local files use bounded
+HolonightImages decoding; all successful images are cached as PNG data URLs with a 64px bound.
 No icons or catalogs are downloaded by the GUI.
 
-On Arch, optional `archlinux-appstream-data` supplies the catalog and cached icons. Optional `kimageformats` supplies
+On supported Arch installations, required `archlinux-appstream-data` supplies the catalog and cached icons. Required `kimageformats` supplies
 Qt's JPEG XL decoder for current Arch cached icons. Without either, missing or unreadable icons silently use tiles.
 Image plugins must be available on Qt's plugin search path in the installed runtime, as well as during development.
 

@@ -29,10 +29,11 @@ for mode in ('default', 'environment', 'command-line', 'external-config'):
         assert sys.argv[1] not in evidence.read_text(), f'{mode}: installed provider build path discovered'
         assert '/prepared/' not in evidence.read_text(), f'{mode}: preparation path discovered'
 PY_ASSERT
-    # Exercise the same Qt plugin discovery used by the staged executable. Optional JXL
-    # decoders must decode the fixture; their absence must leave the package tile.
-    QT_PLUGIN_PATH="$stage/lib/qt6/plugins" ctest --test-dir "$build" \
-      -R 'PackageIconResolver.JpegXl' --output-on-failure --no-tests=error
+    # Supported installation must decode JPEG XL using the staged icon archive and Images.
+    cmake -DSOURCE_DIR="$PWD/tests/icon-consumer" -DPROVIDER_BUILD="$PWD/build/release" \
+      -DTEST_ROOT="$PWD/build/icon-consumer-integration" -DDEPENDENCY_PREFIX="$stage" \
+      -DFIXTURE="$PWD/tests/fixtures/icons/icon.jxl" -DREQUIRE_JXL=ON \
+      -P tests/icon-consumer/check.cmake
     service="$stage/share/dbus-1/services/org.holonight.Packages1.service"
     grep -Fx "Exec=$stage/bin/holonight-packaged" "$service"
     test -x "$(sed -n 's/^Exec=//p' "$service")"

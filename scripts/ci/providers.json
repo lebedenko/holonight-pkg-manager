@@ -6,5 +6,9 @@
   {
     "name": "holonight-qt",
     "revision": "e9b5f79b9ab69a0d22ba6d326dc04f12055a45ab"
+  },
+  {
+    "name": "holonight-images",
+    "revision": "7320da6c69ff95a671defee5ddc34c3df379ba4b"
   }
 ]
