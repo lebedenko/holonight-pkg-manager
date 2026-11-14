@@ -4,6 +4,7 @@
 #include "scratch_dbpath.h"
 #include "upgrade_fixture.h"
 
+#include <cerrno>
 #include <gmock/gmock.h>
 
 namespace holonight_packages_transaction::upgrade_testing {
@@ -13,7 +14,9 @@ using holonight_packages_domain::CancelDecision;
 using holonight_packages_domain::ChangeAction;
 using holonight_packages_domain::ChangedPackage;
 using holonight_packages_domain::WarningToken;
+using ::testing::Contains;
 using ::testing::ElementsAre;
+using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::UnorderedElementsAre;
 
@@ -520,6 +523,44 @@ TEST_F(SyncPromotionTest, ByCopyTheScratchFileStaysAndTheLiveFileIsReplacedWhole
   ASSERT_TRUE(promotion.promote());
   EXPECT_TRUE(fs::exists(scratch() / "core.db"));  // copied, not renamed
   EXPECT_EQ(sha256Of(live() / "core.db"), sha256Of(scratch() / "core.db"));
+}
+
+TEST_F(SyncPromotionTest, BackupFailureKeepsItsErrorAndLiveContents) {
+  fs::create_directory(rollback() / ".hn-promote-core.db.tmp");
+  std::ofstream(rollback() / ".hn-promote-core.db.tmp" / "occupied") << "keep";
+  const auto before = sha256Of(live() / "core.db");
+  std::vector<std::string> lines;
+  SyncPromotion promotion(scratch(), live(), rollback(), seams_,
+                          [&lines](LogLevel, const std::string& line) { lines.push_back(line); });
+  EXPECT_FALSE(promotion.promote());
+  EXPECT_EQ(sha256Of(live() / "core.db"), before);
+  EXPECT_THAT(lines,
+              Contains(::testing::AllOf(HasSubstr("copy_file source=" + (live() / "core.db").string()),
+                                        HasSubstr("destination=" + (rollback() / ".hn-promote-core.db.tmp").string()),
+                                        HasSubstr("error="), HasSubstr("category="), HasSubstr("message="))));
+  EXPECT_THAT(lines, Contains(HasSubstr("remove temporary")));
+}
+
+TEST_F(SyncPromotionTest, RollbackFailureRetainsOriginalAndRecoveryErrors) {
+  seams_.inject_fault = [this](std::string_view stage) {
+    if (stage == "promotion-rename-2") {
+      fs::remove(rollback() / "core.db");
+      fs::remove(scratch() / "extra.db");
+      fs::create_directory(scratch() / "extra.db");
+    }
+    return 0;
+  };
+  std::vector<std::string> lines;
+  SyncPromotion promotion(scratch(), live(), rollback(), seams_,
+                          [&lines](LogLevel, const std::string& line) { lines.push_back(line); });
+  EXPECT_FALSE(promotion.promote());
+  EXPECT_THAT(lines, Contains(::testing::AllOf(HasSubstr("rename source=" + (scratch() / "extra.db").string()),
+                                               HasSubstr("error="), HasSubstr("category=generic"))));
+  EXPECT_THAT(lines,
+              Contains(::testing::AllOf(HasSubstr("copy_file source=" + (rollback() / "core.db").string()),
+                                        HasSubstr("destination=" + (live() / ".hn-promote-core.db.tmp").string()),
+                                        HasSubstr("error=" + std::to_string(ENOENT)))));
+  EXPECT_THAT(lines, Contains(HasSubstr("cannot restore core.db")));
 }
 
 TEST_F(SyncPromotionTest, ALeftoverTemporaryFileIsSweptAndTheLiveFileIsUntouched) {

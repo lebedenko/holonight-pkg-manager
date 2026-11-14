@@ -415,10 +415,12 @@ target_link_options(holonight_test_marker_tool PRIVATE -static)
 add_executable(test_holonight_transaction_userns
   transaction/userns_main.cpp
   transaction/userns_hook_test.cpp
+  transaction/userns_promotion_test.cpp
 )
 add_dependencies(test_holonight_transaction_userns holonight_test_marker_tool)
 target_include_directories(test_holonight_transaction_userns PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/support)
+  ${CMAKE_CURRENT_SOURCE_DIR}/support
+  ${PROJECT_SOURCE_DIR}/src/transaction/src)
 target_compile_features(test_holonight_transaction_userns PRIVATE cxx_std_23)
 target_compile_definitions(test_holonight_transaction_userns PRIVATE
   HOLONIGHT_TEST_MARKER_TOOL="$<TARGET_FILE:holonight_test_marker_tool>")

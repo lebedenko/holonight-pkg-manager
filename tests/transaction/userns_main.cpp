@@ -18,6 +18,7 @@
 #include <sched.h>
 #include <span>
 #include <string>
+#include <sys/mount.h>
 #include <unistd.h>
 
 namespace {
@@ -70,6 +71,9 @@ std::optional<std::string> enterUserNamespace() {
   const auto host = hostUidOfNamespaceRoot();
   if (!host || *host == 0) {
     return std::string("uid_map does not map an unprivileged host user");
+  }
+  if (::unshare(CLONE_NEWNS) != 0 || ::mount(nullptr, "/", nullptr, MS_REC | MS_PRIVATE, nullptr) != 0) {
+    return std::string("cannot create private mount namespace: ") + std::strerror(errno);
   }
   return std::nullopt;
 }

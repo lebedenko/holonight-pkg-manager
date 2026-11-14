@@ -4,6 +4,7 @@
 #include "holonight_packages_transaction/transaction_seams.h"
 
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -27,7 +28,7 @@ class SyncPromotion {
     std::string name;
     bool remove = false;  // a live .db.sig the scratch side no longer has
   };
-  [[nodiscard]] std::vector<Step> plan() const;
+  [[nodiscard]] std::optional<std::vector<Step>> plan() const;
   [[nodiscard]] bool replace(const std::string& name) const;
   void rollBack(const std::vector<std::string>& replaced, const std::vector<std::string>& added) const;
 
