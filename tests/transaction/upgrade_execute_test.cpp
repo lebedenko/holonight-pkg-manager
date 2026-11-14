@@ -525,6 +525,36 @@ TEST_F(SyncPromotionTest, ByCopyTheScratchFileStaysAndTheLiveFileIsReplacedWhole
   EXPECT_EQ(sha256Of(live() / "core.db"), sha256Of(scratch() / "core.db"));
 }
 
+TEST_F(SyncPromotionTest, MissingSourceFailsRenameWithoutCopyAndRestoresPreviouslyPromotedFiles) {
+  const auto time = fs::file_time_type::clock::now() - std::chrono::hours(48);
+  std::map<std::string, std::string> before;
+  for (const auto& entry : fs::directory_iterator(live())) {
+    before[entry.path().filename().string()] = *sha256Of(entry.path());
+    fs::last_write_time(entry.path(), time);
+  }
+  seams_.inject_fault = [this](std::string_view stage) {
+    if (stage == "promotion-rename-2") {
+      EXPECT_NE(sha256Of(live() / "core.db"), sha256Of(rollback() / "core.db"));
+      fs::remove(scratch() / "extra.db");
+    }
+    return 0;
+  };
+  std::vector<std::string> lines;
+  SyncPromotion promotion(scratch(), live(), rollback(), seams_,
+                          [&lines](LogLevel, const std::string& line) { lines.push_back(line); });
+  EXPECT_FALSE(promotion.promote());
+  for (const auto& [name, digest] : before) {
+    EXPECT_EQ(sha256Of(live() / name), digest);
+    EXPECT_EQ(fs::last_write_time(live() / name), time);
+  }
+  EXPECT_THAT(lines, Contains(::testing::AllOf(HasSubstr("rename source=" + (scratch() / "extra.db").string()),
+                                               HasSubstr("destination=" + (live() / "extra.db").string()),
+                                               HasSubstr("error=" + std::to_string(ENOENT)),
+                                               HasSubstr("category=generic"), HasSubstr("message="))));
+  EXPECT_THAT(lines, ::testing::Not(Contains(HasSubstr("copy_file source=" + (scratch() / "extra.db").string()))));
+  EXPECT_THAT(lines, ::testing::Not(Contains(HasSubstr("fallback="))));
+}
+
 TEST_F(SyncPromotionTest, BackupFailureKeepsItsErrorAndLiveContents) {
   fs::create_directory(rollback() / ".hn-promote-core.db.tmp");
   std::ofstream(rollback() / ".hn-promote-core.db.tmp" / "occupied") << "keep";

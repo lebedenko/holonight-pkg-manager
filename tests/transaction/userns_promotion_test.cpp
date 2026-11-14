@@ -42,15 +42,15 @@ class UsernsPromotionTest : public ::testing::Test {
   fs::path live() const { return world_.syncDbPath(); }
   fs::path rollback() const { return world_.base() / "rollback"; }
   LogSink journal() {
-    return [this](LogLevel, const std::string& line) { lines_.push_back(line); };
+    return [this](LogLevel level, const std::string& line) { lines_.emplace_back(level, line); };
   }
   holonight_transaction_testing::FixtureRoot world_;
   TransactionSeams seams_;
-  std::vector<std::string> lines_;
+  std::vector<std::pair<LogLevel, std::string>> lines_;
   bool mounted_ = false;
 };
 
-TEST_F(UsernsPromotionTest, SameDeviceMountBoundaryReproducesRenameFailureAndPreservesLiveDatabases) {
+TEST_F(UsernsPromotionTest, SameDeviceMountBoundaryFallsBackAndPreservesContentsTimesAndSignatures) {
   struct stat scratch_stat{};
   struct stat live_stat{};
   ASSERT_EQ(::stat(scratch().c_str(), &scratch_stat), 0);
@@ -59,17 +59,75 @@ TEST_F(UsernsPromotionTest, SameDeviceMountBoundaryReproducesRenameFailureAndPre
   ASSERT_EQ(std::rename((scratch() / "core.db").c_str(), (live() / "core.db").c_str()), -1);
   const int rename_error = errno;
   ASSERT_EQ(rename_error, EXDEV);
+  std::ofstream(scratch() / "core.db.sig") << "new signature";
+  std::ofstream(live() / "core.db.sig") << "old signature";
+  std::ofstream(live() / "extra.db.sig") << "obsolete signature";
+  const auto time = fs::file_time_type::clock::now() - std::chrono::hours(24);
+  for (const auto& entry : fs::directory_iterator(scratch())) {
+    fs::last_write_time(entry.path(), time);
+  }
+  SyncPromotion promotion(scratch(), live(), rollback(), seams_, journal());
+  ASSERT_TRUE(promotion.promote());
+  for (const std::string name : {"core.db", "core.db.sig", "extra.db"}) {
+    ASSERT_TRUE(fs::exists(scratch() / name));
+    EXPECT_EQ(sha256Of(live() / name), sha256Of(scratch() / name));
+    EXPECT_EQ(fs::last_write_time(live() / name), fs::last_write_time(scratch() / name));
+    EXPECT_EQ(fs::last_write_time(live() / name), time);
+  }
+  EXPECT_FALSE(fs::exists(live() / "extra.db.sig"));
+  for (const auto& directory : {live(), rollback()}) {
+    for (const auto& entry : fs::directory_iterator(directory)) {
+      EXPECT_FALSE(entry.path().filename().string().starts_with(".hn-promote-"));
+    }
+  }
+  EXPECT_THAT(lines_,
+              ::testing::Contains(::testing::Pair(
+                  LogLevel::Info,
+                  ::testing::AllOf(::testing::HasSubstr("rename fallback=copy-then-rename"),
+                                   ::testing::HasSubstr("source=" + (scratch() / "core.db").string()),
+                                   ::testing::HasSubstr("destination=" + (live() / "core.db").string()),
+                                   ::testing::HasSubstr("error=" + std::to_string(EXDEV)),
+                                   ::testing::HasSubstr("category=generic"), ::testing::HasSubstr("message=")))));
+  EXPECT_THAT(lines_, ::testing::Not(::testing::Contains(::testing::Pair(LogLevel::Error, ::testing::_))));
+}
+
+TEST_F(UsernsPromotionTest, FailedFallbackRestoresPreviouslyPromotedDatabase) {
+  const auto time = fs::file_time_type::clock::now() - std::chrono::hours(48);
+  for (const auto& entry : fs::directory_iterator(live())) {
+    fs::last_write_time(entry.path(), time);
+  }
   const auto core = sha256Of(live() / "core.db");
   const auto extra = sha256Of(live() / "extra.db");
+  const auto blocker = live() / ".hn-promote-extra.db.tmp";
+  fs::create_directory(blocker);
+  std::ofstream(blocker / "occupied") << "keep";
+  const auto blocker_digest = sha256Of(blocker / "occupied");
+  seams_.inject_fault = [this](std::string_view stage) {
+    if (stage == "promotion-rename-2") {
+      EXPECT_EQ(sha256Of(live() / "core.db"), sha256Of(scratch() / "core.db"));
+    }
+    return 0;
+  };
   SyncPromotion promotion(scratch(), live(), rollback(), seams_, journal());
   EXPECT_FALSE(promotion.promote());
   EXPECT_EQ(sha256Of(live() / "core.db"), core);
   EXPECT_EQ(sha256Of(live() / "extra.db"), extra);
-  EXPECT_THAT(lines_,
-              ::testing::Contains(::testing::AllOf(
-                  ::testing::HasSubstr("rename source=" + (scratch() / "core.db").string()),
-                  ::testing::HasSubstr("destination=" + (live() / "core.db").string()),
-                  ::testing::HasSubstr("error=" + std::to_string(EXDEV)), ::testing::HasSubstr("category=generic"))));
+  for (const std::string name : {"core.db", "extra.db"}) {
+    EXPECT_EQ(fs::last_write_time(live() / name), time);
+    EXPECT_TRUE(fs::exists(scratch() / name));
+  }
+  EXPECT_EQ(sha256Of(blocker / "occupied"), blocker_digest);
+  EXPECT_FALSE(fs::exists(live() / ".hn-promote-core.db.tmp"));
+  EXPECT_THAT(lines_, ::testing::Contains(::testing::Pair(
+                          LogLevel::Info,
+                          ::testing::AllOf(::testing::HasSubstr("fallback=copy-then-rename"),
+                                           ::testing::HasSubstr("source=" + (scratch() / "extra.db").string())))));
+  EXPECT_THAT(lines_, ::testing::Contains(::testing::Pair(
+                          LogLevel::Error, ::testing::AllOf(::testing::HasSubstr("copy_file source=" +
+                                                                                 (scratch() / "extra.db").string()),
+                                                            ::testing::HasSubstr("destination=" + blocker.string())))));
+  EXPECT_THAT(lines_, ::testing::Contains(::testing::Pair(
+                          LogLevel::Error, ::testing::HasSubstr("remove temporary source=" + blocker.string()))));
 }
 
 TEST_F(UsernsPromotionTest, ForcedCopyCrossesMountBoundaryAndPreservesContentsAndTimes) {

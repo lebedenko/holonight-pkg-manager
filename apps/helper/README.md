@@ -16,7 +16,9 @@ it, authorizes every change through polkit, and exits when it has nothing to do.
 - The system upgrade is the only action that refreshes the sync databases. It syncs them into a private scratch copy
   under `/var/lib/holonight-package-helper` (the unit's `StateDirectory`, mode 0711), shows a preview from that copy,
   downloads every package into the cache, and only then, under the libalpm lock, replaces the live databases with the
-  copy it previewed and installs. libalpm's `DownloadUser` sandbox stays in effect for every download.
+  copy it previewed and installs. Promotion attempts rename first; across mount boundaries (EXDEV), it copies to a
+  temporary file beside the live database and renames it atomically, including for separate mounts of the same
+  filesystem. libalpm's `DownloadUser` sandbox stays in effect for every download.
 - It reads `/etc/pacman.conf` only. A caller sends an action and package names and nothing else, never a path, a
   repository, a server or a resolved package list.
 - It refuses every install when a repository's `SigLevel` is weaker than `Required` + `TrustedOnly` (or not set at all).

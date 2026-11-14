@@ -9,7 +9,6 @@
 #include <fcntl.h>
 #include <map>
 #include <set>
-#include <sys/stat.h>
 #include <system_error>
 #include <unistd.h>
 
@@ -20,29 +19,15 @@ namespace fs = std::filesystem;
 constexpr std::string_view kTemporaryPrefix = ".hn-promote-";
 
 void report(const LogSink& journal, const std::string& operation, const fs::path& from, const fs::path& target,
-            const std::error_code& error) {
+            const std::error_code& error, LogLevel level = LogLevel::Error) {
   if (journal) {
-    journal(LogLevel::Error,
-            redactUrlCredentials(operation + " source=" + from.string() + " destination=" + target.string() +
-                                 " error=" + std::to_string(error.value()) + " category=" + error.category().name() +
-                                 " message=" + error.message()));
+    journal(level, redactUrlCredentials(operation + " source=" + from.string() + " destination=" + target.string() +
+                                        " error=" + std::to_string(error.value()) +
+                                        " category=" + error.category().name() + " message=" + error.message()));
   }
 }
 
 std::error_code systemError() { return {errno, std::generic_category()}; }
-
-bool sameFilesystem(const fs::path& left, const fs::path& right, const LogSink& journal) {
-  struct stat first{};
-  struct stat second{};
-  for (const auto& [path, info] : {std::pair{left, &first}, std::pair{right, &second}}) {
-    if (::stat(path.c_str(), info) != 0) {
-      const auto error = systemError();
-      report(journal, "stat", path, {}, error);
-      return false;
-    }
-  }
-  return first.st_dev == second.st_dev;
-}
 
 // Flush failures are diagnostic only; preserve the existing best-effort semantics.
 void flush(const fs::path& path, int flags, const LogSink& journal) {
@@ -164,14 +149,18 @@ std::optional<std::vector<SyncPromotion::Step>> SyncPromotion::plan() const {
 bool SyncPromotion::replace(const std::string& name) const {
   const fs::path from = scratch_ / name;
   const fs::path target = live_ / name;
-  if (!seams_->promote_by_copy && sameFilesystem(scratch_, live_, journal_)) {
-    if (std::rename(from.c_str(), target.c_str()) == 0) {
-      return true;
-    }
-    const auto error = systemError();
+  if (seams_->promote_by_copy) {
+    return copyThenRename(from, target, journal_);
+  }
+  if (std::rename(from.c_str(), target.c_str()) == 0) {
+    return true;
+  }
+  const auto error = systemError();
+  if (error.value() != EXDEV) {
     report(journal_, "rename", from, target, error);
     return false;
   }
+  report(journal_, "rename fallback=copy-then-rename", from, target, error, LogLevel::Info);
   return copyThenRename(from, target, journal_);
 }
 

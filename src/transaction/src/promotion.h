@@ -11,10 +11,11 @@
 namespace holonight_packages_transaction {
 
 // Replaces the live sync databases with the scratch ones, under the live lock, at the upgrade's point of no return
-// (system-upgrade REQ-F-053, REQ-F-054, REQ-F-077; SPIKES S-3). Each live file is replaced atomically: by rename on one
-// filesystem, otherwise by a copy to `<live>/.hn-promote-<name>.tmp` and a rename over the live file. Signatures go
-// before their database. On a failure before any package change every file already replaced is restored from the
-// rollback directory and a file that was added is removed. Only the upgrade driver may promote (rule H-013).
+// (system-upgrade REQ-F-053, REQ-F-054, REQ-F-077; SPIKES S-3). Each live file is replaced atomically: by rename,
+// falling back on EXDEV (including separate mounts of the same filesystem) to a copy to `<live>/.hn-promote-<name>.tmp`
+// and a rename over the live file. Signatures go before their database. On a failure before any package change every
+// file already replaced is restored from the rollback directory and a file that was added is removed. Only the upgrade
+// driver may promote (rule H-013).
 class SyncPromotion {
  public:
   SyncPromotion(std::filesystem::path scratch_sync, std::filesystem::path live_sync, std::filesystem::path rollback,
