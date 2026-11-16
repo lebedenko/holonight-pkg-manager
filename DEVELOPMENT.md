@@ -23,6 +23,12 @@ defaults; use `CMAKE_BUILD_PARALLEL_LEVEL=4 task build` to limit those.
 Image, tool versions and the selected job count appear in the acceptance log. Logs and fresh builds stay under
 ignored `build/acceptance/`; downloaded sources are reused under `build/sources/`.
 
+Before snapshotting, acceptance captures the host checkout revision and dirty-content
+fingerprint in `source-identity.txt` beside the copied source. Debug and Release header
+generation reads it through `HOLONIGHT_BUILD_IDENTITY_FILE`, preserving host provenance
+without a snapshot commit. An invalid explicit identity file fails the build; native
+builds discover Git identity on every build, and unversioned archives report `unknown`.
+
 Standalone checks automatically acquire the exact sources in `scripts/ci/providers.json`.
 For simultaneous provider/consumer development, explicitly run
 `task check -- --siblings /path/to/umbrella`. This uses current sibling files, including

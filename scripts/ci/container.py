@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -106,6 +107,13 @@ def main():
     for tool in ('docker', 'git', 'tar'):
         if not shutil.which(tool):
             parser.error(f'Missing required launcher tool: {tool}')
+    identity = None
+    if args.mode != 'format':
+        identity = subprocess.check_output(
+            [sys.executable, str(ROOT / 'scripts/build-identity.py'), '--print-identity', str(ROOT)],
+            text=True).strip()
+        if identity == 'unknown':
+            parser.error('Source identity is unavailable; acceptance requires a versioned checkout')
     if subprocess.run(['docker', 'image', 'inspect', image], stdout=subprocess.DEVNULL,
                       stderr=subprocess.DEVNULL).returncode:
         if args.image_id:
@@ -115,6 +123,8 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix=args.mode + '-', dir=output))
     print(f'Image: {image}\nAcceptance output: {work}', flush=True)
+    if identity is not None:
+        (work / 'source-identity.txt').write_text(identity + '\n')
     snapshot(ROOT, work / 'source', pinned_submodules=not bool(args.siblings))
     (work / 'providers').mkdir()
     if args.mode != 'format':
@@ -131,6 +141,8 @@ def main():
                '--workdir', '/work/source', '--env', f'HOLONIGHT_CI_IMAGE={image}',
                '--env', f'JOBS={os.environ.get("JOBS", "")}',
                '--entrypoint', 'bash', image, 'scripts/ci/entry.sh', args.mode]
+    if identity is not None:
+        command[2:2] = ['--env', 'HOLONIGHT_BUILD_IDENTITY_FILE=/work/source-identity.txt']
     with (work / 'acceptance.log').open('w') as log:
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         for line in process.stdout:
