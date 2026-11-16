@@ -51,6 +51,8 @@ class DBusTransactionService final : public QObject, public holonight_packages_d
   [[nodiscard]] const Timeouts& timeouts() const noexcept { return timeouts_; }
   // The match rule the Progress subscription installs (QtDBus does not expose the installed rule).
   [[nodiscard]] static QString progressMatchRule();
+  // Headless diagnostics only. Never activates the service; empty means unavailable or an older helper.
+  [[nodiscard]] static QString runningBuildId(const QDBusConnection& connection);
 
  private slots:
   void onProgress(const QString& plan_id, const QString& phase, uint current, uint total, const QString& item);

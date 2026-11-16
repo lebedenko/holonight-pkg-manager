@@ -1,5 +1,6 @@
 #pragma once
 
+#include "BuildIdentity.h"
 #include "HelperIdentity.h"
 #include "HelperIntrospection.h"
 
@@ -22,12 +23,15 @@ class HelperAdaptor : public QDBusAbstractAdaptor {
   Q_CLASSINFO("D-Bus Introspection", HOLONIGHT_HELPER_INTROSPECTION)
   Q_PROPERTY(uint ProtocolVersion READ protocolVersion)
   Q_PROPERTY(bool Busy READ busy)
+  Q_PROPERTY(QString BuildId READ buildId CONSTANT)
 
  public:
   explicit HelperAdaptor(HelperService* service);
 
   // NOLINTNEXTLINE(readability-convert-member-functions-to-static): a Q_PROPERTY READ must be a member.
   [[nodiscard]] uint protocolVersion() const { return kProtocolVersion; }
+  // NOLINTNEXTLINE(readability-convert-member-functions-to-static): a Q_PROPERTY READ must be a member.
+  [[nodiscard]] QString buildId() const { return QStringLiteral(HOLONIGHT_BUILD_ID); }
   [[nodiscard]] bool busy() const;
 
  public slots:

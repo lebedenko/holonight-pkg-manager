@@ -4,6 +4,7 @@
   <interface name="org.holonight.PackageHelper1.Transactions">
     <!-- 2: version 1 plus PrepareUpgrade, the phases Syncing, Promoting, KeyringStep and MainStep, and the codes
          SyncFailed, SyncDatabaseChanged, KeyImportRequired, UpgradePartiallyApplied and Cancelled. -->
+    <property name="BuildId" type="s" access="read"/>
     <property name="ProtocolVersion" type="u" access="read"/>
     <!-- true while a plan is being prepared, authorized or executed -->
     <property name="Busy" type="b" access="read"/>

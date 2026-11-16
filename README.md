@@ -126,3 +126,19 @@ resulting list from the snapshot file. Tests may sync only fixture repositories 
 
 The application menu entry **HoloNight Packages** launches `holonight-packages` directly.
 CMake installs `org.holonight.Packages.desktop` and the `holonight-pkg-manager` SVG into the hicolor fallback theme.
+
+Build provenance is available without starting the GUI or reading package databases:
+
+```sh
+holonight-packages --build-info
+holonight-packaged --build-info
+/usr/libexec/holonight-package-helper --build-info
+holonight-packages --diagnostics
+```
+
+Diagnostics compare the GUI build with the already-running system helper over D-Bus.
+They do not activate an inactive helper. An unavailable, older, or different helper
+returns a nonzero status. Building or running the GUI does not install the helper;
+use the umbrella's `task install -- holonight-pkg-manager` for coordinated deployment.
+An existing helper process retains its executable until it exits; allow ongoing
+transactions to finish. The next D-Bus activation uses the installed helper.

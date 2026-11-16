@@ -45,3 +45,5 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/holonight-packaged.service"
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/systemd/user)
 install(FILES dbus/org.holonight.Packages1.Updates.xml
   DESTINATION ${CMAKE_INSTALL_DATADIR}/dbus-1/interfaces)
+
+target_link_libraries(holonight-packaged PRIVATE holonight_build_info)

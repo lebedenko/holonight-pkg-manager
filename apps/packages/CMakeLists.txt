@@ -107,3 +107,5 @@ install(FILES app/PackageIconResolver.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   COMPONENT icon-probe EXCLUDE_FROM_ALL)
 install(FILES "${PROJECT_SOURCE_DIR}/src/domain/include/holonight_packages_domain/package.h"
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/holonight_packages_domain COMPONENT icon-probe EXCLUDE_FROM_ALL)
+
+target_link_libraries(holonight-packages PRIVATE holonight_build_info)

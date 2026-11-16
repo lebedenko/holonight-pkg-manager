@@ -23,6 +23,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+add_custom_target(holonight_build_identity
+  COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/scripts/build-identity.py"
+    "${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}/generated/BuildIdentity.h" "${PROJECT_VERSION}"
+  BYPRODUCTS "${PROJECT_BINARY_DIR}/generated/BuildIdentity.h"
+  VERBATIM)
+add_library(holonight_build_info INTERFACE)
+add_dependencies(holonight_build_info holonight_build_identity)
+target_include_directories(holonight_build_info INTERFACE "${PROJECT_BINARY_DIR}/generated")
+
 include(GNUInstallDirs)
 install(FILES LICENSE LICENSES/GPL-3.0-or-later.txt
   DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/${PROJECT_NAME}")

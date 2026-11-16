@@ -71,3 +71,6 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/org.holonight.PackageHelper1.service"
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/holonight-package-helper.service"
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/systemd/system)
 install(FILES dbus/org.holonight.PackageHelper1.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/dbus-1/interfaces)
+
+target_link_libraries(holonight-package-helper PRIVATE holonight_build_info)
+target_link_libraries(holonight_package_helper_service PUBLIC holonight_build_info)

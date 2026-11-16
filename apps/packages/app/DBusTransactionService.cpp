@@ -5,6 +5,7 @@
 #include <QDBusMessage>
 #include <QDBusPendingCall>
 #include <QDBusPendingCallWatcher>
+#include <QDBusVariant>
 #include <QTimer>
 #include <QVariantMap>
 
@@ -132,6 +133,19 @@ void DBusTransactionService::cancel(const std::string& plan_id, CancelDone done)
   message << QString::fromStdString(plan_id);
   send<CancelReply>(message, timeouts_.cancel_ms, std::move(done),
                     [](const QDBusMessage& reply) { return helper_wire::decodeCancelReply(reply); });
+}
+
+QString DBusTransactionService::runningBuildId(const QDBusConnection& connection) {
+  auto message =
+      QDBusMessage::createMethodCall(QLatin1String(kServiceName), QLatin1String(kObjectPath),
+                                     QStringLiteral("org.freedesktop.DBus.Properties"), QStringLiteral("Get"));
+  message.setAutoStartService(false);
+  message << QLatin1String(kInterfaceName) << QStringLiteral("BuildId");
+  const auto reply = connection.call(message, QDBus::Block, 3000);
+  if (reply.type() != QDBusMessage::ReplyMessage || reply.arguments().size() != 1) {
+    return {};
+  }
+  return reply.arguments().front().value<QDBusVariant>().variant().toString();
 }
 
 void DBusTransactionService::queryProtocolVersion(holonight_packages_domain::ProbeMode mode, VersionDone done) {

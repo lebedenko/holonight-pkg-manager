@@ -1,3 +1,4 @@
+#include "BuildIdentity.h"
 #include "DBusCallerIdentity.h"
 #include "HelperIdentity.h"
 #include "HelperService.h"
@@ -432,6 +433,15 @@ TEST_F(HelperBusTest, DecisionChoicesTravelAsStructuredData) {
   EXPECT_EQ(prepared.status.choices[0].kind, QStringLiteral("provider"));
   EXPECT_EQ(prepared.status.choices[0].subject, QStringLiteral("editor"));
   EXPECT_EQ(prepared.status.choices[0].candidates, (QStringList{QStringLiteral("vi"), QStringLiteral("nano")}));
+}
+
+TEST_F(HelperBusTest, BuildIdentityIsExposedAsAString) {
+  QDBusMessage get = QDBusMessage::createMethodCall(kService, kPath, QStringLiteral("org.freedesktop.DBus.Properties"),
+                                                    QStringLiteral("Get"));
+  get << kInterface << QStringLiteral("BuildId");
+  const QDBusMessage reply = await(client_.asyncCall(get));
+  ASSERT_EQ(reply.type(), QDBusMessage::ReplyMessage);
+  EXPECT_EQ(reply.arguments().at(0).value<QDBusVariant>().variant().toString(), QStringLiteral(HOLONIGHT_BUILD_ID));
 }
 
 TEST_F(HelperBusTest, ProtocolVersionIsTwo) {

@@ -444,3 +444,7 @@ add_test(NAME installed_icon_consumer
     "-DDEPENDENCY_PREFIX=${CMAKE_PREFIX_PATH}"
     -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/icons/icon.jxl
     -P ${CMAKE_CURRENT_SOURCE_DIR}/icon-consumer/check.cmake)
+
+add_test(NAME build_identity COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/test_build_identity.py")
+add_test(NAME build_diagnostics COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/test_build_diagnostics.py"
+  "$<TARGET_FILE:holonight-packages>" "$<TARGET_FILE:holonight-packaged>" "$<TARGET_FILE:holonight-package-helper>")

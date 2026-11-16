@@ -1,3 +1,4 @@
+#include "BuildIdentity.h"
 #include "DBusCallerIdentity.h"
 #include "HelperConfig.h"
 #include "HelperIdentity.h"
@@ -34,6 +35,10 @@ constexpr int kExitFailure = 1;
 // The composition root: the only place that names the libalpm engine, the polkit authorizer and the real clock.
 int main(int argc, char* argv[]) {
   QCoreApplication app(argc, argv);
+  if (QCoreApplication::arguments().contains(QStringLiteral("--build-info"))) {
+    QTextStream(stdout) << HOLONIGHT_BUILD_ID << "\n";
+    return EXIT_SUCCESS;
+  }
   QCoreApplication::setApplicationName(QStringLiteral("holonight-package-helper"));
   QCoreApplication::setApplicationVersion(QStringLiteral(HOLONIGHT_PACKAGE_HELPER_VERSION));
 

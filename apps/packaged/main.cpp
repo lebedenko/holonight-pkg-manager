@@ -1,3 +1,4 @@
+#include "BuildIdentity.h"
 #include "PackagedConfig.h"
 #include "SignalHandler.h"
 #include "UpdateStatusService.h"
@@ -21,6 +22,7 @@
 #include <QtLogging>
 
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <memory>
 #include <optional>
@@ -35,6 +37,10 @@ constexpr int kExitFailure = 1;
 
 int main(int argc, char* argv[]) {
   QCoreApplication app(argc, argv);
+  if (QCoreApplication::arguments().contains(QStringLiteral("--build-info"))) {
+    QTextStream(stdout) << HOLONIGHT_BUILD_ID << "\n";
+    return EXIT_SUCCESS;
+  }
   QCoreApplication::setApplicationName(QStringLiteral("holonight-packaged"));
   QCoreApplication::setApplicationVersion(QStringLiteral(HOLONIGHT_PACKAGED_VERSION));
 
