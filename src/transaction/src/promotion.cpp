@@ -164,88 +164,104 @@ bool SyncPromotion::replace(const std::string& name) const {
   return copyThenRename(from, target, journal_);
 }
 
-bool SyncPromotion::promote() {
-  const auto log = [this](const std::string& text) {
-    if (journal_) {
-      journal_(LogLevel::Error, redactUrlCredentials(text));
+void SyncPromotion::logError(const std::string& text) const {
+  if (journal_) {
+    journal_(LogLevel::Error, redactUrlCredentials(text));
+  }
+}
+
+std::optional<SyncPromotion::Digests> SyncPromotion::scratchDigests(const std::vector<Step>& steps) const {
+  Digests expected;
+  for (const Step& step : steps) {
+    if (step.remove) {
+      continue;
     }
-  };
-  const auto planned = plan();
-  if (!planned) {
+    auto digest = sha256Of(scratch_ / step.name);
+    if (!digest) {
+      logError("cannot hash scratch database source=" + (scratch_ / step.name).string());
+      return std::nullopt;
+    }
+    expected[step.name] = std::move(*digest);
+  }
+  return expected;
+}
+
+// Backs up the live file if it exists, then replaces or removes it. Records the change in `applied` only on success.
+bool SyncPromotion::applyStep(const Step& step, int number, Applied& applied) const {
+  const fs::path live = live_ / step.name;
+  std::error_code error;
+  const bool existed = fs::exists(live, error);
+  if (error) {
+    report(journal_, "exists live", live, {}, error);
     return false;
   }
-  const auto& steps = *planned;
-  std::map<std::string, std::string> expected;
-  for (const Step& step : steps) {
-    if (!step.remove) {
-      auto digest = sha256Of(scratch_ / step.name);
-      if (!digest) {
-        log("cannot hash scratch database source=" + (scratch_ / step.name).string());
-        return false;
-      }
-      expected[step.name] = std::move(*digest);
-    }
+  if (existed && !copyThenRename(live, rollback_ / step.name, journal_)) {
+    logError("cannot back up " + step.name);
+    return false;
   }
-  std::vector<std::string> replaced;
-  std::vector<std::string> added;
-  std::error_code error;
-  int number = 0;
-  for (const Step& step : steps) {
-    ++number;
-    const fs::path live = live_ / step.name;
-    const bool existed = fs::exists(live, error);
-    if (error) {
-      report(journal_, "exists live", live, {}, error);
-      rollBack(replaced, added);
-      return false;
-    }
-    if (existed && !copyThenRename(live, rollback_ / step.name, journal_)) {
-      log("cannot back up " + step.name);
-      rollBack(replaced, added);
-      return false;
-    }
-    const int fault = seams_->inject_fault ? seams_->inject_fault("promotion-rename-" + std::to_string(number)) : 0;
-    if (fault != 0) {
-      log("injected promotion failure source=" + (scratch_ / step.name).string() + " destination=" + live.string() +
-          " fault=" + std::to_string(fault));
-    }
-    const bool done = fault == 0 && (step.remove ? fs::remove(live, error) : replace(step.name));
-    if (step.remove && error) {
-      report(journal_, "remove signature", live, {}, error);
-    }
-    if (!done) {
-      log("cannot promote " + step.name);
-      rollBack(replaced, added);
-      return false;
-    }
-    (existed ? replaced : added).push_back(step.name);
+  const int fault = seams_->inject_fault ? seams_->inject_fault("promotion-rename-" + std::to_string(number)) : 0;
+  if (fault != 0) {
+    logError("injected promotion failure source=" + (scratch_ / step.name).string() + " destination=" + live.string() +
+             " fault=" + std::to_string(fault));
   }
-  syncDirectory(live_, journal_);
-  const bool matches = std::ranges::all_of(expected, [this, &log](const auto& entry) {
+  const bool done = fault == 0 && (step.remove ? fs::remove(live, error) : replace(step.name));
+  if (step.remove && error) {
+    report(journal_, "remove signature", live, {}, error);
+  }
+  if (!done) {
+    logError("cannot promote " + step.name);
+    return false;
+  }
+  (existed ? applied.replaced : applied.added).push_back(step.name);
+  return true;
+}
+
+bool SyncPromotion::matchesScratch(const Digests& expected) const {
+  return std::ranges::all_of(expected, [this](const auto& entry) {
     const auto digest = sha256Of(live_ / entry.first);
     if (digest != entry.second) {
-      log("verify promoted database source=" + (scratch_ / entry.first).string() +
-          " destination=" + (live_ / entry.first).string() + (digest ? " hash mismatch" : " cannot hash destination"));
+      logError("verify promoted database source=" + (scratch_ / entry.first).string() + " destination=" +
+               (live_ / entry.first).string() + (digest ? " hash mismatch" : " cannot hash destination"));
       return false;
     }
     return true;
   });
-  if (!matches) {
-    log("a promoted database does not match its scratch copy");
-    rollBack(replaced, added);
+}
+
+bool SyncPromotion::promote() {
+  const auto steps = plan();
+  if (!steps) {
+    return false;
+  }
+  const auto expected = scratchDigests(*steps);
+  if (!expected) {
+    return false;
+  }
+  Applied applied;
+  int number = 0;
+  for (const Step& step : *steps) {
+    if (!applyStep(step, ++number, applied)) {
+      rollBack(applied);
+      return false;
+    }
+  }
+  syncDirectory(live_, journal_);
+  if (!matchesScratch(*expected)) {
+    logError("a promoted database does not match its scratch copy");
+    rollBack(applied);
     return false;
   }
   return true;
 }
 
-void SyncPromotion::rollBack(const std::vector<std::string>& replaced, const std::vector<std::string>& added) const {
+void SyncPromotion::rollBack(const Applied& applied) const {
   std::error_code error;
-  for (const std::string& name : replaced) {
-    if (!copyThenRename(rollback_ / name, live_ / name, journal_) && journal_) {
-      journal_(LogLevel::Error, redactUrlCredentials("cannot restore " + name + " after a failed promotion"));
+  for (const std::string& name : applied.replaced) {
+    if (!copyThenRename(rollback_ / name, live_ / name, journal_)) {
+      logError("cannot restore " + name + " after a failed promotion");
     }
   }
-  for (const std::string& name : added) {
+  for (const std::string& name : applied.added) {
     fs::remove(live_ / name, error);
     if (error) {
       report(journal_, "rollback remove", live_ / name, {}, error);

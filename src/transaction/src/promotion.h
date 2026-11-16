@@ -4,6 +4,7 @@
 #include "holonight_packages_transaction/transaction_seams.h"
 
 #include <filesystem>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -29,9 +30,20 @@ class SyncPromotion {
     std::string name;
     bool remove = false;  // a live .db.sig the scratch side no longer has
   };
+  // Live files changed so far, which a rollback restores (`replaced`) or removes (`added`).
+  struct Applied {
+    std::vector<std::string> replaced;
+    std::vector<std::string> added;
+  };
+  using Digests = std::map<std::string, std::string>;
+
   [[nodiscard]] std::optional<std::vector<Step>> plan() const;
+  [[nodiscard]] std::optional<Digests> scratchDigests(const std::vector<Step>& steps) const;
+  [[nodiscard]] bool applyStep(const Step& step, int number, Applied& applied) const;
+  [[nodiscard]] bool matchesScratch(const Digests& expected) const;
   [[nodiscard]] bool replace(const std::string& name) const;
-  void rollBack(const std::vector<std::string>& replaced, const std::vector<std::string>& added) const;
+  void rollBack(const Applied& applied) const;
+  void logError(const std::string& text) const;
 
   std::filesystem::path scratch_;
   std::filesystem::path live_;
