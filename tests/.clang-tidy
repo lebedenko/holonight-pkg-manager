@@ -1,2 +1,3 @@
 InheritParentConfig: true
-Checks: '-readability-identifier-naming,-cppcoreguidelines-avoid-non-const-global-variables'
+# GTest fixtures expose state to their generated test subclasses.
+Checks: '-readability-identifier-naming,-cppcoreguidelines-avoid-non-const-global-variables,-cppcoreguidelines-non-private-member-variables-in-classes'

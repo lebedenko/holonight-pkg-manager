@@ -77,8 +77,10 @@ TEST_F(UpgradePrepareTest, ARepositoryWithoutServerIsNamedAndNoScratchFileIsCrea
   twoUpgrades();
   ConfSpec spec;
   spec.globalSigLevel = "Required DatabaseOptional";
-  spec.repos = {RepoConf{.name = "core", .servers = {world_.serverUrl("core")}, .sigLevel = std::nullopt},
-                RepoConf{.name = "extra", .servers = {}, .sigLevel = std::nullopt}};
+  spec.repos = {
+      RepoConf{.name = "core", .servers = {world_.serverUrl("core")}, .sigLevel = std::nullopt},
+      RepoConf{.name = "extra", .servers = {}, .sigLevel = std::nullopt},
+  };
   world_.writeConf(spec);
   const auto outcome = prepare();
   ASSERT_FALSE(outcome.result.has_value());
@@ -93,8 +95,10 @@ TEST_F(UpgradePrepareTest, AnOptionalSignatureLevelIsInsecureBeforeAnyDownload) 
   twoUpgrades();
   ConfSpec spec;
   spec.globalSigLevel = "Required DatabaseOptional";
-  spec.repos = {RepoConf{.name = "core", .servers = {world_.serverUrl("core")}, .sigLevel = "Optional"},
-                RepoConf{.name = "extra", .servers = {world_.serverUrl("extra")}, .sigLevel = std::nullopt}};
+  spec.repos = {
+      RepoConf{.name = "core", .servers = {world_.serverUrl("core")}, .sigLevel = "Optional"},
+      RepoConf{.name = "extra", .servers = {world_.serverUrl("extra")}, .sigLevel = std::nullopt},
+  };
   world_.writeConf(spec);
   RecordingFetch fetch;
   fetchSeam = fetch.function();
@@ -210,8 +214,10 @@ TEST_F(UpgradePrepareTest, OnlyTheConfiguredServersAreAskedAndTheFirstThatAnswer
   other.add(pkg("app", "9.0-1")).publish();
   ConfSpec spec;
   spec.globalSigLevel = "Required DatabaseOptional";
-  spec.repos = {RepoConf{.name = "core", .servers = {world_.serverUrl("core"), other.serverUrl()}, .sigLevel = {}},
-                RepoConf{.name = "extra", .servers = {world_.serverUrl("extra")}, .sigLevel = {}}};
+  spec.repos = {
+      RepoConf{.name = "core", .servers = {world_.serverUrl("core"), other.serverUrl()}, .sigLevel = {}},
+      RepoConf{.name = "extra", .servers = {world_.serverUrl("extra")}, .sigLevel = {}},
+  };
   world_.writeConf(spec);
   RecordingFetch fetch;
   fetchSeam = fetch.function();

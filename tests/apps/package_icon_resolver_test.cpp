@@ -93,9 +93,12 @@ TEST(PackageIconResolver, MissingPreferredThemeFallsThroughVisibleThenNoDisplay)
   const auto noDisplay = desktopFile(directory.path(), QStringLiteral("a"), green, true);
   PackageIconResolver resolver(nullptr, directory.path());
   QSignalSpy changed(&resolver, &PackageIconResolver::iconsChanged);
-  resolver.setInstalledPackages(
-      {Package{.name = "sample",
-               .desktopEntryPaths = {noDisplay.toStdString(), visible.toStdString(), preferred.toStdString()}}});
+  resolver.setInstalledPackages({
+      Package{
+          .name = "sample",
+          .desktopEntryPaths = {noDisplay.toStdString(), visible.toStdString(), preferred.toStdString()},
+      },
+  });
   ASSERT_TRUE(changed.wait(5000));
   EXPECT_EQ(publishedImage(resolver.icon("sample").source).pixelColor(0, 0), QColor(255, 0, 0));
   resolver.setInstalledPackages(
@@ -189,8 +192,12 @@ TEST(PackageIconResolver, RejectsSvgResourcesAndOversizedInputThenUsesNextCandid
   const auto third = desktopFile(directory.path(), "c", good);
   PackageIconResolver resolver(nullptr, directory.path());
   QSignalSpy changed(&resolver, &PackageIconResolver::iconsChanged);
-  resolver.setInstalledPackages({Package{
-      .name = "sample", .desktopEntryPaths = {first.toStdString(), second.toStdString(), third.toStdString()}}});
+  resolver.setInstalledPackages({
+      Package{
+          .name = "sample",
+          .desktopEntryPaths = {first.toStdString(), second.toStdString(), third.toStdString()},
+      },
+  });
   ASSERT_TRUE(changed.wait(5000));
   EXPECT_EQ(resolver.icon("sample").source, publishedSource(good));
 }

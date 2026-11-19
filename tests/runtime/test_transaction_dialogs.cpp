@@ -356,13 +356,22 @@ ResolvedPlan upgradePlan(int upgrades, bool keyring) {
   plan.action = PlanAction::Upgrade;
   UpgradeDetail detail;
   for (int index = 0; index < upgrades; ++index) {
-    detail.upgrades.push_back(UpgradeEntry{.name = "package-" + std::to_string(index),
-                                           .old_version = "1.0-1",
-                                           .new_version = "1.1-1",
-                                           .repository = "extra"});
+    detail.upgrades.push_back(UpgradeEntry{
+        .name = "package-" + std::to_string(index),
+        .old_version = "1.0-1",
+        .new_version = "1.1-1",
+        .repository = "extra",
+    });
   }
-  detail.replacements = {ReplacementEntry{
-      .old_name = "oldpkg", .old_version = "1-1", .new_name = "newpkg", .new_version = "2-1", .repository = "extra"}};
+  detail.replacements = {
+      ReplacementEntry{
+          .old_name = "oldpkg",
+          .old_version = "1-1",
+          .new_name = "newpkg",
+          .new_version = "2-1",
+          .repository = "extra",
+      },
+  };
   detail.new_dependencies = {NewDependencyEntry{.name = "dep", .version = "1-1", .repository = "core"}};
   detail.held_back = {HeldBackEntry{.name = "kept", .installed_version = "1-1"}};
   if (keyring) {
@@ -414,8 +423,14 @@ TEST_F(RuntimeTransactionDialogs, ThePreviewOfFiveHundredUpgradesAndTheStepCount
       "plan-u", ProgressUpdate{.phase = ProgressPhase::Installing, .current = 3, .total = 500, .item = "package-3"});
   settle();
   EXPECT_TRUE(text("transactionStep").contains(QStringLiteral("2 of 2")));
-  service_.completeExecute(ExecutionResult::succeeded({ChangedPackage{
-      .name = "archlinux-keyring", .action = ChangeAction::Install, .old_version = "1", .new_version = "2"}}));
+  service_.completeExecute(ExecutionResult::succeeded({
+      ChangedPackage{
+          .name = "archlinux-keyring",
+          .action = ChangeAction::Install,
+          .old_version = "1",
+          .new_version = "2",
+      },
+  }));
   settle();
   EXPECT_TRUE(text("transactionMessage").contains(QStringLiteral("keyring")));
   EXPECT_TRUE(visible("transactionCloseButton"));

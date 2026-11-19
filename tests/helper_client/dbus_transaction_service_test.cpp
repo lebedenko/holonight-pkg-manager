@@ -337,15 +337,19 @@ TEST_F(DBusTransactionServiceProgress, AnEventForAnotherPlanIsDropped) {
 
 helper_wire::UpgradePreviewWire upgradePreview() {
   helper_wire::UpgradePreviewWire preview;
-  preview.upgrades.push_back({.name = QStringLiteral("app"),
-                              .old_version = QStringLiteral("1"),
-                              .new_version = QStringLiteral("2"),
-                              .repository = QStringLiteral("core")});
-  preview.replacements.push_back({.old_name = QStringLiteral("old"),
-                                  .old_version = QStringLiteral("1"),
-                                  .new_name = QStringLiteral("new"),
-                                  .new_version = QStringLiteral("3"),
-                                  .repository = QStringLiteral("extra")});
+  preview.upgrades.push_back({
+      .name = QStringLiteral("app"),
+      .old_version = QStringLiteral("1"),
+      .new_version = QStringLiteral("2"),
+      .repository = QStringLiteral("core"),
+  });
+  preview.replacements.push_back({
+      .old_name = QStringLiteral("old"),
+      .old_version = QStringLiteral("1"),
+      .new_name = QStringLiteral("new"),
+      .new_version = QStringLiteral("3"),
+      .repository = QStringLiteral("extra"),
+  });
   preview.new_dependencies.push_back(
       {.name = QStringLiteral("dep"), .version = QStringLiteral("4"), .repository = QStringLiteral("core")});
   preview.held_back.push_back({.name = QStringLiteral("kept"), .installed_version = QStringLiteral("5")});
@@ -360,11 +364,16 @@ helper_wire::UpgradePreviewWire upgradePreview() {
 TEST_F(DBusTransactionServiceCalls, PrepareUpgradeSendsAnEmptyOptionsMapWithATenMinuteTimeout) {
   EXPECT_EQ(DBusTransactionService::Timeouts{}.upgrade_prepare_ms, 600'000);
   FakeHelperObject& fake = startFakeHelper();
-  fake.script(QStringLiteral("PrepareUpgrade"),
-              {.mode = Mode::Immediate,
-               .delay_ms = 0,
-               .reply = {QVariant::fromValue(helper_wire::StatusWire{}), QStringLiteral("plan-u"),
-                         QVariant::fromValue(upgradePreview())}});
+  fake.script(QStringLiteral("PrepareUpgrade"), {
+                                                    .mode = Mode::Immediate,
+                                                    .delay_ms = 0,
+                                                    .reply =
+                                                        {
+                                                            QVariant::fromValue(helper_wire::StatusWire{}),
+                                                            QStringLiteral("plan-u"),
+                                                            QVariant::fromValue(upgradePreview()),
+                                                        },
+                                                });
   const auto service = makeService();
   Captured<PrepareReply> prepared;
   service->preparePlan(PlanRequest{.action = PlanAction::Upgrade, .names = {}},
@@ -397,10 +406,16 @@ TEST_F(DBusTransactionServiceCalls, AnUpgradeRefusalIsADomainRefusal) {
   FakeHelperObject& fake = startFakeHelper();
   helper_wire::StatusWire status;
   status.code = QStringLiteral("NothingToDo");
-  fake.script(QStringLiteral("PrepareUpgrade"), {.mode = Mode::Immediate,
-                                                 .delay_ms = 0,
-                                                 .reply = {QVariant::fromValue(status), QString(),
-                                                           QVariant::fromValue(helper_wire::UpgradePreviewWire{})}});
+  fake.script(QStringLiteral("PrepareUpgrade"), {
+                                                    .mode = Mode::Immediate,
+                                                    .delay_ms = 0,
+                                                    .reply =
+                                                        {
+                                                            QVariant::fromValue(status),
+                                                            QString(),
+                                                            QVariant::fromValue(helper_wire::UpgradePreviewWire{}),
+                                                        },
+                                                });
   const auto service = makeService();
   Captured<PrepareReply> prepared;
   service->preparePlan(PlanRequest{.action = PlanAction::Upgrade, .names = {}},

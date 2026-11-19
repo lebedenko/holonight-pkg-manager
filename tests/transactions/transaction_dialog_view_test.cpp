@@ -291,7 +291,11 @@ ResolvedPlan upgradePlanOf(int upgrades, bool keyring) {
   UpgradeDetail detail;
   for (int index = 0; index < upgrades; ++index) {
     detail.upgrades.push_back(UpgradeEntry{
-        .name = "pkg-" + std::to_string(index), .old_version = "1", .new_version = "2", .repository = "core"});
+        .name = "pkg-" + std::to_string(index),
+        .old_version = "1",
+        .new_version = "2",
+        .repository = "core",
+    });
   }
   detail.held_back = {HeldBackEntry{.name = "kept", .installed_version = "1"}};
   if (keyring) {

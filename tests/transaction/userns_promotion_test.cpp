@@ -38,9 +38,9 @@ class UsernsPromotionTest : public ::testing::Test {
       EXPECT_EQ(::umount(scratch().c_str()), 0) << std::strerror(errno);
     }
   }
-  fs::path scratch() const { return world_.base() / "scratch"; }
-  fs::path live() const { return world_.syncDbPath(); }
-  fs::path rollback() const { return world_.base() / "rollback"; }
+  [[nodiscard]] fs::path scratch() const { return world_.base() / "scratch"; }
+  [[nodiscard]] fs::path live() const { return world_.syncDbPath(); }
+  [[nodiscard]] fs::path rollback() const { return world_.base() / "rollback"; }
   LogSink journal() {
     return [this](LogLevel level, const std::string& line) { lines_.emplace_back(level, line); };
   }

@@ -20,10 +20,21 @@ UpgradeDetail detailOf(int upgrades, bool keyring = false) {
   UpgradeDetail detail;
   for (int index = 0; index < upgrades; ++index) {
     detail.upgrades.push_back(UpgradeEntry{
-        .name = "pkg-" + std::to_string(index), .old_version = "1", .new_version = "2", .repository = "core"});
+        .name = "pkg-" + std::to_string(index),
+        .old_version = "1",
+        .new_version = "2",
+        .repository = "core",
+    });
   }
-  detail.replacements = {ReplacementEntry{
-      .old_name = "old", .old_version = "1", .new_name = "new", .new_version = "3", .repository = "core"}};
+  detail.replacements = {
+      ReplacementEntry{
+          .old_name = "old",
+          .old_version = "1",
+          .new_name = "new",
+          .new_version = "3",
+          .repository = "core",
+      },
+  };
   detail.new_dependencies = {NewDependencyEntry{.name = "dep", .version = "4", .repository = "core"}};
   detail.held_back = {HeldBackEntry{.name = "kept", .installed_version = "5"}};
   if (keyring) {
@@ -163,8 +174,14 @@ TEST_F(TransactionControllerUpgrade, TheStepTextFollowsTheMarkers) {
 TEST_F(TransactionControllerUpgrade, ASuccessWithTheKeyringSaysSo) {
   toPreview(1, true);
   controller.confirm();
-  service.completeExecute(ExecutionResult::succeeded({ChangedPackage{
-      .name = "archlinux-keyring", .action = ChangeAction::Install, .old_version = "1", .new_version = "2"}}));
+  service.completeExecute(ExecutionResult::succeeded({
+      ChangedPackage{
+          .name = "archlinux-keyring",
+          .action = ChangeAction::Install,
+          .old_version = "1",
+          .new_version = "2",
+      },
+  }));
   EXPECT_TRUE(controller.message().contains(messages::upgradeText(messages::UpgradeKey::Succeeded)));
   EXPECT_TRUE(controller.message().contains(messages::upgradeText(messages::UpgradeKey::KeyringUpdated)));
   EXPECT_EQ(refresh.upgradeCount(), 1);
@@ -226,9 +243,13 @@ TEST(TransactionMessagesUpgrade, EveryUpgradeKeyAndEveryNewCodeHasAnEntry) {
   for (std::size_t index = 0; index < messages::kUpgradeKeyCount; ++index) {
     EXPECT_FALSE(messages::upgradeText(static_cast<messages::UpgradeKey>(index)).isEmpty()) << index;
   }
-  for (const auto code : {TransactionErrorCode::SyncFailed, TransactionErrorCode::SyncDatabaseChanged,
-                          TransactionErrorCode::KeyImportRequired, TransactionErrorCode::UpgradePartiallyApplied,
-                          TransactionErrorCode::Cancelled}) {
+  for (const auto code : {
+           TransactionErrorCode::SyncFailed,
+           TransactionErrorCode::SyncDatabaseChanged,
+           TransactionErrorCode::KeyImportRequired,
+           TransactionErrorCode::UpgradePartiallyApplied,
+           TransactionErrorCode::Cancelled,
+       }) {
     EXPECT_FALSE(messages::failureText(code, {}, PlanAction::Upgrade, true).isEmpty()) << transactionErrorName(code);
   }
   EXPECT_EQ(messages::failureText(TransactionErrorCode::NothingToDo, {}, PlanAction::Upgrade, true),

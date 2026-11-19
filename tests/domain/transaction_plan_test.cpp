@@ -119,8 +119,16 @@ ResolvedPlan upgradePlan() {
   plan.action = PlanAction::Upgrade;
   plan.upgrade = UpgradeDetail{
       .upgrades = {UpgradeEntry{.name = "app", .old_version = "1.0-1", .new_version = "2.0-1", .repository = "core"}},
-      .replacements = {ReplacementEntry{
-          .old_name = "old", .old_version = "1.0-1", .new_name = "new", .new_version = "1.0-1", .repository = "extra"}},
+      .replacements =
+          {
+              ReplacementEntry{
+                  .old_name = "old",
+                  .old_version = "1.0-1",
+                  .new_name = "new",
+                  .new_version = "1.0-1",
+                  .repository = "extra",
+              },
+          },
       .new_dependencies = {NewDependencyEntry{.name = "lib", .version = "1.0-1", .repository = "core"}},
       .held_back = {HeldBackEntry{.name = "kept", .installed_version = "1.0-1"}},
       .keyring_packages = {},
