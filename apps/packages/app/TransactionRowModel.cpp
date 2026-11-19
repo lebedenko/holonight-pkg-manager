@@ -105,44 +105,52 @@ QList<TransactionRowModel::Row> TransactionRowModel::upgradeRows(
   rows.reserve(static_cast<qsizetype>(detail.upgrades.size() + detail.replacements.size() +
                                       detail.new_dependencies.size() + detail.held_back.size()));
   for (const auto& entry : detail.upgrades) {
-    rows.push_back(Row{.name = text(entry.name),
-                       .kind = QStringLiteral("upgrade"),
-                       .action = QStringLiteral("install"),
-                       .old_version = text(entry.old_version),
-                       .new_version = text(entry.new_version),
-                       .repository = text(entry.repository),
-                       .conditional = false,
-                       .replaces = {}});
+    rows.push_back(Row{
+        .name = text(entry.name),
+        .kind = QStringLiteral("upgrade"),
+        .action = QStringLiteral("install"),
+        .old_version = text(entry.old_version),
+        .new_version = text(entry.new_version),
+        .repository = text(entry.repository),
+        .conditional = false,
+        .replaces = {},
+    });
   }
   for (const auto& entry : detail.replacements) {
-    rows.push_back(Row{.name = text(entry.new_name),
-                       .kind = QStringLiteral("replacement"),
-                       .action = QStringLiteral("install"),
-                       .old_version = text(entry.old_version),
-                       .new_version = text(entry.new_version),
-                       .repository = text(entry.repository),
-                       .conditional = false,
-                       .replaces = text(entry.old_name)});
+    rows.push_back(Row{
+        .name = text(entry.new_name),
+        .kind = QStringLiteral("replacement"),
+        .action = QStringLiteral("install"),
+        .old_version = text(entry.old_version),
+        .new_version = text(entry.new_version),
+        .repository = text(entry.repository),
+        .conditional = false,
+        .replaces = text(entry.old_name),
+    });
   }
   for (const auto& entry : detail.new_dependencies) {
-    rows.push_back(Row{.name = text(entry.name),
-                       .kind = QStringLiteral("newDependency"),
-                       .action = QStringLiteral("install"),
-                       .old_version = {},
-                       .new_version = text(entry.version),
-                       .repository = text(entry.repository),
-                       .conditional = false,
-                       .replaces = {}});
+    rows.push_back(Row{
+        .name = text(entry.name),
+        .kind = QStringLiteral("newDependency"),
+        .action = QStringLiteral("install"),
+        .old_version = {},
+        .new_version = text(entry.version),
+        .repository = text(entry.repository),
+        .conditional = false,
+        .replaces = {},
+    });
   }
   for (const auto& entry : detail.held_back) {
-    rows.push_back(Row{.name = text(entry.name),
-                       .kind = QStringLiteral("heldBack"),
-                       .action = {},
-                       .old_version = text(entry.installed_version),
-                       .new_version = {},
-                       .repository = {},
-                       .conditional = false,
-                       .replaces = {}});
+    rows.push_back(Row{
+        .name = text(entry.name),
+        .kind = QStringLiteral("heldBack"),
+        .action = {},
+        .old_version = text(entry.installed_version),
+        .new_version = {},
+        .repository = {},
+        .conditional = false,
+        .replaces = {},
+    });
   }
   return rows;
 }

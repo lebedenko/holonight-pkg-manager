@@ -406,21 +406,28 @@ holonight_packages_domain::PrepareReply decodePrepareUpgradeReply(const QDBusMes
   }
   holonight_packages_domain::UpgradeDetail detail;
   for (const UpgradeItemWire& item : preview.upgrades) {
-    detail.upgrades.push_back({.name = s(item.name),
-                               .old_version = s(item.old_version),
-                               .new_version = s(item.new_version),
-                               .repository = s(item.repository)});
+    detail.upgrades.push_back({
+        .name = s(item.name),
+        .old_version = s(item.old_version),
+        .new_version = s(item.new_version),
+        .repository = s(item.repository),
+    });
   }
   for (const ReplacementWire& item : preview.replacements) {
-    detail.replacements.push_back({.old_name = s(item.old_name),
-                                   .old_version = s(item.old_version),
-                                   .new_name = s(item.new_name),
-                                   .new_version = s(item.new_version),
-                                   .repository = s(item.repository)});
+    detail.replacements.push_back({
+        .old_name = s(item.old_name),
+        .old_version = s(item.old_version),
+        .new_name = s(item.new_name),
+        .new_version = s(item.new_version),
+        .repository = s(item.repository),
+    });
   }
   for (const NewDependencyWire& item : preview.new_dependencies) {
-    detail.new_dependencies.push_back(
-        {.name = s(item.name), .version = s(item.version), .repository = s(item.repository)});
+    detail.new_dependencies.push_back({
+        .name = s(item.name),
+        .version = s(item.version),
+        .repository = s(item.repository),
+    });
   }
   for (const HeldBackWire& item : preview.held_back) {
     detail.held_back.push_back({.name = s(item.name), .installed_version = s(item.installed_version)});

@@ -206,8 +206,10 @@ void PlanService::finishPreparing(holonight_packages_domain::UpgradePrepareOutco
   auto plan_id =
       store_.add(preparation.owner, holonight_packages_domain::PlanRequest{.action = PlanAction::Upgrade, .names = {}},
                  std::move(outcome.result->plan),
-                 holonight_packages_domain::UpgradeWorkspace{.scratch_root = preparation.scratch_root,
-                                                             .guard = std::move(outcome.result->guard)});
+                 holonight_packages_domain::UpgradeWorkspace{
+                     .scratch_root = preparation.scratch_root,
+                     .guard = std::move(outcome.result->guard),
+                 });
   notifyActivity();
   if (!plan_id) {
     scratch_->remove(preparation.scratch_root);
@@ -285,9 +287,11 @@ void PlanService::execute(const std::string& unique_name, const PlanId& plan_id,
     // Counts only, never names (system-upgrade REQ-F-040).
     const auto& upgrade = *active_->plan.upgrade;
     request.action_id = actions_.upgrade;
-    request.details = {{"upgrades", std::to_string(upgrade.upgrades.size())},
-                       {"replacements", std::to_string(upgrade.replacements.size())},
-                       {"new_packages", std::to_string(upgrade.new_dependencies.size())}};
+    request.details = {
+        {"upgrades", std::to_string(upgrade.upgrades.size())},
+        {"replacements", std::to_string(upgrade.replacements.size())},
+        {"new_packages", std::to_string(upgrade.new_dependencies.size())},
+    };
   } else {
     request.action_id = active_->request.action == PlanAction::Install ? actions_.install : actions_.remove;
     request.details = {{"packages", joinNames(active_->request.names)}};

@@ -60,10 +60,21 @@ UpgradePrepared upgradePlan() {
   ResolvedPlan plan;
   plan.action = PlanAction::Upgrade;
   plan.upgrade = UpgradeDetail{
-      .upgrades = {UpgradeEntry{.name = "app", .old_version = "1", .new_version = "2", .repository = "core"},
-                   UpgradeEntry{.name = "lib", .old_version = "1", .new_version = "2", .repository = "core"}},
-      .replacements = {ReplacementEntry{
-          .old_name = "old", .old_version = "1", .new_name = "new", .new_version = "1", .repository = "core"}},
+      .upgrades =
+          {
+              UpgradeEntry{.name = "app", .old_version = "1", .new_version = "2", .repository = "core"},
+              UpgradeEntry{.name = "lib", .old_version = "1", .new_version = "2", .repository = "core"},
+          },
+      .replacements =
+          {
+              ReplacementEntry{
+                  .old_name = "old",
+                  .old_version = "1",
+                  .new_name = "new",
+                  .new_version = "1",
+                  .repository = "core",
+              },
+          },
       .new_dependencies = {NewDependencyEntry{.name = "dep", .version = "1", .repository = "core"}},
       .held_back = {HeldBackEntry{.name = "kept", .installed_version = "1"}},
       .keyring_packages = {},
@@ -294,7 +305,8 @@ TEST_F(PlanServiceUpgradeTest, ADenialKeepsThePlanAndItsScratchRootAndASecondExe
 
 TEST_F(PlanServiceUpgradeTest, TheEngineGetsTheWorkspaceOfThePlan) {
   engine.prepareUpgradeResult.result->guard = {
-      holonight_packages_domain::SyncFileStamp{.name = "core.db", .sha256 = "ab", .size = 1, .mtime_ns = 2}};
+      holonight_packages_domain::SyncFileStamp{.name = "core.db", .sha256 = "ab", .size = 1, .mtime_ns = 2},
+  };
   const auto plan = prepare();
   std::optional<UpgradeWorkspace> seen;
   engine.executeUpgradeScript = [&seen](const ResolvedPlan&, const UpgradeWorkspace& workspace,

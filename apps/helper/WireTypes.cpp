@@ -331,21 +331,28 @@ UpgradePreviewWire toUpgradeWire(const holonight_packages_domain::ResolvedPlan& 
   const auto& detail = *plan.upgrade;
   const auto str = [](const std::string& text) { return QString::fromStdString(text); };
   for (const auto& entry : detail.upgrades) {
-    preview.upgrades.push_back(UpgradeItemWire{.name = str(entry.name),
-                                               .old_version = str(entry.old_version),
-                                               .new_version = str(entry.new_version),
-                                               .repository = str(entry.repository)});
+    preview.upgrades.push_back(UpgradeItemWire{
+        .name = str(entry.name),
+        .old_version = str(entry.old_version),
+        .new_version = str(entry.new_version),
+        .repository = str(entry.repository),
+    });
   }
   for (const auto& entry : detail.replacements) {
-    preview.replacements.push_back(ReplacementWire{.old_name = str(entry.old_name),
-                                                   .old_version = str(entry.old_version),
-                                                   .new_name = str(entry.new_name),
-                                                   .new_version = str(entry.new_version),
-                                                   .repository = str(entry.repository)});
+    preview.replacements.push_back(ReplacementWire{
+        .old_name = str(entry.old_name),
+        .old_version = str(entry.old_version),
+        .new_name = str(entry.new_name),
+        .new_version = str(entry.new_version),
+        .repository = str(entry.repository),
+    });
   }
   for (const auto& entry : detail.new_dependencies) {
-    preview.new_dependencies.push_back(
-        NewDependencyWire{.name = str(entry.name), .version = str(entry.version), .repository = str(entry.repository)});
+    preview.new_dependencies.push_back(NewDependencyWire{
+        .name = str(entry.name),
+        .version = str(entry.version),
+        .repository = str(entry.repository),
+    });
   }
   for (const auto& entry : detail.held_back) {
     preview.held_back.push_back(

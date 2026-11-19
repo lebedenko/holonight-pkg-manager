@@ -218,8 +218,12 @@ TEST_F(TransactionFlowUpgradeOutcome, ChangedDatabasesOfferTryAgainWhichPrepares
 }
 
 TEST_F(TransactionFlowUpgradeOutcome, OtherUpgradeCodesOfferCloseOnly) {
-  for (const auto code : {TransactionErrorCode::SyncFailed, TransactionErrorCode::KeyImportRequired,
-                          TransactionErrorCode::DownloadFailed, TransactionErrorCode::UpgradePartiallyApplied}) {
+  for (const auto code : {
+           TransactionErrorCode::SyncFailed,
+           TransactionErrorCode::KeyImportRequired,
+           TransactionErrorCode::DownloadFailed,
+           TransactionErrorCode::UpgradePartiallyApplied,
+       }) {
     FakeTransactionService local_service;
     FakePackageListRefresh local_refresh;
     TransactionFlow local(local_service, local_refresh);
@@ -233,10 +237,15 @@ TEST_F(TransactionFlowUpgradeOutcome, OtherUpgradeCodesOfferCloseOnly) {
 
 TEST_F(TransactionFlowUpgradeOutcome, APartialResultKeepsTheChangedListAndTheStepToken) {
   toRunning(true);
-  auto failed = FakeTransactionService::failed(
-      TransactionErrorCode::UpgradePartiallyApplied,
-      {ChangedPackage{
-          .name = "archlinux-keyring", .action = ChangeAction::Install, .old_version = "1", .new_version = "2"}});
+  auto failed = FakeTransactionService::failed(TransactionErrorCode::UpgradePartiallyApplied,
+                                               {
+                                                   ChangedPackage{
+                                                       .name = "archlinux-keyring",
+                                                       .action = ChangeAction::Install,
+                                                       .old_version = "1",
+                                                       .new_version = "2",
+                                                   },
+                                               });
   failed->failure.names = {"main"};
   service.completeExecute(std::move(failed));
   ASSERT_TRUE(flow.failure().has_value());

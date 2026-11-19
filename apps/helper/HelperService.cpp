@@ -93,8 +93,11 @@ void HelperService::prepareUpgrade(const QDBusMessage& message, const QVariantMa
                                                        holonight_packages_domain::TransactionFailure>
                                              result) {
                            if (!result) {
-                             reply(message, {QVariant::fromValue(toWire(result.error())), QString(),
-                                             QVariant::fromValue(UpgradePreviewWire{})});
+                             reply(message, {
+                                                QVariant::fromValue(toWire(result.error())),
+                                                QString(),
+                                                QVariant::fromValue(UpgradePreviewWire{}),
+                                            });
                              return;
                            }
                            reply(message, {
