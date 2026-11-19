@@ -68,3 +68,12 @@ Clang-tidy translates GCC-only direct-access flags in temporary analysis databas
 no manual database edits are needed. See the umbrella
 [translation contract](../docs/initiatives/clang-tidy-compatibility.md) when working
 in the coordinated checkout. Standalone helper regressions: `python3 scripts/test-quality.py`.
+
+## Package-manager deployment
+
+Use the build tree, a staging directory, or a disposable root for development.
+For an explicitly requested live package-manager deployment, run
+`./scripts/install.sh holonight-pkg-manager` from the umbrella checkout. If a required
+check fails or the installer refuses deployment, report the blocker. Never copy the
+helper directly into the live system, run a privileged component install, or edit the
+installer's ownership records to bypass deployment checks.
