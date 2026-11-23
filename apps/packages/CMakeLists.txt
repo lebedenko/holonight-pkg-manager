@@ -81,6 +81,7 @@ qt_add_qml_module(holonight-packages
 )
 
 target_link_libraries(holonight-packages PRIVATE
+  holonight_packages_helper_protocol
   holonight_package_icons
   HolonightQt::Controls
   holonight_packages_domain

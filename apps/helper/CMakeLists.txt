@@ -37,6 +37,7 @@ target_include_directories(holonight_package_helper_service PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}
   ${PROJECT_SOURCE_DIR}/src/backends/include)
 target_link_libraries(holonight_package_helper_service PUBLIC
+  holonight_packages_helper_protocol
   holonight_packages_application holonight_packages_domain holonight_packages_transaction Qt6::Core Qt6::DBus)
 target_compile_features(holonight_package_helper_service PUBLIC cxx_std_23)
 target_compile_definitions(holonight_package_helper_service PUBLIC

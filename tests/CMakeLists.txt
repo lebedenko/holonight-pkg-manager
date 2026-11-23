@@ -148,6 +148,7 @@ target_compile_definitions(test_holonight_packages PRIVATE
   HOLONIGHT_HELPER_DBUS_XML="${PROJECT_SOURCE_DIR}/apps/helper/dbus/org.holonight.PackageHelper1.xml"
   HOLONIGHT_QML_SOURCE_DIR="${PROJECT_SOURCE_DIR}/qml")
 target_link_libraries(test_holonight_packages PRIVATE
+  holonight_packages_helper_protocol
   holonight_package_icons
   GTest::gtest GTest::gmock Qt6::Gui Qt6::Quick Qt6::Qml Qt6::Test Qt6::Concurrent Qt6::DBus
   holonight_packaged_service
@@ -228,8 +229,8 @@ qt_add_executable(test_runtime_controls
   ${PROJECT_SOURCE_DIR}/apps/packages/app/DataFreshness.h
   ${PROJECT_SOURCE_DIR}/apps/packages/app/SnapshotFileReader.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/SnapshotFileReader.h
-  ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdateCheckModel.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdateStatusPresentation.h
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdateCheckModel.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdateCheckModel.h
   ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdateCheckClient.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdateCheckClient.h)
@@ -428,9 +429,9 @@ add_executable(test_holonight_packages_helper_client
   helper_client/helper_contract_test.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/HelperWire.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/DBusTransactionService.cpp
-)
   ${PROJECT_SOURCE_DIR}/apps/packages/app/DBusOwnerTracker.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/DBusOwnerTracker.h
+)
 set_target_properties(test_holonight_packages_helper_client PROPERTIES AUTOMOC ON)
 target_include_directories(test_holonight_packages_helper_client PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/support

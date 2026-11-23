@@ -127,7 +127,7 @@ void pump(int milliseconds) {
 class HelperBusTest : public ::testing::Test {
  public:
   void SetUp() override {
-    registerWireTypes();
+    helper_wire::registerHelperWireTypes();
     ASSERT_TRUE(bus_.start()) << bus_.error().toStdString();
     static std::atomic<int> counter{0};
     const QString suffix = QString::number(counter++);

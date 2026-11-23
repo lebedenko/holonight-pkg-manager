@@ -24,7 +24,7 @@ using holonight_packages_domain::WarningToken;
 using ::testing::ElementsAre;
 
 TEST(WireTypesTest, SignaturesMatchTheInterfaceXml) {
-  registerWireTypes();
+  helper_wire::registerHelperWireTypes();
   EXPECT_EQ(QByteArray(QDBusMetaType::typeToSignature(QMetaType::fromType<StatusWire>())), QByteArray("(sasa(ssas))"));
   EXPECT_EQ(QByteArray(QDBusMetaType::typeToSignature(QMetaType::fromType<PreviewWire>())),
             QByteArray("(sa(sssss)a(sssss)a(sssss)a(sb)x)"));
@@ -113,13 +113,13 @@ TEST(WireTypesTest, AResultCarriesOutcomeCodeChangesAndEnumeratedWarnings) {
 // ---- system-upgrade T-048: the upgrade preview ----
 
 TEST(WireTypesTest, TheUpgradePreviewHasTheSignatureOfTheInterfaceXml) {
-  registerWireTypes();
+  helper_wire::registerHelperWireTypes();
   EXPECT_EQ(QByteArray(QDBusMetaType::typeToSignature(QMetaType::fromType<UpgradePreviewWire>())),
             QByteArray("(a(ssss)a(sssss)a(sss)a(ss)bastxx)"));
 }
 
 TEST(WireTypesTest, AnUpgradePlanIsMappedFieldByField) {
-  registerWireTypes();
+  helper_wire::registerHelperWireTypes();
   ResolvedPlan plan;
   plan.action = PlanAction::Upgrade;
   plan.upgrade = holonight_packages_domain::UpgradeDetail{

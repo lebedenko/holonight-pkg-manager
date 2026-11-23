@@ -22,7 +22,7 @@ std::vector<std::string> toStd(const QStringList& values) {
 HelperService::HelperService(QDBusConnection connection, holonight_packages_application::PlanService& plans,
                              QObject* parent)
     : QObject(parent), connection_(std::move(connection)), plans_(&plans), adaptor_(new HelperAdaptor(this)) {
-  registerWireTypes();
+  helper_wire::registerHelperWireTypes();
   // Called on the worker thread; the signal itself is sent from this object's thread.
   plans_->setProgressForward([this](const std::string& owner, const std::string& planId,
                                     const holonight_packages_domain::ProgressUpdate& update) {

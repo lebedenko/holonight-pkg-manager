@@ -1,0 +1,4 @@
+add_library(holonight_packages_helper_protocol STATIC HelperProtocol.cpp HelperProtocol.h)
+target_include_directories(holonight_packages_helper_protocol PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(holonight_packages_helper_protocol PUBLIC Qt6::Core Qt6::DBus)
+target_compile_features(holonight_packages_helper_protocol PUBLIC cxx_std_23)

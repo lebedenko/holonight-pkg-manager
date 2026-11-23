@@ -61,7 +61,7 @@ QDBusMessage await(const QDBusPendingCall& pending, int milliseconds = 20000) {
 class HelperProcessTest : public ::testing::Test {
  public:
   void SetUp() override {
-    registerWireTypes();
+    helper_wire::registerHelperWireTypes();
     ASSERT_TRUE(directory_.isValid());
     const QString root = directory_.path();
     const QString socket = root + QStringLiteral("/bus.sock");

@@ -1,5 +1,5 @@
-// Runs the GUI's adapter against the real HelperService (over PlanService with fake engine and authorizer), so the
-// GUI's copy of the wire structures and the helper's own encoder cannot drift apart (REQ-C-004).
+// Exercise the GUI decoder against replies from the real helper over a private D-Bus (REQ-C-004).
+
 #include "DBusCallerIdentity.h"
 #include "DBusTransactionService.h"
 #include "HelperService.h"
@@ -30,7 +30,7 @@ class HelperContract : public HelperBusFixture {
  public:
   void SetUp() override {
     HelperBusFixture::SetUp();
-    holonight_helper::registerWireTypes();
+    helper_wire::registerHelperWireTypes();
     server_ = std::make_unique<QDBusConnection>(connect(QStringLiteral("server")));
     ResolvedPlan plan;
     plan.action = PlanAction::Install;

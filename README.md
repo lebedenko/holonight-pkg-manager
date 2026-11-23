@@ -84,18 +84,20 @@ The code is a modular monolith with dependency direction toward the domain:
 | Target | Responsibility |
 | --- | --- |
 | `holonight_packages_domain` | `Package`/`PendingUpdate`/`SyncPackage`/`HistoryEntry` models, `PackageSource`/`UpdateSource`/`ExploreSource`/`HistorySource` ports, source/trust/install-reason concepts |
-| `holonight_packages_application` | Use cases and pure helpers (e.g. `PackageListUseCase`, `summarizeUpdates`, `ExploreIndex`/`searchPackages`, history presentation) — no Qt/QML types |
+| `holonight_packages_application` | Use cases, presentation policies, and Qt Core/Concurrent update orchestration |
 | `holonight_packages_backends` | Native package-manager adapters (`AlpmPackageSource`, `AlpmUpdateSource`, `AlpmExploreSource` via libalpm; `PacmanLogHistorySource` reads the pacman log) |
 | `holonight_packages_snapshot_store` | libalpm-free JSON store for the last online update snapshot (`update-snapshot.json` under the XDG cache) |
 | `holonight_packages_advisor` | Deterministic update assessment and evidence collection |
 | `holonight_packages_persistence` | Cache (e.g. `AlpmConnectionCache`) and settings |
 | `holonight_packages_platform` | D-Bus, notifications, systemd, and desktop integration |
+| `holonight_packages_helper_protocol` | Qt D-Bus wire types and codecs shared by the GUI and privileged helper |
 | `holonight-packages` | Qt Quick user interface, QML-facing view-models, and composition root |
 
 `domain`, `application`, `backends`, and `persistence` are `STATIC` libraries. `advisor` and `platform` are still
-`INTERFACE` stubs — convert a target to `STATIC` when its first implementation file is added. The planned
-`holonight-packaged` user service and privileged `holonight-package-helper` remain separate processes; their
-interfaces should be designed before executable stubs are introduced.
+`INTERFACE` stubs. The `holonight-packaged` user service owns online update checks and publishes their snapshots.
+It shares the offline snapshot lifecycle with the GUI through the application library. The privileged
+`holonight-package-helper` owns package transactions and uses the shared codec to exchange D-Bus messages with
+the GUI. Each endpoint maps the wire types to its own domain operations.
 
 See [the high-level project idea](docs/ideas/01-high-level-project-idea.md) for the product and security model.
 
