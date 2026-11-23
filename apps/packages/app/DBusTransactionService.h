@@ -3,12 +3,17 @@
 #include "holonight_packages_domain/transaction_service.h"
 
 #include <QDBusConnection>
+#include <QFutureWatcher>
 #include <QObject>
 #include <QString>
 
 #include <functional>
+#include <memory>
 #include <optional>
 #include <string>
+#include <vector>
+
+class DBusOwnerTracker;
 
 // The QDBus implementation of the TransactionService port: the only code in the GUI that calls the package helper
 // (REQ-F-040). Every call is asynchronous (REQ-F-043), the three calls and the Progress subscription share one bus
@@ -42,6 +47,7 @@ class DBusTransactionService final : public QObject, public holonight_packages_d
   DBusTransactionService(DBusTransactionService&&) = delete;
   DBusTransactionService& operator=(DBusTransactionService&&) = delete;
 
+  void setCapabilityInvalidatedHandler(const std::function<void()>& handler) override;
   void setProgressHandler(ProgressHandler handler) override;
   void preparePlan(const holonight_packages_domain::PlanRequest& request, PrepareDone done) override;
   void execute(const std::string& plan_id, ExecuteDone done) override;
@@ -55,11 +61,15 @@ class DBusTransactionService final : public QObject, public holonight_packages_d
   [[nodiscard]] static QString runningBuildId(const QDBusConnection& connection);
 
  private slots:
-  void onProgress(const QString& plan_id, const QString& phase, uint current, uint total, const QString& item);
+  void onProgress(const QString& plan_id, const QString& phase, uint current, uint total, const QString& item,
+                  const QDBusMessage& message);
 
  private:
   // Connects lazily on the first use and subscribes to Progress once. Empty when no bus connection exists.
-  std::optional<QDBusConnection> ensureConnection();
+  void withConnection(std::function<void()> operation);
+  void onConnected();
+  void findVersionOwner(holonight_packages_domain::ProbeMode mode, VersionDone done, bool may_activate);
+  void readVersion(const QString& owner, holonight_packages_domain::ProbeMode mode, VersionDone done);
   [[nodiscard]] static QDBusMessage call(const QString& method);
   template <typename Reply, typename Done, typename Decode>
   void send(const QDBusMessage& message, int timeout_ms, Done done, Decode decode);
@@ -70,5 +80,15 @@ class DBusTransactionService final : public QObject, public holonight_packages_d
   Timeouts timeouts_;
   ProgressHandler progress_;
   std::optional<QDBusConnection> bus_;
+  QFutureWatcher<QDBusConnection> connection_watcher_;
+  std::vector<std::function<void()>> pending_operations_;
+  std::unique_ptr<DBusOwnerTracker> owner_tracker_;
+  std::function<void()> capability_invalidated_;
+  struct UpgradeOwner {
+    QString name;
+    quint64 generation;
+  };
+  std::optional<UpgradeOwner> upgrade_owner_;
+  QString active_owner_;
   std::string active_plan_id_;
 };

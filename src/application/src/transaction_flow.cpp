@@ -133,10 +133,14 @@ void TransactionFlow::clearRequestData() {
   warnings_.clear();
 }
 
-void TransactionFlow::startPrepare() {
+void TransactionFlow::startPrepare(std::optional<ServiceError> probe_error) {
   ++generation_;
   clearRequestData();
   state_ = FlowState::Preparing;
+  if (probe_error) {
+    onPrepared(generation_, std::unexpected(std::move(*probe_error)));
+    return;
+  }
   const int generation = generation_;
   const std::weak_ptr<Alive> alive = alive_;
   // Mutate first, notify second: a service that called back synchronously would still see consistent state.
@@ -160,9 +164,13 @@ bool TransactionFlow::request(const holonight_packages_domain::PlanRequest& requ
   return true;
 }
 
-bool TransactionFlow::requestUpgrade() {
-  return request(
-      holonight_packages_domain::PlanRequest{.action = holonight_packages_domain::PlanAction::Upgrade, .names = {}});
+bool TransactionFlow::requestUpgrade(std::optional<ServiceError> probe_error) {
+  if (!allowNewRequest()) {
+    return false;
+  }
+  request_ = {.action = holonight_packages_domain::PlanAction::Upgrade, .names = {}};
+  startPrepare(std::move(probe_error));
+  return true;
 }
 
 void TransactionFlow::updateSystem() {
@@ -186,11 +194,11 @@ void TransactionFlow::cancelPreparation() {
   notify();
 }
 
-void TransactionFlow::tryAgain() {
+void TransactionFlow::tryAgain(std::optional<ServiceError> probe_error) {
   if (!retryable()) {
     return;
   }
-  startPrepare();
+  startPrepare(std::move(probe_error));
 }
 
 void TransactionFlow::confirm() {
@@ -300,7 +308,16 @@ void TransactionFlow::resolveDeferredClose() {
   }
 }
 
+void TransactionFlow::setProgressObserver(std::function<void()> changed) { progress_observer_ = std::move(changed); }
+
 void TransactionFlow::onProgress(const std::string& plan_id, const holonight_packages_domain::ProgressUpdate& update) {
+  const auto notifyProgress = [this] {
+    if (progress_observer_) {
+      progress_observer_();
+    } else {
+      notify();
+    }
+  };
   // The upgrade's database sync reports with an empty plan ID while it is being prepared (REQ-F-080).
   if (state_ == FlowState::Preparing && isUpgrade() && plan_id.empty() && update.phase == ProgressPhase::Syncing) {
     progress_ = ProgressView{
@@ -312,7 +329,7 @@ void TransactionFlow::onProgress(const std::string& plan_id, const holonight_pac
         .step_index = 0,
         .step_count = 0,
     };
-    notify();
+    notifyProgress();
     return;
   }
   if (!inRun() || !prepared_ || plan_id != prepared_->plan_id) {
@@ -333,8 +350,12 @@ void TransactionFlow::onProgress(const std::string& plan_id, const holonight_pac
       .step_count = marker ? static_cast<std::uint8_t>(update.total) : progress_.step_count,
   };
   cancel_latch_ = cancel_latch_ && isPreCommitPhase(update.phase);
-  state_ = FlowState::Executing;
-  notify();
+  if (state_ != FlowState::Executing && progress_observer_) {
+    changeState(FlowState::Executing);
+  } else {
+    state_ = FlowState::Executing;
+    notifyProgress();
+  }
 }
 
 void TransactionFlow::onPrepared(int generation, holonight_packages_domain::PrepareReply reply) {

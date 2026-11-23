@@ -15,13 +15,13 @@ Rectangle {
     required property UpdatesModel updatesModel
     required property ExploreModel exploreModel
     // Optional: pending-update count published by holonight-packaged. Null, or available === false, hides the badge.
-    property var updateStatusClient: null
+    property UpdateStatusPresentation updateStatusClient: null
     // Optional: the online-check view-model. Null hides the Check now control.
-    property var updateCheckModel: null
+    property UpdateCheckModel updateCheckModel: null
     // Optional: the install/remove view-model. Null leaves the Install and Remove controls disabled and shows no dialog.
-    property var transactionController: null
+    property TransactionController transactionController: null
     // Optional: the History page model (transaction-history). Null leaves the History page empty.
-    property var historyModel: null
+    property HistoryModel historyModel: null
 
     // Installed stays the landing page until the Updates page gains an advisor and update actions.
     property string currentPage: "installed"
@@ -40,9 +40,7 @@ Rectangle {
         Sidebar {
             checkHistoryText: root.updateCheckModel ? root.updateCheckModel.checkHistoryText : qsTr("Not checked yet")
             currentPage: root.currentPage
-            updatesBadgeText: root.updateStatusClient && root.updateStatusClient.available
-                              && root.updateStatusClient.state === "ready"
-                              && root.updateStatusClient.count > 0 ? String(root.updateStatusClient.count) : ""
+            updatesBadgeText: root.updateStatusClient ? root.updateStatusClient.badgeText : ""
             Layout.preferredWidth: 196
             Layout.fillHeight: true
             Layout.margins: 12
@@ -64,6 +62,7 @@ Rectangle {
 
             UpdatesView {
                 objectName: "updatesPage"
+                active: root.currentPage === "updates"
                 updatesModel: root.updatesModel
                 updateCheckModel: root.updateCheckModel
                 transactionController: root.transactionController

@@ -1,5 +1,6 @@
 #include "PackagesApplication.h"
 
+#include "DBusOwnerTracker.h"
 #include "DBusTransactionService.h"
 #include "DBusUpdateCheckClient.h"
 #include "ExploreModel.h"
@@ -80,11 +81,13 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
   updates_model_->setIconResolver(icon_resolver_.get());
   explore_model_->setIconResolver(icon_resolver_.get());
 
-  update_status_client_ = std::make_unique<UpdateStatusClient>(QDBusConnection::sessionBus());
+  const auto owner = std::make_shared<DBusOwnerTracker>(QDBusConnection::sessionBus(),
+                                                        QLatin1String(UpdateStatusClient::kServiceName));
+  update_status_client_ = std::make_unique<UpdateStatusClient>(owner);
 
   // Online update check: the GUI neither checks nor writes anything. "Check now" asks holonight-packaged over D-Bus,
   // and the resulting list is read back from the snapshot file it writes.
-  update_check_client_ = std::make_unique<DBusUpdateCheckClient>(QDBusConnection::sessionBus());
+  update_check_client_ = std::make_unique<DBusUpdateCheckClient>(owner);
 
   snapshot_reader_ = std::make_unique<SnapshotFileReader>(
       std::make_shared<holonight_packages_persistence::JsonUpdateSnapshotStore>(

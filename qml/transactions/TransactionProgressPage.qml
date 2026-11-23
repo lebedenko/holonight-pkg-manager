@@ -4,12 +4,13 @@ import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import Holonight.Core
+import HolonightPackages
 
 // Only the phase, the current item, a bar and the Cancel control (REQ-F-011): no log, no list, no text area.
 ColumnLayout {
     id: root
 
-    required property var controller
+    required property TransactionController controller
 
     spacing: 12
 

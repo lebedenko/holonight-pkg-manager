@@ -1,13 +1,14 @@
 import QtQuick
 import Holonight.Core
 import Holonight.Controls
+import HolonightPackages
 
 // Section header of one local calendar day (REQ-F-025). `section` is the "YYYY-MM-DD" day key.
 Item {
     id: root
 
     required property string section
-    property var historyModel: null
+    property HistoryModel historyModel: null
 
     implicitHeight: dayLabel.implicitHeight + 16
 

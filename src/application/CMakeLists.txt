@@ -20,6 +20,8 @@ add_library(holonight_packages_application STATIC
   include/holonight_packages_application/update_check_service.h
   src/update_check_service.cpp
   src/update_monitor.cpp
+  include/holonight_packages_application/update_path_watcher.h
+  src/update_path_watcher.cpp
   src/update_status.cpp
   src/update_summary.cpp
 )

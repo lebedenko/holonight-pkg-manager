@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import Holonight.Core
+import HolonightPackages
 
 // The only transaction popup (REQ-F-031): one modal card whose page changes with the controller. CloseOnPressOutside
 // is deliberately absent so a stray click cannot discard a preview, and Escape works only while the state is closable.
@@ -11,7 +12,7 @@ Controls.Popup {
     id: root
 
     // Null leaves the dialog inert (no transaction view-model was provided).
-    property var controller: null
+    property TransactionController controller: null
 
     objectName: "transactionDialog"
     modal: true
@@ -60,10 +61,10 @@ Controls.Popup {
                 return null
             }
             switch (root.controller.page) {
-            case 1: return preparingPage    // preparing
-            case 2: return confirmPage      // confirmation
-            case 3: return progressPage     // progress
-            case 4: return resultPage       // result
+            case TransactionController.Preparing: return preparingPage    // preparing
+            case TransactionController.Confirm: return confirmPage      // confirmation
+            case TransactionController.Progress: return progressPage     // progress
+            case TransactionController.Result: return resultPage       // result
             default: return null
             }
         }

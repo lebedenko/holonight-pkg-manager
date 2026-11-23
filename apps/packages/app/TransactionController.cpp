@@ -35,6 +35,12 @@ TransactionController::TransactionController(holonight_packages_domain::Transact
       hook_rows_(new TransactionRowModel(this)),
       result_rows_(new TransactionRowModel(this)) {
   flow_.setObserver([this] { onFlowChanged(); });
+  flow_.setProgressObserver([this] { emit progressChanged(); });
+  service_.setCapabilityInvalidatedHandler([this] {
+    helper_version_.reset();
+    refreshHelper();
+    emit changed();
+  });
   flow_.setCloseReadyHandler([this] { emit closeReady(); });
   service_.setProgressHandler(
       [this](const std::string& plan_id, const holonight_packages_domain::ProgressUpdate& update) {
@@ -45,25 +51,38 @@ TransactionController::TransactionController(holonight_packages_domain::Transact
 TransactionController::~TransactionController() {
   // The flow's callbacks held by the service are invalidated by the flow's destructor; stop forwarding progress.
   service_.setProgressHandler({});
+  service_.setCapabilityInvalidatedHandler({});
 }
 
 void TransactionController::onFlowChanged() {
   syncRows();
+  const auto state = flow_.state();
+  const bool upgrade_outcome = state != previous_state_ && flow_.isUpgrade() && page() == Page::Result;
+  previous_state_ = state;
+  if (upgrade_outcome) {
+    refreshHelper();
+  }
   emit changed();
+  emit progressChanged();
 }
 
 void TransactionController::syncRows() {
-  if (flow_.prepared()) {
+  if (flow_.prepared() && !has_preview_rows_) {
     preview_rows_->setRows(TransactionRowModel::previewRows(flow_.prepared()->plan));
     hook_rows_->setRows(TransactionRowModel::hookRows(flow_.prepared()->plan));
-  } else {
+    has_preview_rows_ = true;
+  } else if (!flow_.prepared() && has_preview_rows_) {
     preview_rows_->clear();
     hook_rows_->clear();
+    has_preview_rows_ = false;
   }
   const FlowState state = flow_.state();
+  if (state == previous_state_) {
+    return;
+  }
   if (state == FlowState::Succeeded || state == FlowState::Failed) {
     result_rows_->setRows(TransactionRowModel::changedRows(flow_.changed()));
-  } else {
+  } else if (previous_state_ == FlowState::Succeeded || previous_state_ == FlowState::Failed) {
     result_rows_->clear();
   }
 }
@@ -94,7 +113,7 @@ TransactionController::Page TransactionController::page() const {
 
 bool TransactionController::dialogOpen() const { return flow_.state() != FlowState::Idle; }
 int TransactionController::openDialogCount() const { return flow_.openDialogCount(); }
-bool TransactionController::allowAction() const { return flow_.allowNewRequest(); }
+bool TransactionController::allowAction() const { return flow_.allowNewRequest() && !upgrade_probe_pending_; }
 bool TransactionController::closable() const { return flow_.closable(); }
 
 QString TransactionController::actionKind() const {
@@ -258,11 +277,11 @@ QString TransactionController::cancelLabel() const {
 }
 
 bool TransactionController::requestInstall(const QString& name) {
-  return flow_.request(PlanRequest{.action = PlanAction::Install, .names = {name.toStdString()}});
+  return allowAction() && flow_.request(PlanRequest{.action = PlanAction::Install, .names = {name.toStdString()}});
 }
 
 bool TransactionController::requestRemove(const QString& name) {
-  return flow_.request(PlanRequest{.action = PlanAction::Remove, .names = {name.toStdString()}});
+  return allowAction() && flow_.request(PlanRequest{.action = PlanAction::Remove, .names = {name.toStdString()}});
 }
 
 void TransactionController::confirm() { flow_.confirm(); }
@@ -274,7 +293,16 @@ void TransactionController::cancelRun() {
   }
   flow_.cancelRun();
 }
-void TransactionController::tryAgain() { flow_.tryAgain(); }
+void TransactionController::tryAgain() {
+  if (!actions().contains(QStringLiteral("tryAgain")) || upgrade_probe_pending_) {
+    return;
+  }
+  if (isUpgrade()) {
+    probeUpgrade(UpgradeEntry::Retry);
+  } else {
+    flow_.tryAgain();
+  }
+}
 
 bool TransactionController::isUpgrade() const { return flow_.state() != FlowState::Idle && flow_.isUpgrade(); }
 
@@ -339,47 +367,68 @@ bool TransactionController::keyringChanged() const {
   });
 }
 
-void TransactionController::probe(holonight_packages_domain::ProbeMode mode, std::function<void(bool)> then) {
+void TransactionController::refreshHelper() {
+  if (!helper_observed_ || upgrade_probe_pending_) {
+    return;
+  }
+  const auto generation = ++passive_probe_generation_;
   const std::weak_ptr<int> alive = alive_;
-  service_.queryProtocolVersion(mode,
-                                [this, alive, then = std::move(then)](holonight_packages_domain::VersionReply reply) {
-                                  if (alive.expired()) {
+  service_.queryProtocolVersion(holonight_packages_domain::ProbeMode::NoAutoStart,
+                                [this, alive, generation](holonight_packages_domain::VersionReply reply) {
+                                  if (alive.expired() || generation != passive_probe_generation_) {
                                     return;
                                   }
-                                  if (reply) {
-                                    helper_version_ = *reply;
-                                  }
-                                  if (then) {
-                                    then(reply.has_value());
-                                  }
+                                  helper_version_ = reply ? std::optional{*reply} : std::nullopt;
                                   emit changed();
                                 });
 }
 
-void TransactionController::probeHelper() { probe(holonight_packages_domain::ProbeMode::NoAutoStart, {}); }
+void TransactionController::probeHelper() {
+  if (!std::exchange(helper_observed_, true)) {
+    refreshHelper();
+  }
+}
+
+void TransactionController::probeUpgrade(UpgradeEntry entry) {
+  using holonight_packages_domain::ServiceError;
+  ++passive_probe_generation_;
+  upgrade_probe_pending_ = true;
+  const std::weak_ptr<int> alive = alive_;
+  const auto state = flow_.state();
+  service_.queryProtocolVersion(
+      holonight_packages_domain::ProbeMode::AutoStart,
+      [this, alive, entry, state](holonight_packages_domain::VersionReply reply) {
+        if (alive.expired()) {
+          return;
+        }
+        upgrade_probe_pending_ = false;
+        helper_version_ = reply ? std::optional{*reply} : std::nullopt;
+        if (flow_.state() == state && !helperTooOld()) {
+          const auto error =
+              reply ? std::nullopt
+                    : std::optional{ServiceError{.kind = ServiceError::Kind::HelperUnavailable, .failure = {}}};
+          if (entry == UpgradeEntry::Retry) {
+            flow_.tryAgain(error);
+          } else {
+            flow_.requestUpgrade(error);
+          }
+        }
+        emit changed();
+      });
+  emit changed();
+}
 
 bool TransactionController::requestUpgrade() {
   if (!upgradeEnabled()) {
     return false;
   }
-  if (helper_version_ && *helper_version_ >= 2) {
-    return flow_.requestUpgrade();
-  }
-  upgrade_probe_pending_ = true;
-  emit changed();
-  probe(holonight_packages_domain::ProbeMode::AutoStart, [this](bool answered) {
-    upgrade_probe_pending_ = false;
-    // An old helper never sees PrepareUpgrade (REQ-F-079); an unreachable one is reported by the flow.
-    if (!answered || !helperTooOld()) {
-      flow_.requestUpgrade();
-    }
-  });
+  probeUpgrade(UpgradeEntry::Page);
   return true;
 }
 
 void TransactionController::updateSystem() {
-  if (actions().contains(QStringLiteral("updateSystem"))) {
-    static_cast<void>(requestUpgrade());
+  if (!upgrade_probe_pending_ && actions().contains(QStringLiteral("updateSystem"))) {
+    probeUpgrade(UpgradeEntry::PartialUpgrade);
   }
 }
 

@@ -32,7 +32,7 @@ class TransactionController : public QObject {
   Q_PROPERTY(QString actionKind READ actionKind NOTIFY changed)
   Q_PROPERTY(QString packageName READ packageName NOTIFY changed)
   Q_PROPERTY(QString title READ title NOTIFY changed)
-  Q_PROPERTY(QString message READ message NOTIFY changed)
+  Q_PROPERTY(QString message READ message NOTIFY progressChanged)
   Q_PROPERTY(QString noticeText READ noticeText NOTIFY changed)
   Q_PROPERTY(QStringList actions READ actions NOTIFY changed)
   Q_PROPERTY(QString confirmLabel READ confirmLabel NOTIFY changed)
@@ -43,17 +43,17 @@ class TransactionController : public QObject {
   Q_PROPERTY(TransactionRowModel* hookRows READ hookRows CONSTANT)
   Q_PROPERTY(TransactionRowModel* resultRows READ resultRows CONSTANT)
   Q_PROPERTY(bool hasHookWarning READ hasHookWarning NOTIFY changed)
-  Q_PROPERTY(QString phaseLabel READ phaseLabel NOTIFY changed)
-  Q_PROPERTY(QString currentItem READ currentItem NOTIFY changed)
-  Q_PROPERTY(qreal progressValue READ progressValue NOTIFY changed)
-  Q_PROPERTY(bool progressIndeterminate READ progressIndeterminate NOTIFY changed)
-  Q_PROPERTY(bool cancelEnabled READ cancelEnabled NOTIFY changed)
-  Q_PROPERTY(QString cancelLabel READ cancelLabel NOTIFY changed)
+  Q_PROPERTY(QString phaseLabel READ phaseLabel NOTIFY progressChanged)
+  Q_PROPERTY(QString currentItem READ currentItem NOTIFY progressChanged)
+  Q_PROPERTY(qreal progressValue READ progressValue NOTIFY progressChanged)
+  Q_PROPERTY(bool progressIndeterminate READ progressIndeterminate NOTIFY progressChanged)
+  Q_PROPERTY(bool cancelEnabled READ cancelEnabled NOTIFY progressChanged)
+  Q_PROPERTY(QString cancelLabel READ cancelLabel NOTIFY progressChanged)
   // system-upgrade
   Q_PROPERTY(bool isUpgrade READ isUpgrade NOTIFY changed)
   Q_PROPERTY(bool upgradeEnabled READ upgradeEnabled NOTIFY changed)
   Q_PROPERTY(QString upgradeDisabledReason READ upgradeDisabledReason NOTIFY changed)
-  Q_PROPERTY(QString stepText READ stepText NOTIFY changed)
+  Q_PROPERTY(QString stepText READ stepText NOTIFY progressChanged)
   Q_PROPERTY(QString keyringNotice READ keyringNotice NOTIFY changed)
   Q_PROPERTY(QString downloadText READ downloadText NOTIFY changed)
   Q_PROPERTY(QString sizeChangeText READ sizeChangeText NOTIFY changed)
@@ -144,12 +144,15 @@ class TransactionController : public QObject {
 
  signals:
   void changed();
+  void progressChanged();
   void closeReady();
 
  private:
   void onFlowChanged();
   void syncRows();
-  void probe(holonight_packages_domain::ProbeMode mode, std::function<void(bool)> then);
+  enum class UpgradeEntry : quint8 { Page, Retry, PartialUpgrade };
+  void probeUpgrade(UpgradeEntry entry);
+  void refreshHelper();
   [[nodiscard]] bool helperTooOld() const;
   [[nodiscard]] bool keyringChanged() const;
 
@@ -159,6 +162,10 @@ class TransactionController : public QObject {
   TransactionRowModel* hook_rows_;
   TransactionRowModel* result_rows_;
   std::optional<std::uint32_t> helper_version_;
+  holonight_packages_application::FlowState previous_state_ = holonight_packages_application::FlowState::Idle;
+  bool has_preview_rows_ = false;
+  bool helper_observed_ = false;
+  quint64 passive_probe_generation_ = 0;
   bool upgrade_probe_pending_ = false;
   std::shared_ptr<int> alive_ = std::make_shared<int>(0);
 };

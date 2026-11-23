@@ -9,7 +9,7 @@ PackageDetailFrame {
 
     required property InstalledPackagesFilterModel filterModel
     // Optional TransactionController; null leaves the Remove control disabled.
-    property var transactionController: null
+    property TransactionController transactionController: null
 
     hasSelection: root.filterModel.currentRow >= 0
     detailContent: detailContentComponent

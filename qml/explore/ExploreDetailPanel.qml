@@ -13,7 +13,7 @@ PackageDetailFrame {
 
     required property ExploreModel exploreModel
     // Optional TransactionController; null leaves the Install control disabled.
-    property var transactionController: null
+    property TransactionController transactionController: null
 
     hasSelection: root.exploreModel.currentRow >= 0
     detailContent: detailContentComponent

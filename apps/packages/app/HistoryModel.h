@@ -9,7 +9,9 @@
 #include <QHash>
 #include <QModelIndex>
 #include <QObject>
+#include <QSet>
 #include <QString>
+#include <QStringList>
 #include <QVariant>
 #include <QtQmlIntegration/qqmlintegration.h>
 
@@ -89,12 +91,22 @@ class HistoryModel : public QAbstractListModel {
  private:
   void startRead(holonight_packages_domain::HistoryReadMode mode);
   void onReadFinished();
-  void apply(holonight_packages_domain::HistoryReadResult result);
+  struct ReadResult {
+    holonight_packages_domain::HistoryReadResult history;
+    std::vector<QStringList> package_names;
+    QSet<std::uint32_t> foreign_users;
+  };
+
+  void apply(ReadResult loaded);
+  void resolveUsers(const QSet<std::uint32_t>& users);
+  void applyUserName(std::uint32_t uid, std::string name);
 
   std::shared_ptr<holonight_packages_domain::HistorySource> source_;
   HistoryModelOptions options_;
   std::vector<holonight_packages_domain::HistoryEntry> entries_;  // file order, oldest first
-  QFutureWatcher<holonight_packages_domain::HistoryReadResult> watcher_;
+  std::vector<QStringList> package_names_;
+  QHash<std::uint32_t, std::optional<std::string>> user_names_;
+  QFutureWatcher<ReadResult> watcher_;
   QString empty_reason_;
   bool load_requested_ = false;
   bool loading_ = false;

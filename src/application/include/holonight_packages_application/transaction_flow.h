@@ -65,13 +65,14 @@ class TransactionFlow {
   TransactionFlow(TransactionFlow&&) = delete;
   TransactionFlow& operator=(TransactionFlow&&) = delete;
 
+  void setProgressObserver(std::function<void()> changed);
   void setObserver(std::function<void()> changed);         // after every state or data change
   void setCloseReadyHandler(std::function<void()> ready);  // after a deferred close may proceed
 
   // User intents. Each does nothing when the current state does not allow it (REQ-F-030).
   bool request(const holonight_packages_domain::PlanRequest& request);  // REQ-F-001, 002
   // system-upgrade: a full system upgrade, which takes no package names (REQ-F-080).
-  bool requestUpgrade();
+  bool requestUpgrade(std::optional<holonight_packages_domain::ServiceError> probe_error = std::nullopt);
   // The PartialUpgradeRequired refusal of an install: back to Idle, then the upgrade; the install is not retried.
   void updateSystem();
   // Cancel("") while the upgrade's databases sync (REQ-F-080); the Cancelled reply ends the preparation.
@@ -79,7 +80,8 @@ class TransactionFlow {
   void confirm();    // Previewed -> Authorizing (REQ-F-005, 026)
   void dismiss();    // Previewed: Cancel call, -> Idle; terminal states: -> Idle  (REQ-F-006)
   void cancelRun();  // Authorizing/Executing with cancelEnabled                 (REQ-F-013)
-  void tryAgain();   // Refused/Failed with Busy, PlanNotFound, PlanExpired      (REQ-F-023)
+  void tryAgain(std::optional<holonight_packages_domain::ServiceError> probe_error =
+                    std::nullopt);               // Refused/Failed with Busy, PlanNotFound, PlanExpired      (REQ-F-023)
   [[nodiscard]] CloseDecision closeRequested();  // window close request        (REQ-F-033..036)
   // A Progress signal from the service (the controller connects the service's handler to this).
   void onProgress(const std::string& plan_id, const holonight_packages_domain::ProgressUpdate& update);
@@ -119,7 +121,7 @@ class TransactionFlow {
     return state_ == FlowState::Authorizing || state_ == FlowState::Executing;
   }
   [[nodiscard]] bool retryable() const noexcept;
-  void startPrepare();
+  void startPrepare(std::optional<holonight_packages_domain::ServiceError> probe_error = std::nullopt);
   void changeState(FlowState next);
   void notify();
   void requestRefresh();
@@ -134,6 +136,7 @@ class TransactionFlow {
   PackageListRefresh& refresh_;
   std::shared_ptr<Alive> alive_ = std::make_shared<Alive>();
   std::function<void()> observer_;
+  std::function<void()> progress_observer_;
   std::function<void()> close_ready_;
 
   FlowState state_ = FlowState::Idle;

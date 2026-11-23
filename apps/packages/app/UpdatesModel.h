@@ -1,6 +1,8 @@
 #pragma once
 
 #include "PackageIconResolver.h"
+#include "holonight_packages_application/snapshot_selection.h"
+#include "holonight_packages_application/update_path_watcher.h"
 #include "holonight_packages_application/update_summary.h"
 #include "holonight_packages_domain/pending_update.h"
 #include "holonight_packages_domain/update_checker.h"
@@ -9,14 +11,12 @@
 #include <QAbstractListModel>
 #include <QByteArray>
 #include <QDateTime>
-#include <QFileSystemWatcher>
 #include <QFutureWatcher>
 #include <QHash>
 #include <QModelIndex>
 #include <QObject>
 #include <QPointer>
 #include <QString>
-#include <QTimer>
 #include <QVariant>
 #include <QtQmlIntegration/qqmlintegration.h>
 
@@ -117,7 +117,7 @@ class UpdatesModel : public QAbstractListModel {
   void applyCheckedSnapshot(const holonight_packages_domain::CheckedSnapshot& snapshot);
 
   void invalidateCheckedSnapshot();
-  [[nodiscard]] bool hasCheckedSnapshot() const { return online_.has_value(); }
+  [[nodiscard]] bool hasCheckedSnapshot() const { return snapshots_.checked().has_value(); }
   [[nodiscard]] const auto& displayedFetchedAt() const { return displayed_fetched_at_; }
 
   void setIconResolver(PackageIconResolver* resolver);
@@ -129,7 +129,6 @@ class UpdatesModel : public QAbstractListModel {
   using LoadResult =
       std::expected<holonight_packages_domain::UpdateSnapshot, holonight_packages_domain::UpdateSourceError>;
 
-  void armWatcher();
   QPointer<PackageIconResolver> icon_resolver_;
 
   void startLoading();
@@ -142,18 +141,15 @@ class UpdatesModel : public QAbstractListModel {
   std::shared_ptr<holonight_packages_domain::UpdateSource> source_;
   Clock now_;
   QFutureWatcher<LoadResult> watcher_;
-  std::optional<holonight_packages_domain::UpdateSnapshot> local_;
-  std::optional<holonight_packages_domain::UpdateSnapshot> online_;
-  std::optional<std::chrono::system_clock::time_point> online_fetched_at_;
+  holonight_packages_application::UpdateSnapshotState snapshots_;
   std::optional<std::chrono::system_clock::time_point> displayed_fetched_at_;
   std::vector<holonight_packages_domain::PendingUpdate> updates_;
   holonight_packages_application::UpdateSummary summary_;
-  QFileSystemWatcher filesystem_watcher_;
-  QTimer debounce_timer_;
-  bool rerun_ = false;
+  holonight_packages_application::UpdatePathWatcher filesystem_watcher_;
   bool checked_data_ = false;
   bool previously_loaded_ = false;
   QString source_text_;
+  bool initial_watch_ready_ = false;
   bool loading_ = false;
   ViewState state_ = ViewState::Loading;
   QString error_message_;

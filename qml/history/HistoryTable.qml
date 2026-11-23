@@ -14,7 +14,7 @@ Controls.ScrollView {
     id: root
 
     required property HistoryFilterModel filterModel
-    property var historyModel: null
+    property HistoryModel historyModel: null
 
     readonly property bool hasEntries: root.historyModel !== null && root.historyModel.loaded
                                        && root.historyModel.entryCount > 0

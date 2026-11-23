@@ -5,6 +5,7 @@ import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import Holonight.Core
 import Holonight.Controls
+import HolonightPackages
 
 ColumnLayout {
     id: root
@@ -18,7 +19,7 @@ ColumnLayout {
     property string actionKind: "remove"
     property bool showMoreOptions: true
     // Optional TransactionController. Null keeps the control disabled with the "Not implemented yet" tooltip.
-    property var transactionController: null
+    property TransactionController transactionController: null
 
     readonly property bool actionEnabled: root.transactionController !== null && root.transactionController.allowAction
     readonly property string actionToolTip: root.transactionController === null ? qsTr("Not implemented yet")

@@ -63,9 +63,12 @@ UpdateCheckModel::UpdateCheckModel(UpdateCheckClient* client, SnapshotFileReader
 }
 
 void UpdateCheckModel::onClientStatusChanged() {
-  // Any word from the service means it is reachable again.
   service_unavailable_ = false;
-  reader_->readNow();
+  const auto fetched_at = client_->status().snapshotFetchedAt;
+  if (fetched_at > 0 && fetched_at != observed_snapshot_fetched_at_) {
+    observed_snapshot_fetched_at_ = fetched_at;
+    reader_->readNow();
+  }
   emit changed();
 }
 

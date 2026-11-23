@@ -1,14 +1,17 @@
 #include "SnapshotFileReader.h"
+#include "holonight_packages_persistence/catalog_lock.h"
 #include "holonight_packages_persistence/json_update_snapshot_store.h"
 
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QTimer>
 
 #include <atomic>
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
+#include <semaphore>
 #include <sstream>
 
 namespace {
@@ -29,7 +32,11 @@ class WriterCallCountingStore final : public holonight_packages_domain::UpdateSn
   explicit WriterCallCountingStore(fs::path file) : inner_(std::move(file)) {}
   [[nodiscard]] std::expected<holonight_packages_domain::SnapshotLoad, holonight_packages_domain::SnapshotStoreError>
   load() const override {
-    return inner_.load();
+    const auto result = inner_.load();
+    if (++reads == 1 && hold_first_read) {
+      static_cast<void>(release_first_read.try_acquire_for(seconds{5}));
+    }
+    return result;
   }
   [[nodiscard]] std::expected<void, holonight_packages_domain::SnapshotStoreError> save(
       const CheckedSnapshot& snapshot) override {
@@ -41,6 +48,9 @@ class WriterCallCountingStore final : public holonight_packages_domain::UpdateSn
     return inner_.discardInvalid();
   }
   [[nodiscard]] int writeCount() const { return writes_.load(); }
+  mutable std::atomic<int> reads{0};
+  mutable std::atomic<bool> hold_first_read{false};
+  mutable std::binary_semaphore release_first_read{0};
 
  private:
   std::atomic<int> writes_{0};
@@ -98,8 +108,8 @@ TEST_F(SnapshotFileReaderTest, ASecondRewriteIsPickedUpAndAnIdenticalOneIsNot) {
   JsonUpdateSnapshotStore writer(file_);
   ASSERT_TRUE(writer.save(sample(1, 1'760'000'000)).has_value());
   reader_->start();
+  ASSERT_TRUE(QTest::qWaitFor([&] { return reader_->latest().has_value(); }, kWaitMs));
   QSignalSpy spy(reader_.get(), &SnapshotFileReader::snapshotRead);
-  EXPECT_EQ(spy.count(), 0) << "start() already emitted before the spy existed";
 
   ASSERT_TRUE(writer.save(sample(2, 1'760'000'500)).has_value());
   ASSERT_TRUE(spy.wait(kWaitMs));
@@ -152,7 +162,7 @@ TEST_F(SnapshotFileReaderTest, DeletionCorruptionAndReadFailureInvalidateOnce) {
   for (int mode = 0; mode < 3; ++mode) {
     ASSERT_TRUE(writer.save(sample(1, 1760000000)));
     reader_->readNow();
-    ASSERT_TRUE(reader_->latest());
+    ASSERT_TRUE(QTest::qWaitFor([&] { return reader_->latest().has_value(); }, kWaitMs));
     QSignalSpy invalidated(reader_.get(), &SnapshotFileReader::snapshotInvalidated);
     if (mode == 0) {
       fs::remove(file_);
@@ -164,6 +174,8 @@ TEST_F(SnapshotFileReaderTest, DeletionCorruptionAndReadFailureInvalidateOnce) {
     }
     reader_->readNow();
     reader_->readNow();
+    ASSERT_TRUE(QTest::qWaitFor([&] { return invalidated.count() == 1; }, kWaitMs));
+    QTest::qWait(100);
     EXPECT_EQ(invalidated.count(), 1);
     EXPECT_FALSE(reader_->latest());
     if (mode == 2) {
@@ -172,4 +184,37 @@ TEST_F(SnapshotFileReaderTest, DeletionCorruptionAndReadFailureInvalidateOnce) {
   }
 }
 
+TEST_F(SnapshotFileReaderTest, SupersededReadIsDiscardedAndRequestsCoalesce) {
+  JsonUpdateSnapshotStore writer(file_);
+  ASSERT_TRUE(writer.save(sample(1, 1'760'000'000)));
+  store_->hold_first_read = true;
+  QSignalSpy spy(reader_.get(), &SnapshotFileReader::snapshotRead);
+  reader_->start();
+  ASSERT_TRUE(QTest::qWaitFor([&] { return store_->reads == 1; }, kWaitMs));
+  ASSERT_TRUE(writer.save(sample(2, 1'760'000'500)));
+  for (int request = 0; request < 10; ++request) {
+    reader_->readNow();
+  }
+  // Process the filesystem notification while the first read is held.
+  QTest::qWait(100);
+  EXPECT_EQ(store_->reads, 1);
+  EXPECT_EQ(spy.count(), 0);
+  store_->release_first_read.release();
+  ASSERT_TRUE(QTest::qWaitFor([&] { return spy.count() == 1; }, kWaitMs));
+  EXPECT_EQ(store_->reads, 2);
+  EXPECT_EQ(reader_->latest()->snapshot.updates.size(), 2U);
+}
+
+TEST_F(SnapshotFileReaderTest, CatalogLockDoesNotBlockLaterEvents) {
+  JsonUpdateSnapshotStore writer(file_);
+  ASSERT_TRUE(writer.save(sample(1, 1'760'000'000)));
+  auto lock = std::make_unique<holonight_packages_persistence::CatalogLock>(file_, true);
+  reader_->start();
+  bool ticked = false;
+  QTimer::singleShot(0, reader_.get(), [&] { ticked = true; });
+  EXPECT_TRUE(QTest::qWaitFor([&] { return ticked; }, kWaitMs));
+  EXPECT_FALSE(reader_->latest());
+  lock.reset();
+  ASSERT_TRUE(QTest::qWaitFor([&] { return reader_->latest().has_value(); }, kWaitMs));
+}
 }  // namespace

@@ -110,12 +110,19 @@ add_executable(test_holonight_packages
   ${PROJECT_SOURCE_DIR}/apps/packages/app/HistoryModel.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/HistoryFilterModel.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/HelperWire.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/TransactionController.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/TransactionRowModel.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/TransactionMessages.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/DataFreshness.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdateStatusClient.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/DBusUpdateSubscription.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/DBusUpdateSubscription.h
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/DBusOwnerTracker.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/DBusOwnerTracker.h
   ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdateCheckClient.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/DBusUpdateCheckClient.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/SnapshotFileReader.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdateStatusPresentation.h
   ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdateCheckModel.cpp
 )
 qt_add_resources(test_holonight_packages workspace_assets
@@ -222,6 +229,7 @@ qt_add_executable(test_runtime_controls
   ${PROJECT_SOURCE_DIR}/apps/packages/app/SnapshotFileReader.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/SnapshotFileReader.h
   ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdateCheckModel.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdateStatusPresentation.h
   ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdateCheckModel.h
   ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdateCheckClient.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdateCheckClient.h)
@@ -421,6 +429,8 @@ add_executable(test_holonight_packages_helper_client
   ${PROJECT_SOURCE_DIR}/apps/packages/app/HelperWire.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/DBusTransactionService.cpp
 )
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/DBusOwnerTracker.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/DBusOwnerTracker.h
 set_target_properties(test_holonight_packages_helper_client PROPERTIES AUTOMOC ON)
 target_include_directories(test_holonight_packages_helper_client PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/support
@@ -432,7 +442,7 @@ target_compile_definitions(test_holonight_packages_helper_client PRIVATE
   HOLONIGHT_HELPER_DBUS_XML="${PROJECT_SOURCE_DIR}/apps/helper/dbus/org.holonight.PackageHelper1.xml"
   HOLONIGHT_PROTOCOL_V1_SIGNATURES="${CMAKE_CURRENT_SOURCE_DIR}/helper_client/protocol_v1_signatures.txt")
 target_link_libraries(test_holonight_packages_helper_client PRIVATE
-  GTest::gtest GTest::gmock Qt6::Core Qt6::DBus Qt6::Test holonight_packages_domain holonight_package_helper_service
+  GTest::gtest GTest::gmock Qt6::Core Qt6::DBus Qt6::Test Qt6::Concurrent holonight_packages_domain holonight_package_helper_service
   holonight_transaction_test_support)
 gtest_discover_tests(test_holonight_packages_helper_client
   TEST_PREFIX "holonight_helper_client."

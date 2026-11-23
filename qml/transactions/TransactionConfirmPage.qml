@@ -3,12 +3,13 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Holonight.Core
+import HolonightPackages
 
 // The preview: what will change, the hooks that will run, when the confirmation expires, and Confirm / Cancel.
 ColumnLayout {
     id: root
 
-    required property var controller
+    required property TransactionController controller
 
     spacing: 12
 

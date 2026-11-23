@@ -56,20 +56,21 @@ class HistoryFilterModelTest : public ::testing::Test {
 TEST_F(HistoryFilterModelTest, FiltersByPackageName) {
   EXPECT_EQ(visibleNames(), (QStringList{"git", "linux,linux-headers"}));
   filter().setSearchText(QStringLiteral("linux"));
-  EXPECT_EQ(visibleNames(), QStringList{"linux,linux-headers"});
+  ASSERT_TRUE(QTest::qWaitFor([this] { return visibleNames() == QStringList{"linux,linux-headers"}; }, kWaitMs));
   filter().setSearchText(QStringLiteral("git"));
-  EXPECT_EQ(visibleNames(), QStringList{"git"});
+  ASSERT_TRUE(QTest::qWaitFor([this] { return visibleNames() == QStringList{"git"}; }, kWaitMs));
   filter().setSearchText(QString());
+  ASSERT_TRUE(QTest::qWaitFor([this] { return filter().rowCount() == 2; }, kWaitMs));
   EXPECT_EQ(visibleNames(), (QStringList{"git", "linux,linux-headers"}));
 }
 
 TEST_F(HistoryFilterModelTest, FilterIsACaseInsensitiveSubstring) {
   filter().setSearchText(QStringLiteral("LINUX"));
-  EXPECT_EQ(visibleNames(), QStringList{"linux,linux-headers"});
+  ASSERT_TRUE(QTest::qWaitFor([this] { return visibleNames() == QStringList{"linux,linux-headers"}; }, kWaitMs));
   filter().setSearchText(QStringLiteral("headers"));
-  EXPECT_EQ(visibleNames(), QStringList{"linux,linux-headers"});
+  ASSERT_TRUE(QTest::qWaitFor([this] { return visibleNames() == QStringList{"linux,linux-headers"}; }, kWaitMs));
   filter().setSearchText(QStringLiteral("nothing"));
-  EXPECT_EQ(filter().rowCount(), 0);
+  ASSERT_TRUE(QTest::qWaitFor([this] { return filter().rowCount() == 0; }, kWaitMs));
   EXPECT_EQ(filter().currentRow(), -1);
   EXPECT_TRUE(filter().currentEntry().isEmpty());
 }
@@ -100,10 +101,10 @@ TEST_F(HistoryFilterModelTest, SelectionSurvivesAnInsertAtRowZero) {
 TEST_F(HistoryFilterModelTest, SelectionSurvivesAFilterThatKeepsIt) {
   filter().setCurrentRow(1);
   filter().setSearchText(QStringLiteral("linux"));
-  EXPECT_EQ(filter().currentRow(), 0);
+  ASSERT_TRUE(QTest::qWaitFor([this] { return filter().currentRow() == 0; }, kWaitMs));
   EXPECT_EQ(filter().currentEntry().value("packageNames").toStringList(), (QStringList{"linux", "linux-headers"}));
   filter().setSearchText(QString());
-  EXPECT_EQ(filter().currentRow(), 1);
+  ASSERT_TRUE(QTest::qWaitFor([this] { return filter().currentRow() == 1; }, kWaitMs));
 }
 
 TEST_F(HistoryFilterModelTest, GetOutsideTheRowsIsEmpty) {

@@ -3,6 +3,7 @@
 #include "InstalledPackagesModel.h"
 #include "SnapshotFileReader.h"
 #include "UpdateCheckModel.h"
+#include "UpdateStatusPresentation.h"
 #include "UpdatesModel.h"
 #include "fake_clock.h"
 #include "fake_explore_source.h"
@@ -106,6 +107,11 @@ bool hasOrigin(QObject* object, const QString& suffix) {
   return false;
 }
 
+class FakeUpdateStatus : public UpdateStatusPresentation {
+ public:
+  using UpdateStatusPresentation::setValues;
+};
+
 class RuntimeControls : public testing::Test {
  protected:
   void SetUp() override {
@@ -137,6 +143,7 @@ class RuntimeControls : public testing::Test {
         {QStringLiteral("updatesModel"), QVariant::fromValue(updates_model_.get())},
         {QStringLiteral("exploreModel"), QVariant::fromValue(explore_model_.get())},
         {QStringLiteral("updateCheckModel"), QVariant::fromValue(update_check_model_.get())},
+        {QStringLiteral("updateStatusClient"), QVariant::fromValue(static_cast<UpdateStatusPresentation*>(&status_))},
     });
     view_.setSource(QUrl(QStringLiteral("qrc:/HolonightPackages/workspace/WorkspaceWindow.qml")));
     ASSERT_EQ(view_.status(), QQuickView::Ready);
@@ -165,6 +172,7 @@ class RuntimeControls : public testing::Test {
     QCoreApplication::processEvents();
   }
 
+  FakeUpdateStatus& updateStatus() { return status_; }
   QQuickView* view() { return &view_; }
   holonight_packages_testing::FakeUpdateCheckClient& checkClient() { return check_client_; }
   auto& checkStore() { return *check_store_; }
@@ -188,6 +196,7 @@ class RuntimeControls : public testing::Test {
       std::make_shared<holonight_packages_testing::FakeSnapshotStore>();
   std::unique_ptr<SnapshotFileReader> check_reader_;
   std::unique_ptr<UpdateCheckModel> update_check_model_;
+  FakeUpdateStatus status_;
   QStringList diagnostics_;
   QQuickView view_;
   InstalledPackagesFilterModel* filter_ = nullptr;
@@ -431,6 +440,15 @@ TEST_F(RuntimeControls, UpdateCheckFailureShowsInTheControlRowWithoutAnyPopupOrD
   }
 }
 
+TEST_F(RuntimeControls, UpdatesBadgeFollowsReadyCount) {
+  auto* badge = object("sidebarUpdatesNav");
+  EXPECT_TRUE(badge->property("badgeText").toString().isEmpty());
+  updateStatus().setValues(true, 5, QStringLiteral("ready"));
+  EXPECT_EQ(badge->property("badgeText").toString(), QStringLiteral("5"));
+  updateStatus().setValues(true, 5, QStringLiteral("error"));
+  EXPECT_TRUE(badge->property("badgeText").toString().isEmpty());
+}
+
 TEST_F(RuntimeControls, UpdateCheckNotCheckedYetShowsNoAgeLine) {
   view()->rootObject()->setProperty("currentPage", QStringLiteral("updates"));
   QCoreApplication::processEvents();
@@ -452,8 +470,11 @@ TEST_F(RuntimeControls, UpdateCheckSnapshotAgeIsShownInTheStatusLine) {
       .fetchedAt = checkClock().now() - std::chrono::hours{3},
   });
   checkClient().setStatus(status);
-  QCoreApplication::processEvents();
-  EXPECT_TRUE(object("updatesCheckStatusLine")->property("rawText").toString().contains(QStringLiteral("3 h")));
+  EXPECT_TRUE(QTest::qWaitFor(
+      [this] {
+        return object("updatesCheckStatusLine")->property("rawText").toString().contains(QStringLiteral("3 h"));
+      },
+      2000));
 }
 
 TEST_F(RuntimeControls, UpdateCheckWhileCheckingDisablesTheButtonAndShowsTheBusyIndicator) {
@@ -513,9 +534,13 @@ TEST_F(RuntimeControls, UpdateCheckLocalDataHasAnExplicitStatus) {
   UpdateCheckClientStatus status{};
   status.serviceReachable = true;
   checkClient().setStatus(status);
-  QCoreApplication::processEvents();
-  EXPECT_EQ(object("updatesCheckStatusLine")->property("rawText").toString(),
-            QStringLiteral("Showing local package data"));
+  checkClient().completeCheck();
+  EXPECT_TRUE(QTest::qWaitFor(
+      [this] {
+        return object("updatesCheckStatusLine")->property("rawText").toString() ==
+               QStringLiteral("Showing local package data");
+      },
+      2000));
 }
 
 TEST_F(RuntimeControls, PageAndSidebarCheckHistoryRemainIndependentOfLocalRowsAndBusyState) {

@@ -66,6 +66,8 @@ class TransactionService {
   TransactionService& operator=(TransactionService&&) = delete;
   virtual ~TransactionService();
 
+  // Invalidates a previously observed helper capability when the adapter detects an owner change.
+  virtual void setCapabilityInvalidatedHandler(const std::function<void()>& /*handler*/) {}
   virtual void setProgressHandler(ProgressHandler handler) = 0;
   // An install or remove calls PreparePlan; a request with PlanAction::Upgrade calls PrepareUpgrade with an empty
   // options map and reports its Syncing progress with an empty plan ID (system-upgrade REQ-F-080).
@@ -74,6 +76,7 @@ class TransactionService {
   virtual void execute(const std::string& plan_id, ExecuteDone done) = 0;
   // An empty plan ID cancels this caller's upgrade preparation (system-upgrade REQ-F-032).
   virtual void cancel(const std::string& plan_id, CancelDone done) = 0;
+  // An AutoStart probe can authorize one upgrade preparation for the replying owner.
   virtual void queryProtocolVersion(ProbeMode mode, VersionDone done) = 0;
 };
 

@@ -13,7 +13,7 @@ ColumnLayout {
     id: root
 
     required property HistoryFilterModel filterModel
-    property var historyModel: null
+    property HistoryModel historyModel: null
 
     signal refreshRequested()
 

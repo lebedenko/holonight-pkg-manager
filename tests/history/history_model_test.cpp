@@ -11,12 +11,14 @@
 #include <QVariantList>
 #include <QVariantMap>
 
+#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <memory>
 #include <optional>
+#include <semaphore>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -149,7 +151,9 @@ TEST_F(HistoryModelTest, RowRoles) {
   model().ensureLoaded();
   ASSERT_TRUE(waitIdle());
 
-  EXPECT_EQ(role(0, HistoryModel::OriginLabelRole).toString(), QStringLiteral("Packages · alice"));
+  ASSERT_TRUE(QTest::qWaitFor(
+      [&] { return role(0, HistoryModel::OriginLabelRole).toString() == QStringLiteral("Packages · alice"); },
+      kWaitMs));
   EXPECT_EQ(role(0, HistoryModel::OriginKindRole).toString(), QStringLiteral("packages"));
   EXPECT_EQ(role(0, HistoryModel::CommandLineRole).toString(), QString());
   EXPECT_EQ(role(0, HistoryModel::StatusKindRole).toString(), QStringLiteral("inProgress"));
@@ -279,6 +283,54 @@ TEST(HistoryModelFormat, FormatDayUsesTheLocaleLongDate) {
   EXPECT_FALSE(HistoryModel::formatDay(QStringLiteral("2026-11-23")).isEmpty());
   EXPECT_NE(HistoryModel::formatDay(QStringLiteral("2026-11-23")), QStringLiteral("2026-11-23"));
   EXPECT_EQ(HistoryModel::formatDay(QStringLiteral("not a day")), QStringLiteral("not a day"));
+}
+
+TEST(HistoryUserResolution, ForeignUsersUseTheFallbackWhileResolvingAndCacheAcrossReloads) {
+  struct Resolver {
+    std::atomic<int> calls{0};
+    std::binary_semaphore resume{0};
+  };
+  const auto resolver = std::make_shared<Resolver>();
+  auto source = std::make_shared<CountingHistorySource>();
+  auto foreign = historyEntry(sys_days{2026y / 11 / 23}, 1h);
+  foreign.origin = {.kind = HistoryOriginKind::Packages, .uid = 1001, .command = {}};
+  auto unresolved = foreign;
+  unresolved.origin.uid = 1002;
+  const auto own = historyEntry(sys_days{2026y / 11 / 23}, 2h);
+  const auto fixture = resetWith({foreign, own, unresolved, foreign});
+  source->enqueue(fixture);
+  const auto resolve = [resolver](std::uint32_t uid) -> std::optional<std::string> {
+    ++resolver->calls;
+    if (uid == 1001) {
+      static_cast<void>(resolver->resume.try_acquire_for(5s));
+      return "alice";
+    }
+    return std::nullopt;
+  };
+  HistoryModel model(source, {.current_uid = 1000, .resolve_user = resolve});
+  QSignalSpy changed(&model, &HistoryModel::dataChanged);
+  model.ensureLoaded();
+  ASSERT_TRUE(QTest::qWaitFor([&] { return model.loaded() && resolver->calls == 2; }, kWaitMs));
+  EXPECT_EQ(model.index(0).data(HistoryModel::OriginLabelRole).toString(), QStringLiteral("Packages · uid 1001"));
+  EXPECT_EQ(model.index(1).data(HistoryModel::OriginLabelRole).toString(), QStringLiteral("Packages · uid 1002"));
+  EXPECT_EQ(changed.count(), 0);
+  resolver->resume.release();
+
+  ASSERT_TRUE(QTest::qWaitFor([&] { return changed.count() == 2; }, kWaitMs));
+  EXPECT_EQ(changed.at(0).at(0).value<QModelIndex>().row(), 0);
+  EXPECT_EQ(changed.at(1).at(0).value<QModelIndex>().row(), 3);
+  for (const auto& signal : changed) {
+    EXPECT_EQ(signal.at(2).value<QList<int>>(), QList<int>{HistoryModel::OriginLabelRole});
+  }
+  EXPECT_EQ(model.index(0).data(HistoryModel::OriginLabelRole).toString(), QStringLiteral("Packages · alice"));
+  EXPECT_EQ(model.index(1).data(HistoryModel::OriginLabelRole).toString(), QStringLiteral("Packages · uid 1002"));
+  EXPECT_EQ(resolver->calls, 2);
+
+  source->enqueue(fixture);
+  model.refresh();
+  ASSERT_TRUE(QTest::qWaitFor([&] { return !model.loading(); }, kWaitMs));
+  EXPECT_EQ(model.index(0).data(HistoryModel::OriginLabelRole).toString(), QStringLiteral("Packages · alice"));
+  EXPECT_EQ(resolver->calls, 2);
 }
 
 }  // namespace

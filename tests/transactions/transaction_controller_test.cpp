@@ -321,10 +321,12 @@ TEST_F(TransactionControllerResult, TryAgainAfterBusyRecordsOnePrepare) {
 
 TEST_F(TransactionControllerResult, NotAuthorizedReturnsToThePreviewWithTheNote) {
   toPreviewed(installPlan());
+  QSignalSpy preview_reset(controller.previewRows(), &TransactionRowModel::modelReset);
   controller.confirm();
   service.completeExecute(FakeTransactionService::failed(TransactionErrorCode::NotAuthorized));
   EXPECT_EQ(controller.state(), State::Previewed);
   EXPECT_TRUE(controller.noticeText().contains(QStringLiteral("Authorization was not granted")));
+  EXPECT_EQ(preview_reset.count(), 0);
   EXPECT_TRUE(controller.confirmEnabled());
 }
 

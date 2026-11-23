@@ -12,16 +12,20 @@ Item {
 
     required property UpdatesModel updatesModel
     // Optional: the online-check control. Null hides it and leaves the page exactly as it was.
-    property var updateCheckModel: null
+    property UpdateCheckModel updateCheckModel: null
     // Optional: the transaction view-model. Null hides "Update system…" (system-upgrade REQ-F-078).
-    property var transactionController: null
+    property TransactionController transactionController: null
 
-    // The helper's protocol version, asked without starting the helper (system-upgrade DESIGN D-11).
-    Component.onCompleted: {
-        if (root.transactionController !== null) {
+    property bool active: visible
+
+    function observeHelperIfActive(): void {
+        if (root.active && root.transactionController)
             root.transactionController.probeHelper()
-        }
     }
+
+    Component.onCompleted: root.observeHelperIfActive()
+    onActiveChanged: root.observeHelperIfActive()
+    onTransactionControllerChanged: root.observeHelperIfActive()
 
     readonly property bool hasResult: root.updatesModel.state === UpdatesModel.Updates
                                       || root.updatesModel.state === UpdatesModel.UpToDate

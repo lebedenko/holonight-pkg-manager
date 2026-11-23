@@ -5,6 +5,7 @@
 #include "fake_transaction_service.h"
 
 #include <QElapsedTimer>
+#include <QSignalSpy>
 
 #include <gtest/gtest.h>
 
@@ -104,15 +105,58 @@ TEST_F(TransactionControllerUpgrade, VersionTwoEnablesTheButtonWhateverTheListAn
   EXPECT_FALSE(controller.upgradeEnabled());
 }
 
-TEST_F(TransactionControllerUpgrade, AKnownVersionTwoStartsTheUpgradeWithoutAnotherProbe) {
+TEST_F(TransactionControllerUpgrade, AKnownVersionTwoStillRequiresAFreshProbe) {
   service.setVersion(2);
   controller.probeHelper();
   service.completeProbes();
   ASSERT_TRUE(controller.requestUpgrade());
-  EXPECT_EQ(service.probes().size(), 1U);
+  EXPECT_EQ(service.probes().size(), 2U);
+  EXPECT_EQ(service.upgradePrepareCalls(), 0U);
+  service.completeProbes();
   EXPECT_EQ(service.upgradePrepareCalls(), 1U);
   EXPECT_EQ(controller.actionKind(), QStringLiteral("upgrade"));
   EXPECT_EQ(controller.title(), messages::upgradeText(messages::UpgradeKey::Title));
+}
+
+TEST_F(TransactionControllerUpgrade, ProgressDoesNotRebuildALargePreview) {
+  toPreview(500);
+  const int row_count = controller.previewRows()->rowCount();
+  ASSERT_GE(row_count, 500);
+  QSignalSpy preview(controller.previewRows(), &TransactionRowModel::modelReset);
+  QSignalSpy structures(&controller, &TransactionController::changed);
+  QSignalSpy progress(&controller, &TransactionController::progressChanged);
+  controller.confirm();
+  service.emitProgress("plan-u", {.phase = ProgressPhase::Downloading, .current = 1, .total = 500, .item = "app"});
+  EXPECT_EQ(controller.state(), State::Executing);
+  EXPECT_TRUE(controller.cancelEnabled());
+  structures.clear();
+  progress.clear();
+  for (std::uint32_t index = 2; index < 500; ++index) {
+    service.emitProgress("plan-u",
+                         {.phase = ProgressPhase::Downloading, .current = index, .total = 500, .item = "app"});
+  }
+  service.emitProgress("plan-u", {.phase = ProgressPhase::Installing, .current = 1, .total = 1, .item = "app"});
+  EXPECT_FALSE(controller.cancelEnabled());
+  EXPECT_EQ(progress.count(), 499);
+  EXPECT_EQ(structures.count(), 0);
+  EXPECT_EQ(preview.count(), 0);
+  EXPECT_EQ(controller.previewRows()->rowCount(), row_count);
+}
+
+TEST_F(TransactionControllerUpgrade, RetryProbesAgainAndReportsAnUnavailableHelperWithoutPreparing) {
+  click();
+  service.completePrepare(FakeTransactionService::refusal(TransactionErrorCode::Busy));
+  ASSERT_TRUE(controller.actions().contains(QStringLiteral("tryAgain")));
+  controller.tryAgain();
+  EXPECT_EQ(service.probeCalls(), 2U);
+  EXPECT_EQ(service.upgradePrepareCalls(), 1U);
+  service.setVersion(std::unexpected(holonight_packages_domain::ServiceError{
+      .kind = holonight_packages_domain::ServiceError::Kind::HelperUnavailable,
+      .failure = {},
+  }));
+  service.completeProbes();
+  EXPECT_EQ(controller.state(), State::HelperUnavailable);
+  EXPECT_EQ(service.upgradePrepareCalls(), 1U);
 }
 
 TEST_F(TransactionControllerUpgrade, TheSyncingTextCountsTheRepositories) {
@@ -234,7 +278,7 @@ TEST_F(TransactionControllerUpgrade, TheRefusalActionProbesAndPreservesTheRefusa
   EXPECT_FALSE(controller.upgradeDisabledReason().isEmpty());
   controller.updateSystem();
   EXPECT_EQ(service.upgradePrepareCalls(), 0U);
-  EXPECT_EQ(service.probes().size(), 1U);
+  EXPECT_EQ(service.probes().size(), 2U);
 }
 
 // ---- T-068: the message table ----

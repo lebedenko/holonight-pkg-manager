@@ -3,11 +3,8 @@
 #include "DataFreshness.h"
 #include "holonight_packages_application/data_freshness.h"
 #include "holonight_packages_application/package_size_formatter.h"
-#include "holonight_packages_application/snapshot_selection.h"
 #include "holonight_packages_domain/require_non_null.h"
 
-#include <QDirIterator>
-#include <QFileInfo>
 #include <QtConcurrentRun>
 
 #include <algorithm>
@@ -31,22 +28,30 @@ QString sizeLabel(std::uint64_t bytes) {
 UpdatesModel::UpdatesModel(std::shared_ptr<holonight_packages_domain::UpdateSource> source, QObject* parent, Clock now)
     : QAbstractListModel(parent),
       source_(holonight_packages_domain::requireNonNull(std::move(source), "UpdatesModel requires an update source")),
-      now_(std::move(now)) {
-  connect(&watcher_, &QFutureWatcher<LoadResult>::finished, this, &UpdatesModel::onLoadFinished);
-  debounce_timer_.setSingleShot(true);
-  debounce_timer_.setInterval(2000);
-  connect(&debounce_timer_, &QTimer::timeout, this, &UpdatesModel::reload);
-  const auto changed = [this] {
-    armWatcher();
+      now_(std::move(now)),
+      filesystem_watcher_(
+          [source = source_] {
+            QStringList desired;
+            for (const auto& path : source->watchPaths()) {
+              if (!path.empty()) {
+                desired.append(QString::fromStdString(path.string()));
+              }
+            }
+            return desired;
+          },
+          std::chrono::milliseconds{2000}) {
+  connect(&filesystem_watcher_, &holonight_packages_application::UpdatePathWatcher::invalidated, this,
+          [this] { snapshots_.invalidateInFlightEvaluation(loading_); });
+  connect(&filesystem_watcher_, &holonight_packages_application::UpdatePathWatcher::reconciled, this, [this] {
+    initial_watch_ready_ = true;
     if (loading_) {
-      rerun_ = true;
+      snapshots_.invalidateInFlightEvaluation(true);
+    } else {
+      reload();
     }
-    debounce_timer_.start();
-  };
-  connect(&filesystem_watcher_, &QFileSystemWatcher::fileChanged, this, changed);
-  connect(&filesystem_watcher_, &QFileSystemWatcher::directoryChanged, this, changed);
-  armWatcher();
-  startLoading();
+  });
+  connect(&watcher_, &QFutureWatcher<LoadResult>::finished, this, &UpdatesModel::onLoadFinished);
+  filesystem_watcher_.start();
 }
 
 UpdatesModel::~UpdatesModel() = default;
@@ -120,7 +125,7 @@ QString UpdatesModel::emptyStateText() const {
 
 QString UpdatesModel::errorMessage() const { return error_message_; }
 
-bool UpdatesModel::loading() const { return loading_; }
+bool UpdatesModel::loading() const { return loading_ || !initial_watch_ready_; }
 
 int UpdatesModel::updateCount() const { return summary_.updateCount; }
 
@@ -143,7 +148,7 @@ QString UpdatesModel::staleHintText() { return data_freshness::staleHintText(); 
 QString UpdatesModel::officialOnlyNote() { return tr("AUR and foreign packages are not covered."); }
 
 void UpdatesModel::reload() {
-  if (loading_) {
+  if (loading()) {
     return;
   }
   startLoading();
@@ -151,46 +156,6 @@ void UpdatesModel::reload() {
 
 bool UpdatesModel::hasResult() const {
   return state_ == ViewState::Updates || state_ == ViewState::UpToDate || state_ == ViewState::NoDatabases;
-}
-
-// Same mechanism as InstalledPackagesModel: QtConcurrent::run keeps libalpm work off the GUI thread and
-// QFutureWatcher delivers the result back on it, so all model state is only ever touched from the GUI thread.
-void UpdatesModel::armWatcher() {
-  QStringList desired;
-  for (const auto& path : source_->watchPaths()) {
-    if (path.empty()) {
-      continue;
-    }
-    const QFileInfo info(QString::fromStdString(path.string()));
-    if (info.exists()) {
-      desired.append(info.absoluteFilePath());
-    }
-    auto parent = info.absoluteDir();
-    while (!parent.exists() && parent.cdUp()) {
-    }
-    if (parent.exists()) {
-      desired.append(parent.absolutePath());
-    }
-    if (info.isDir()) {
-      QDirIterator entries(info.absoluteFilePath(), QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot,
-                           QDirIterator::Subdirectories);
-      while (entries.hasNext()) {
-        desired.append(entries.next());
-      }
-    }
-  }
-  desired.removeDuplicates();
-  const auto existing = filesystem_watcher_.files() + filesystem_watcher_.directories();
-  for (const auto& path : existing) {
-    if (!desired.contains(path)) {
-      filesystem_watcher_.removePath(path);
-    }
-  }
-  for (const auto& path : desired) {
-    if (!existing.contains(path)) {
-      filesystem_watcher_.addPath(path);
-    }
-  }
 }
 
 void UpdatesModel::startLoading() {
@@ -213,64 +178,55 @@ void UpdatesModel::startLoading() {
 
 void UpdatesModel::onLoadFinished() {
   LoadResult result = watcher_.future().takeResult();
-  if (std::exchange(rerun_, false)) {
-    startLoading();
+  if (snapshots_.takeInvalidation()) {
+    loading_ = false;
+    if (!filesystem_watcher_.pending()) {
+      startLoading();
+    }
     return;
   }
   if (result.has_value()) {
-    local_ = *result;
+    snapshots_.recordEvaluation(std::move(*result));
     applyFreshest();
   } else {
     applyFailure(result.error());
   }
   loading_ = false;
   emit stateChanged();
-  if (std::exchange(rerun_, false)) {
+  if (snapshots_.takeInvalidation()) {
     startLoading();
   }
 }
 
 void UpdatesModel::applyFreshest() {
-  const bool online = holonight_packages_application::selectFresherSnapshot(local_, online_) ==
-                      holonight_packages_application::SnapshotChoice::Online;
-  const bool checked =
-      !online && local_ && std::ranges::any_of(local_->repositories, [](const auto& repo) { return repo.checked; });
-  if (online || checked || (local_ && local_->previously_loaded && online_fetched_at_)) {
-    displayed_fetched_at_ = online_fetched_at_;
-  } else if (!local_ || !local_->previously_loaded) {
+  const auto& selected = snapshots_.selected();
+  const auto& checked_snapshot = snapshots_.checked();
+  const bool checked = std::ranges::any_of(selected.repositories, [](const auto& repo) { return repo.checked; });
+  if (checked_snapshot && (checked || selected.previously_loaded)) {
+    displayed_fetched_at_ = checked_snapshot->fetchedAt;
+  } else if (checked || !selected.previously_loaded) {
     displayed_fetched_at_.reset();
   }
-  applySnapshot(online ? *online_ : *local_);
+  applySnapshot(selected);
 }
 
 void UpdatesModel::applyCheckedSnapshot(const holonight_packages_domain::CheckedSnapshot& snapshot) {
-  online_ = snapshot.snapshot;
-  online_->evaluated = false;
-  online_->previously_loaded = true;
-  online_fetched_at_ = snapshot.fetchedAt;
+  snapshots_.adoptChecked(snapshot);
   if (!hasResult()) {
-    auto historical = snapshot.snapshot;
-    historical.evaluated = false;
-    historical.previously_loaded = true;
     displayed_fetched_at_ = snapshot.fetchedAt;
-    applySnapshot(std::move(historical));
+    applySnapshot(snapshots_.checked()->snapshot);
   }
-  if (loading_) {
-    rerun_ = true;
-  }
+  snapshots_.invalidateInFlightEvaluation(loading_);
   reload();
   emit stateChanged();
 }
 
 void UpdatesModel::invalidateCheckedSnapshot() {
-  online_.reset();
-  online_fetched_at_.reset();
+  snapshots_.clearChecked();
   previously_loaded_ = true;
   source_text_ = tr("Previously loaded data");
   checked_data_ = false;
-  if (loading_) {
-    rerun_ = true;
-  }
+  snapshots_.invalidateInFlightEvaluation(loading_);
   reload();
   emit stateChanged();
 }

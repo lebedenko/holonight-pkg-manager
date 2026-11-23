@@ -12,6 +12,19 @@
 
 HistoryFilterModel::HistoryFilterModel(QObject* parent) : QSortFilterProxyModel(parent) {
   setDynamicSortFilter(true);
+  setFilterRole(HistoryModel::PackageNamesRole);
+  search_debounce_.setSingleShot(true);
+  search_debounce_.setTimerType(Qt::PreciseTimer);
+  search_debounce_.setInterval(150);
+  connect(&search_debounce_, &QTimer::timeout, this, [this] {
+    {
+      const QScopedValueRollback<bool> guard(filter_change_in_progress_, true);
+      applied_search_ = search_text_;
+      // A search can change thousands of disjoint rows. Publish one layout change for the new mapping.
+      invalidate();
+    }
+    reconcileCurrentRow();
+  });
   connect(this, &QAbstractItemModel::modelReset, this, [this] {
     active_sequence_.reset();
     reconcileCurrentRow();
@@ -19,7 +32,11 @@ HistoryFilterModel::HistoryFilterModel(QObject* parent) : QSortFilterProxyModel(
   connect(this, &QAbstractItemModel::layoutChanged, this, &HistoryFilterModel::reconcileCurrentRow);
   connect(this, &QAbstractItemModel::rowsInserted, this, &HistoryFilterModel::reconcileCurrentRow);
   connect(this, &QAbstractItemModel::rowsRemoved, this, &HistoryFilterModel::reconcileCurrentRow);
-  connect(this, &QAbstractItemModel::dataChanged, this, &HistoryFilterModel::reconcileCurrentRow);
+  connect(this, &QAbstractItemModel::dataChanged, this, [this](const QModelIndex& first, const QModelIndex& last) {
+    if (current_row_ >= first.row() && current_row_ <= last.row()) {
+      setCurrentRow(current_row_);
+    }
+  });
 }
 
 void HistoryFilterModel::setSourceModel(QAbstractItemModel* source_model) {
@@ -36,13 +53,12 @@ void HistoryFilterModel::setSearchText(const QString& text) {
   if (search_text_ == text) {
     return;
   }
-  {
-    const QScopedValueRollback<bool> guard(filter_change_in_progress_, true);
-    beginFilterChange();
-    search_text_ = text;
-    endFilterChange(Direction::Rows);
+  search_text_ = text;
+  if (search_text_ == applied_search_) {
+    search_debounce_.stop();
+  } else {
+    search_debounce_.start();
   }
-  reconcileCurrentRow();
   emit searchTextChanged();
 }
 
@@ -85,7 +101,7 @@ QVariantMap HistoryFilterModel::get(int row) const {
 }
 
 bool HistoryFilterModel::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const {
-  if (search_text_.isEmpty()) {
+  if (applied_search_.isEmpty()) {
     return true;
   }
   const QAbstractItemModel* source = sourceModel();
@@ -95,8 +111,8 @@ bool HistoryFilterModel::filterAcceptsRow(int source_row, const QModelIndex& sou
   const QStringList names =
       source->index(source_row, 0, source_parent).data(HistoryModel::PackageNamesRole).toStringList();
   // A case-insensitive substring of any package name (REQ-F-029, OQ-H4).
-  return std::ranges::any_of(names,
-                             [this](const QString& name) { return name.contains(search_text_, Qt::CaseInsensitive); });
+  return std::ranges::any_of(
+      names, [this](const QString& name) { return name.contains(applied_search_, Qt::CaseInsensitive); });
 }
 
 void HistoryFilterModel::reconcileCurrentRow() {
@@ -108,10 +124,12 @@ void HistoryFilterModel::reconcileCurrentRow() {
     count_ = rowCount();
     emit countChanged();
   }
-  if (active_sequence_) {
-    for (int row = 0; row < rowCount(); ++row) {
-      if (index(row, 0).data(HistoryModel::SequenceRole).value<quint32>() == *active_sequence_) {
-        setCurrentRow(row);
+  if (active_sequence_ && sourceModel() != nullptr) {
+    const auto source_row = sourceModel()->rowCount() - 1 - static_cast<qint64>(*active_sequence_);
+    if (source_row >= 0) {
+      const auto selected = mapFromSource(sourceModel()->index(static_cast<int>(source_row), 0));
+      if (selected.isValid()) {
+        setCurrentRow(selected.row());
         return;
       }
     }

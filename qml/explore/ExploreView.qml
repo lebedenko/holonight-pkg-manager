@@ -15,7 +15,7 @@ Item {
 
     required property ExploreModel exploreModel
     // Optional TransactionController, passed down to the detail panel's Install control.
-    property var transactionController: null
+    property TransactionController transactionController: null
 
     readonly property bool hasIndex: root.exploreModel.state === ExploreModel.Hint
                                      || root.exploreModel.state === ExploreModel.NoMatches

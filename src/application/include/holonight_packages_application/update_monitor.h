@@ -1,14 +1,14 @@
 #pragma once
 
+#include "holonight_packages_application/snapshot_selection.h"
+#include "holonight_packages_application/update_path_watcher.h"
 #include "holonight_packages_application/update_status.h"
 #include "holonight_packages_domain/update_checker.h"
 #include "holonight_packages_domain/update_source.h"
 
-#include <QFileSystemWatcher>
 #include <QFutureWatcher>
 #include <QObject>
 #include <QStringList>
-#include <QTimer>
 
 #include <chrono>
 #include <expected>
@@ -57,24 +57,18 @@ class UpdateMonitor : public QObject {
   using LoadResult =
       std::expected<holonight_packages_domain::UpdateSnapshot, holonight_packages_domain::UpdateSourceError>;
 
-  void armWatcher();
-  void onFilesystemChanged();
   void startEvaluation();
   void onEvaluationFinished();
   void publish(const UpdateStatus& updated);
-  void applyFreshest();
 
   std::shared_ptr<holonight_packages_domain::UpdateSource> source_;
   UpdateMonitorOptions options_;
-  QFileSystemWatcher fs_watcher_;
-  QTimer debounce_timer_;
+  holonight_packages_application::UpdatePathWatcher fs_watcher_;
   QFutureWatcher<LoadResult> evaluation_watcher_;
   UpdateStatus status_;
-  std::optional<holonight_packages_domain::UpdateSnapshot> local_;
-  std::optional<holonight_packages_domain::UpdateSnapshot> online_;
+  UpdateSnapshotState snapshots_;
   bool running_ = false;
   bool rerun_ = false;
-  bool dirty_ = false;
 };
 
 }  // namespace holonight_packages_application

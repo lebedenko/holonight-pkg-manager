@@ -46,6 +46,14 @@ class DBusTransactionServiceCalls : public HelperBusFixture {
     [[nodiscard]] bool done() const { return reply.has_value(); }
   };
 
+  static void probeUpgrade(DBusTransactionService& service) {
+    Captured<VersionReply> version;
+    service.queryProtocolVersion(ProbeMode::AutoStart, [&](VersionReply reply) { version.reply = reply; });
+    ASSERT_TRUE(waitFor([&] { return version.done(); }));
+    ASSERT_TRUE(version.reply->has_value());
+    EXPECT_GE(**version.reply, 2U);
+  }
+
   static bool waitFor(const std::function<bool()>& condition, int timeout_ms = 5000) {
     return QTest::qWaitFor(condition, timeout_ms);
   }
@@ -274,6 +282,7 @@ TEST_F(DBusTransactionServiceProgress, SyncingWithAnEmptyPlanIdArrivesWhileAnUpg
   auto service = makeService();
   service->setProgressHandler(
       [&seen](const std::string& plan_id, const ProgressUpdate& update) { seen.events.emplace_back(plan_id, update); });
+  ASSERT_NO_FATAL_FAILURE(probeUpgrade(*service));
   service->preparePlan(PlanRequest{.action = PlanAction::Upgrade, .names = {}}, [](PrepareReply) {});
   ASSERT_TRUE(waitFor([&] { return fake.calls(QStringLiteral("PrepareUpgrade")) == 1; }));
   fake.emitProgress(QString(), QStringLiteral("Syncing"), 1, 2, QStringLiteral("core"));
@@ -376,6 +385,7 @@ TEST_F(DBusTransactionServiceCalls, PrepareUpgradeSendsAnEmptyOptionsMapWithATen
                                                 });
   const auto service = makeService();
   Captured<PrepareReply> prepared;
+  ASSERT_NO_FATAL_FAILURE(probeUpgrade(*service));
   service->preparePlan(PlanRequest{.action = PlanAction::Upgrade, .names = {}},
                        [&](PrepareReply reply) { prepared.reply = std::move(reply); });
   ASSERT_TRUE(waitFor([&] { return prepared.done(); }));
@@ -418,12 +428,52 @@ TEST_F(DBusTransactionServiceCalls, AnUpgradeRefusalIsADomainRefusal) {
                                                 });
   const auto service = makeService();
   Captured<PrepareReply> prepared;
+  ASSERT_NO_FATAL_FAILURE(probeUpgrade(*service));
   service->preparePlan(PlanRequest{.action = PlanAction::Upgrade, .names = {}},
                        [&](PrepareReply reply) { prepared.reply = std::move(reply); });
   ASSERT_TRUE(waitFor([&] { return prepared.done(); }));
   ASSERT_FALSE(prepared.reply->has_value());
   EXPECT_EQ(prepared.reply->error().kind, ServiceError::Kind::Refused);
   EXPECT_EQ(prepared.reply->error().failure.code, TransactionErrorCode::NothingToDo);
+}
+
+TEST_F(DBusTransactionServiceCalls, OwnerReplacementInvalidatesCapabilityAndCannotReceiveAnEarlierPrepare) {
+  const QString name = FakeHelperObject::serviceName();
+  auto& first = startFakeHelper();
+  first.setProtocolVersion(1);
+  auto service = makeService();
+  int owner_changes = 0;
+  service->setCapabilityInvalidatedHandler([&] { ++owner_changes; });
+  const auto passiveVersion = [&] {
+    Captured<VersionReply> version;
+    service->queryProtocolVersion(ProbeMode::NoAutoStart, [&](VersionReply reply) { version.reply = reply; });
+    if (!waitFor([&] { return version.done(); }) || !*version.reply) {
+      return 0U;
+    }
+    return **version.reply;
+  };
+  ASSERT_EQ(passiveVersion(), 1U);
+  const int initial_owner_changes = owner_changes;
+
+  ASSERT_TRUE(helper_connection_->unregisterService(name));
+  auto next_connection = connect(QStringLiteral("version-two"));
+  FakeHelperObject next(next_connection);
+  ASSERT_TRUE(next.start());
+  ASSERT_TRUE(waitFor([&] { return owner_changes > initial_owner_changes; }));
+  ASSERT_EQ(passiveVersion(), 2U);
+  ASSERT_NO_FATAL_FAILURE(probeUpgrade(*service));
+
+  ASSERT_TRUE(next_connection.unregisterService(name));
+  ASSERT_TRUE(helper_connection_->registerService(name));
+  Captured<PrepareReply> prepared;
+  service->preparePlan(PlanRequest{.action = PlanAction::Upgrade, .names = {}},
+                       [&](PrepareReply reply) { prepared.reply = std::move(reply); });
+  ASSERT_TRUE(waitFor([&] { return prepared.done(); }));
+  ASSERT_FALSE(prepared.reply->has_value());
+  EXPECT_EQ(prepared.reply->error().kind, ServiceError::Kind::HelperUnavailable);
+  EXPECT_EQ(first.calls(QStringLiteral("PrepareUpgrade")), 0);
+  EXPECT_EQ(next.calls(QStringLiteral("PrepareUpgrade")), 0);
+  EXPECT_EQ(passiveVersion(), 1U);
 }
 
 TEST_F(DBusTransactionServiceCalls, TheProbeReadsTheProtocolVersion) {

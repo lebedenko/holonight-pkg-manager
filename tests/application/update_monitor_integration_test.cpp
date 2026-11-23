@@ -1,3 +1,4 @@
+#include "UpdatesModel.h"
 #include "holonight_packages_application/update_monitor.h"
 #include "holonight_packages_backends/alpm_update_source.h"
 
@@ -66,6 +67,7 @@ TEST(UpdateMonitorIntegration, FixtureStatusMatchesAndSyncDatabasesAreNeverModif
                                         },
                                     .debounce = std::chrono::milliseconds{20},
                                 });
+  UpdatesModel page(std::make_shared<holonight_packages_backends::AlpmUpdateSource>(source_options));
   QSignalSpy spy(&monitor, &UpdateMonitor::statusChanged);
 
   monitor.start();
@@ -80,6 +82,10 @@ TEST(UpdateMonitorIntegration, FixtureStatusMatchesAndSyncDatabasesAreNeverModif
   // alpha, dup and gamma are pending; ignoreme (IgnorePkg) and banana (IgnoreGroup) are ignored.
   EXPECT_EQ(status.updateCount, 3);
   EXPECT_EQ(status.ignoredCount, 2);
+  ASSERT_TRUE(QTest::qWaitFor([&] { return !page.loading(); }, 5000));
+  EXPECT_EQ(page.updateCount(), status.updateCount);
+  EXPECT_EQ(page.ignoredCount(), status.ignoredCount);
+  EXPECT_EQ(page.rowCount(), status.updateCount + status.ignoredCount);
   EXPECT_GT(status.totalDownloadBytes, 0U);
   EXPECT_GT(status.dataAsOfEpochSeconds, 0);
   EXPECT_EQ(syncFileStates(root / "sync"), before);

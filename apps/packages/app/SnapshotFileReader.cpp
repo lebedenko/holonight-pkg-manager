@@ -3,12 +3,14 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QStringList>
+#include <QtConcurrentRun>
 
 #include <utility>
 
 SnapshotFileReader::SnapshotFileReader(std::shared_ptr<const holonight_packages_domain::UpdateSnapshotStore> store,
                                        std::filesystem::path file, std::chrono::milliseconds debounce, QObject* parent)
     : QObject(parent), store_(std::move(store)), file_(std::move(file)) {
+  connect(&read_watcher_, &QFutureWatcher<Snapshot>::finished, this, &SnapshotFileReader::onReadFinished);
   debounce_.setSingleShot(true);
   debounce_.setInterval(debounce);
   connect(&debounce_, &QTimer::timeout, this, &SnapshotFileReader::readNow);
@@ -16,10 +18,7 @@ SnapshotFileReader::SnapshotFileReader(std::shared_ptr<const holonight_packages_
   connect(&watcher_, &QFileSystemWatcher::fileChanged, this, &SnapshotFileReader::onFilesystemChanged);
 }
 
-void SnapshotFileReader::start() {
-  armWatcher();
-  readNow();
-}
+void SnapshotFileReader::start() { readNow(); }
 
 // Watches the nearest existing ancestor of the file, plus the file itself and its directory once they exist, so a
 // first-ever write (or a directory created later) is noticed without polling. The writer replaces the file by
@@ -50,9 +49,6 @@ void SnapshotFileReader::armWatcher() {
       obsolete.push_back(path);
     }
   }
-  if (!obsolete.isEmpty()) {
-    watcher_.removePaths(obsolete);
-  }
   QStringList missing;
   for (const QString& path : desired) {
     if (!watched.contains(path)) {
@@ -62,28 +58,53 @@ void SnapshotFileReader::armWatcher() {
   if (!missing.isEmpty()) {
     watcher_.addPaths(missing);
   }
+  if (!obsolete.isEmpty()) {
+    watcher_.removePaths(obsolete);
+  }
 }
 
 void SnapshotFileReader::onFilesystemChanged() {
-  armWatcher();
+  superseded_ = reading_;
   debounce_.start();
 }
 
 void SnapshotFileReader::readNow() {
   debounce_.stop();
   armWatcher();
-  const auto loaded = store_->load();
-  if (!loaded || loaded->state != holonight_packages_domain::SnapshotFileState::Valid ||
-      !loaded->snapshot.has_value()) {
-    if (latest_) {
-      latest_.reset();
-      emit snapshotInvalidated();
+  if (reading_) {
+    superseded_ = true;
+    return;
+  }
+  reading_ = true;
+  read_watcher_.setFuture(QtConcurrent::run([store = store_] -> Snapshot {
+    try {
+      auto loaded = store->load();
+      if (loaded && loaded->state == holonight_packages_domain::SnapshotFileState::Valid) {
+        return std::move(loaded->snapshot);
+      }
+    } catch (...) {
+      // A failed read has the same presentation as an invalid snapshot.
+    }
+    return std::nullopt;
+  }));
+}
+
+void SnapshotFileReader::onReadFinished() {
+  reading_ = false;
+  if (std::exchange(superseded_, false)) {
+    if (!debounce_.isActive()) {
+      readNow();
     }
     return;
   }
-  if (latest_ == loaded->snapshot) {
+  auto loaded = read_watcher_.future().takeResult();
+  if (latest_ == loaded) {
     return;
   }
-  latest_ = loaded->snapshot;
-  emit snapshotRead(*latest_);
+  latest_ = std::move(loaded);
+  if (latest_) {
+    emit snapshotRead(*latest_);
+  } else {
+    emit snapshotInvalidated();
+  }
 }

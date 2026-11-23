@@ -5,6 +5,7 @@ import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import Holonight.Core
 import Holonight.Controls
+import HolonightPackages
 
 // Page title row with the online-check controls, and the quiet status line under it. Failures are shown inline in the
 // control row: no popup, dialog or notification. Everything is hidden when updateCheckModel is null or reports that
@@ -12,7 +13,7 @@ import Holonight.Controls
 ColumnLayout {
     id: root
 
-    property var updateCheckModel: null
+    property UpdateCheckModel updateCheckModel: null
     property string titleText: ""
     // Extra controls placed at the end of the title row (the Reload button).
     default property alias trailingControls: trailing.data

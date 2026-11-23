@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QSortFilterProxyModel>
 #include <QString>
+#include <QTimer>
 #include <QVariantMap>
 #include <QtQmlIntegration/qqmlintegration.h>
 
@@ -47,6 +48,8 @@ class HistoryFilterModel : public QSortFilterProxyModel {
   void reconcileCurrentRow();
 
   QString search_text_;
+  QString applied_search_;
+  QTimer search_debounce_;
   std::optional<quint32> active_sequence_;
   int current_row_ = -1;
   int count_ = 0;

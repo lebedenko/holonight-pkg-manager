@@ -3,13 +3,14 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Holonight.Core
+import HolonightPackages
 
 // The outcome: a refusal, a failure, success, cancelled, unknown or helper unavailable. The message comes from the
 // fixed message table via the controller; the changed list shows only when there is something to show.
 ColumnLayout {
     id: root
 
-    required property var controller
+    required property TransactionController controller
 
     spacing: 12
 

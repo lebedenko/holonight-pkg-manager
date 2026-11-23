@@ -73,6 +73,7 @@ TEST(UpdatesModelCheckedSnapshot, ArrivalDuringLoadIsHistoricalUntilReevaluation
   source->enqueue(snapshot(5, kNow, "obsolete"));
   source->enqueue(snapshot(1, kNow - hours(48), "current"));
   UpdatesModel model(source, nullptr, fixedClock());
+  ASSERT_TRUE(QTest::qWaitFor([&source] { return source->callCount() == 1; }, 2000));
   model.applyCheckedSnapshot(checked(5, kNow));
   EXPECT_TRUE(model.previouslyLoaded());
   EXPECT_EQ(model.updateCount(), 5);

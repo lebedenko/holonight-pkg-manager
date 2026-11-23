@@ -11,13 +11,13 @@ Item {
 
     required property InstalledPackagesModel installedPackagesModel
     // Optional TransactionController, passed down to the detail panel's Remove control.
-    property var transactionController: null
+    property TransactionController transactionController: null
 
     readonly property bool hasPackages: root.installedPackagesModel.status === InstalledPackagesModel.Loaded
                                         && root.installedPackagesModel.totalPackageCount > 0
 
     InstalledPackagesFilterModel {
-        id: filterModel
+        id: installedFilter
 
         // Default tab is TabFilter::Explicit via the C++ default member initializer (REQ-F-106).
         // Do not bind `tabFilter:` here declaratively -- assigning a scoped-enum literal directly
@@ -50,7 +50,7 @@ Item {
 
                 width: content.width
                 installedPackagesModel: root.installedPackagesModel
-                filterModel: filterModel
+                filterModel: installedFilter
             }
 
             InstalledFilterTabs {
@@ -58,7 +58,7 @@ Item {
 
                 width: content.width
                 installedPackagesModel: root.installedPackagesModel
-                filterModel: filterModel
+                filterModel: installedFilter
             }
 
             GridLayout {
@@ -80,7 +80,7 @@ Item {
                 PackageTable {
                     id: packageTable
 
-                    filterModel: filterModel
+                    filterModel: installedFilter
                     Layout.minimumHeight: 160
                     Layout.fillWidth: true
                     Layout.fillHeight: true
@@ -89,7 +89,7 @@ Item {
                 PackageDetailPanel {
                     id: packageDetail
 
-                    filterModel: filterModel
+                    filterModel: installedFilter
                     transactionController: root.transactionController
                     Layout.minimumHeight: 200
                     objectName: "packageDetailPanel"

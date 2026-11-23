@@ -4,6 +4,7 @@
 #include "history_test_entries.h"
 
 #include <QCoreApplication>
+#include <QElapsedTimer>
 #include <QMetaObject>
 #include <QQmlComponent>
 #include <QQmlEngine>
@@ -19,6 +20,7 @@
 #include <algorithm>
 #include <chrono>
 #include <gtest/gtest.h>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <utility>
@@ -299,10 +301,11 @@ TEST_F(HistoryViewTest, RefreshKeepsRowsAndSelection) {
 
 TEST_F(HistoryViewTest, SelectionFollowsProxyAfterAppendAndReset) {
   const auto day = sys_days{2026y / 11 / 23};
-  openWith({historyEntry(day, 1h, {"linux"}), historyEntry(day, 2h, {"git"})});
-  ASSERT_TRUE(QTest::qWaitFor([this] { return rowsReady(2); }, kWaitMs));
+  openWith({historyEntry(day, 0h, {"curl"}), historyEntry(day, 1h, {"linux"}), historyEntry(day, 2h, {"git"})});
+  ASSERT_TRUE(QTest::qWaitFor([this] { return rowsReady(3); }, kWaitMs));
   select(1);
   filter()->setSearchText(QStringLiteral("i"));
+  ASSERT_TRUE(QTest::qWaitFor([this] { return rowsReady(2); }, kWaitMs));
 
   HistoryReadResult delta;
   delta.append = {historyEntry(day, 3h, {"vim"})};
@@ -322,8 +325,13 @@ TEST_F(HistoryViewTest, SelectionFollowsProxyAfterAppendAndReset) {
   EXPECT_EQ(filter()->currentEntry().value("packageNames").toStringList(), QStringList{"ninja"});
   EXPECT_EQ(filter()->currentRow(), 0);
   ASSERT_TRUE(QTest::qWaitFor([this] { return item("historyList")->property("currentIndex").toInt() == 0; }, kWaitMs));
-  EXPECT_TRUE(rows()[0]->property("highlighted").toBool());
-  EXPECT_FALSE(rows()[1]->property("highlighted").toBool());
+  ASSERT_TRUE(QTest::qWaitFor(
+      [this] {
+        const auto delegates = rows();
+        return delegates.size() == 2 && delegates[0] && delegates[1] &&
+               delegates[0]->property("highlighted").toBool() && !delegates[1]->property("highlighted").toBool();
+      },
+      kWaitMs));
 }
 
 TEST_F(HistoryViewTest, DetailPanelIsReachableAtMinimumWindowSize) {
@@ -518,6 +526,46 @@ TEST_F(HistoryViewTest, ScriptletTextNeverShown) {
     }
     EXPECT_TRUE(fixed.contains(text)) << text.toStdString();
   }
+}
+
+TEST_F(HistoryViewTest, LargeHistorySearchAndDetailSelectionTiming) {
+  constexpr int entry_count = 40'000;
+  constexpr int actions_in_detail = 250;
+  std::vector<HistoryEntry> entries;
+  entries.reserve(entry_count);
+  const auto day = sys_days{2026y / 11 / 23};
+  for (int row = 0; row < entry_count; ++row) {
+    entries.push_back(historyEntry(day, std::chrono::seconds{row}, {row % 2 == 0 ? "bench-match" : "bench-other"}));
+  }
+  auto& detailed = entries[entry_count - 4];
+  for (int action = 1; action < actions_in_detail; ++action) {
+    detailed.actions.push_back({
+        .kind = HistoryActionKind::Installed,
+        .name = "detail-package-" + std::to_string(action),
+        .old_version = {},
+        .new_version = "1",
+    });
+  }
+  openWith(std::move(entries));
+  ASSERT_TRUE(QTest::qWaitFor([this] { return filter()->count() == entry_count; }, kWaitMs));
+  QElapsedTimer timer;
+  timer.start();
+  ASSERT_TRUE(item("historySearchField")->setProperty("text", QStringLiteral("bench-matc")));
+  ASSERT_TRUE(item("historySearchField")->setProperty("text", QStringLiteral("bench-match")));
+  EXPECT_EQ(filter()->searchText(), QStringLiteral("bench-match"));
+  EXPECT_EQ(filter()->count(), entry_count);
+  ASSERT_TRUE(QTest::qWaitFor([this] { return filter()->count() == entry_count / 2; }, kWaitMs));
+  ASSERT_TRUE(QMetaObject::invokeMethod(item("historyList"), "forceLayout"));
+  QCoreApplication::processEvents();
+  const auto search_ms = static_cast<double>(timer.nsecsElapsed()) / 1e6;
+  timer.restart();
+  select(1);
+  const auto detail_ms = static_cast<double>(timer.nsecsElapsed()) / 1e6;
+  EXPECT_EQ(filter()->currentEntry().value("actions").toList().size(), actions_in_detail);
+  EXPECT_TRUE(isVisible("historyDetailTitle"));
+  std::cout << "History UI with " << entry_count << " entries: search " << search_ms
+            << " ms including 150 ms debounce, detail selection " << detail_ms << " ms for " << actions_in_detail
+            << " actions\n";
 }
 
 }  // namespace

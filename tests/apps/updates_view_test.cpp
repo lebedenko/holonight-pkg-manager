@@ -3,6 +3,7 @@
 #include "HistoryModel.h"
 #include "InstalledPackagesFilterModel.h"
 #include "InstalledPackagesModel.h"
+#include "UpdateStatusPresentation.h"
 #include "UpdatesModel.h"
 #include "fake_explore_source.h"
 #include "fake_update_source.h"
@@ -13,7 +14,6 @@
 #include <QQmlComponent>
 #include <QQmlEngine>
 #include <QQmlError>
-#include <QQmlPropertyMap>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QTest>
@@ -134,7 +134,7 @@ class UpdatesViewTest : public ::testing::Test {
   }
 
   // Hosts the workspace (sidebar + both pages) instead of the bare Updates page; not placed in a window.
-  void createWorkspace(InstalledPackagesModel& installed, QObject* status_client = nullptr) {
+  void createWorkspace(InstalledPackagesModel& installed, UpdateStatusPresentation* status_client = nullptr) {
     QQmlComponent component(&engine_, qmlSource(QStringLiteral("/workspace/WorkspaceWindow.qml")));
     ASSERT_EQ(component.status(), QQmlComponent::Ready) << component.errorString().toStdString();
     explore_model_ = std::make_unique<ExploreModel>(std::make_shared<holonight_packages_testing::FakeExploreSource>());
@@ -345,26 +345,24 @@ TEST_F(UpdatesViewTest, SidebarShowsNoBadgeWithoutAStatusClient) {
 
 TEST_F(UpdatesViewTest, SidebarBadgeFollowsAvailableStatusClientCount) {
   const auto installed = loadedEmptyInstalledModel();
-  const std::unique_ptr<QQmlPropertyMap> client(QQmlPropertyMap::create());
-  client->insert(QStringLiteral("available"), false);
-  client->insert(QStringLiteral("count"), 5);
-  client->insert(QStringLiteral("state"), QStringLiteral("error"));
+  struct Status : UpdateStatusPresentation {
+    using UpdateStatusPresentation::setValues;
+  } client;
+  client.setValues(false, 5, QStringLiteral("error"));
   startModel();
-  createWorkspace(*installed, client.get());
+  createWorkspace(*installed, &client);
   EXPECT_TRUE(child("sidebarUpdatesNav")->property("badgeText").toString().isEmpty());
 
-  client->insert(QStringLiteral("available"), true);
+  client.setValues(true, 5, QStringLiteral("error"));
   EXPECT_TRUE(child("sidebarUpdatesNav")->property("badgeText").toString().isEmpty());
-  client->insert(QStringLiteral("state"), QStringLiteral("loading"));
+  client.setValues(true, 5, QStringLiteral("loading"));
   EXPECT_TRUE(child("sidebarUpdatesNav")->property("badgeText").toString().isEmpty());
-  client->insert(QStringLiteral("state"), QStringLiteral("ready"));
+  client.setValues(true, 5, QStringLiteral("ready"));
   EXPECT_EQ(child("sidebarUpdatesNav")->property("badgeText").toString(), QStringLiteral("5"));
 
-  client->insert(QStringLiteral("count"), 0);
+  client.setValues(true, 0, QStringLiteral("ready"));
   EXPECT_TRUE(child("sidebarUpdatesNav")->property("badgeText").toString().isEmpty());
-
-  client->insert(QStringLiteral("count"), 12);
-  client->insert(QStringLiteral("available"), false);
+  client.setValues(false, 12, QStringLiteral("ready"));
   EXPECT_TRUE(child("sidebarUpdatesNav")->property("badgeText").toString().isEmpty());
   destroyView();
 }

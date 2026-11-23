@@ -3,12 +3,13 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
+import HolonightPackages
 
 // The right-aligned button row shared by the pages. A button exists only when its id is in controller.actions.
 RowLayout {
     id: root
 
-    required property var controller
+    required property TransactionController controller
 
     spacing: 8
 

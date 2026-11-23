@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import HolonightPackages
 
 // Common detail layout; callers supply only the fields and sections specific to their page.
 ColumnLayout {
@@ -16,7 +17,7 @@ ColumnLayout {
     property bool showInstalledIndicator: true
     property string actionKind: "remove"
     property bool showMoreOptions: true
-    property var transactionController: null
+    property TransactionController transactionController: null
     property Component extraSections: null
     property Component footerContent: null
 

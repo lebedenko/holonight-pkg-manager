@@ -82,6 +82,7 @@ class UpdateCheckModel : public QObject {
   [[nodiscard]] std::optional<std::chrono::system_clock::time_point> fetchedAt() const;
 
   UpdateCheckClient* client_;
+  qint64 observed_snapshot_fetched_at_ = 0;
   SnapshotFileReader* reader_;
   UpdatesModel* updates_;
   Clock now_;

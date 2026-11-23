@@ -384,8 +384,10 @@ ResolvedPlan upgradePlan(int upgrades, bool keyring) {
 }
 
 TEST_F(RuntimeTransactionDialogs, TheUpdatesPageOffersUpdateSystemForAnEmptyList) {  // probeHelper + completeProbes
+  EXPECT_EQ(service_.probeCalls(), 0U);
   view_.rootObject()->setProperty("currentPage", QStringLiteral("updates"));
   settle();
+  ASSERT_EQ(service_.probeCalls(), 1U);
   service_.setVersion(2);
   service_.completeProbes();
   settle();

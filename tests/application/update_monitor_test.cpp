@@ -8,9 +8,11 @@
 #include <QTemporaryDir>
 #include <QTest>
 
+#include <atomic>
 #include <chrono>
 #include <gtest/gtest.h>
 #include <memory>
+#include <semaphore>
 #include <stdexcept>
 
 namespace holonight_packages_application {
@@ -37,6 +39,34 @@ class UpdateMonitorTest : public ::testing::Test {
  protected:
   std::shared_ptr<FakeUpdateSource> source_ = std::make_shared<FakeUpdateSource>();
 };
+
+TEST(UpdatePathWatcherTest, ManualRefreshCanRunWhileWatchDiscoveryIsHeld) {
+  struct Gate {
+    std::atomic<bool> entered{false};
+    std::binary_semaphore release{0};
+  };
+  class DiscoverySource final : public holonight_packages_domain::UpdateSource {
+   public:
+    std::shared_ptr<Gate> gate = std::make_shared<Gate>();
+
+    [[nodiscard]] std::vector<std::filesystem::path> watchPaths() const override {
+      gate->entered = true;
+      static_cast<void>(gate->release.try_acquire_for(milliseconds{5000}));
+      return {};
+    }
+    [[nodiscard]] std::expected<UpdateSnapshot, UpdateSourceError> loadUpdates() const override {
+      return snapshotWithCount(2);
+    }
+  };
+  auto source = std::make_shared<DiscoverySource>();
+  UpdateMonitor monitor(source, UpdateMonitorOptions{});
+  monitor.start();
+  ASSERT_TRUE(QTest::qWaitFor([&] { return source->gate->entered.load(); }, kWaitMs));
+  EXPECT_EQ(monitor.status().state, UpdateState::Loading);
+  monitor.refresh();
+  EXPECT_TRUE(QTest::qWaitFor([&] { return monitor.status().updateCount == 2; }, kWaitMs));
+  source->gate->release.release();
+}
 
 TEST_F(UpdateMonitorTest, StartRunsOneEvaluationAndPublishesReadyStatus) {
   source_->enqueue(snapshotWithCount(3));

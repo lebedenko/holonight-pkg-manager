@@ -17,7 +17,7 @@ Item {
     objectName: "historyPage"
 
     // Optional HistoryModel, like transactionController elsewhere; null leaves the page empty.
-    property var historyModel: null
+    property HistoryModel historyModel: null
     // True while this page is the current workspace page.
     property bool active: false
 

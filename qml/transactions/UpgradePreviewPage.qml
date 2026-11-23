@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import Holonight.Core
+import HolonightPackages
 
 // The preview of a system upgrade (system-upgrade REQ-F-082, REQ-F-083): one scrollable list with a section per kind
 // (upgrades, replacements, new packages, held back), the keyring notice, the sizes and the expiry. There is no
@@ -11,7 +12,7 @@ import Holonight.Core
 ColumnLayout {
     id: root
 
-    required property var controller
+    required property TransactionController controller
 
     spacing: 12
 

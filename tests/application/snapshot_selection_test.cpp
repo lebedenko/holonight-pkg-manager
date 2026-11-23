@@ -37,5 +37,33 @@ TEST(SnapshotSelectionTest, MissingSidesForceTheChoice) {
   EXPECT_EQ(selectFresherSnapshot(withDataAsOf(500, false), withDataAsOf(100)), SnapshotChoice::Online);
 }
 
+TEST(UpdateSnapshotStateTest, CheckedRowsAreHistoricalUntilAnOfflineEvaluationSucceeds) {
+  UpdateSnapshotState state;
+  auto checked = withDataAsOf(200);
+  checked.evaluated = true;
+  state.adoptChecked({.snapshot = checked, .fetchedAt = checked.dataAsOf});
+
+  EXPECT_TRUE(state.selected().previously_loaded);
+  EXPECT_FALSE(state.selected().evaluated);
+  EXPECT_EQ(state.selected().dataAsOf, checked.dataAsOf);
+
+  auto evaluated = withDataAsOf(100);
+  evaluated.evaluated = true;
+  state.recordEvaluation(evaluated);
+
+  EXPECT_EQ(state.selected(), evaluated);
+}
+
+TEST(UpdateSnapshotStateTest, InvalidationIsConsumedOnceForAnInFlightEvaluation) {
+  UpdateSnapshotState state;
+  state.invalidateInFlightEvaluation(false);
+  EXPECT_FALSE(state.takeInvalidation());
+
+  state.invalidateInFlightEvaluation(true);
+  state.invalidateInFlightEvaluation(true);
+  EXPECT_TRUE(state.takeInvalidation());
+  EXPECT_FALSE(state.takeInvalidation());
+}
+
 }  // namespace
 }  // namespace holonight_packages_application

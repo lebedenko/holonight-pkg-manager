@@ -20,8 +20,13 @@ qt_add_executable(holonight-packages
   app/UpdatesModel.cpp
   app/ExploreModel.h
   app/ExploreModel.cpp
+  app/UpdateStatusPresentation.h
   app/UpdateStatusClient.h
   app/UpdateStatusClient.cpp
+  app/DBusUpdateSubscription.cpp
+  app/DBusUpdateSubscription.h
+  app/DBusOwnerTracker.cpp
+  app/DBusOwnerTracker.h
   app/UpdateCheckClient.h
   app/UpdateCheckClient.cpp
   app/DBusUpdateCheckClient.h
@@ -71,7 +76,7 @@ qt_add_qml_module(holonight-packages
   QML_FILES ${HOLONIGHT_PACKAGES_QML_FILES}
   SOURCES app/InstalledPackagesModel.h app/InstalledPackagesFilterModel.h app/UpdatesModel.h app/ExploreModel.h
           app/HistoryModel.h app/HistoryFilterModel.h
-          app/UpdateStatusClient.h app/UpdateCheckModel.h app/TransactionController.h app/TransactionRowModel.h
+          app/UpdateStatusPresentation.h app/UpdateCheckModel.h app/TransactionController.h app/TransactionRowModel.h
   RESOURCES ${HOLONIGHT_PACKAGES_RESOURCES}
 )
 
