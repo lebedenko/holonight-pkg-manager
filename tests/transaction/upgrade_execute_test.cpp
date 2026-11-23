@@ -5,6 +5,7 @@
 #include "upgrade_fixture.h"
 
 #include <cerrno>
+#include <fstream>
 #include <gmock/gmock.h>
 
 namespace holonight_packages_transaction::upgrade_testing {
@@ -46,6 +47,33 @@ class UpgradeExecuteTest : public UpgradeTest {
     conf();
   }
 
+  // The fixture pacman.log, one string per line.
+  [[nodiscard]] std::vector<std::string> logLines() const {
+    std::vector<std::string> lines;
+    std::ifstream log(world_.base() / "pacman.log");
+    for (std::string line; std::getline(log, line);) {
+      lines.push_back(line);
+    }
+    return lines;
+  }
+
+  // Checks that the log holds exactly `expected` upgrade tags, each with nothing after "(uid N)" and each followed
+  // directly by the start line of its own libalpm transaction.
+  void expectUpgradeTags(std::size_t expected) const {
+    const std::vector<std::string> lines = logLines();
+    std::size_t tags = 0;
+    for (std::size_t index = 0; index < lines.size(); ++index) {
+      if (!lines[index].contains("[HOLONIGHT]")) {
+        continue;
+      }
+      ++tags;
+      EXPECT_TRUE(lines[index].ends_with("[HOLONIGHT] Running 'upgrade' (uid 1000)")) << lines[index];
+      ASSERT_LT(index + 1, lines.size());
+      EXPECT_TRUE(lines[index + 1].ends_with("[ALPM] transaction started")) << lines[index + 1];
+    }
+    EXPECT_EQ(tags, expected);
+  }
+
   [[nodiscard]] std::size_t cachedPackages() const {
     std::size_t count = 0;
     for (const auto& entry : fs::directory_iterator(world_.cacheDir())) {
@@ -54,6 +82,26 @@ class UpgradeExecuteTest : public UpgradeTest {
     return count;
   }
 };
+
+TEST_F(UpgradeExecuteTest, AnUpgradeWritesOneHistoryTag) {
+  SKIP_UNLESS_FRESH_GPGME();
+  threeUpgrades();
+  callerUid = 1000;
+  const auto result = execute(prepared());
+  ASSERT_EQ(result.outcome, ExecutionOutcome::Succeeded) << codeName(result.failure.code);
+  expectUpgradeTags(1);
+}
+
+TEST_F(UpgradeExecuteTest, AKeyringUpgradeWritesOneHistoryTagPerCommit) {
+  SKIP_UNLESS_FRESH_GPGME();
+  keyringAndApp();
+  callerUid = 1000;
+  const auto result = execute(prepared());
+  ASSERT_EQ(result.outcome, ExecutionOutcome::Succeeded) << codeName(result.failure.code);
+  EXPECT_EQ(world_.installedVersions(),
+            (std::map<std::string, std::string>{{"app", "2.0-1"}, {"archlinux-keyring", "2.0-1"}}));
+  expectUpgradeTags(2);
+}
 
 TEST_F(UpgradeExecuteTest, KeyringOnlyCompletesWithNoMainChanges) {
   SKIP_UNLESS_FRESH_GPGME();

@@ -1,5 +1,6 @@
 add_library(holonight_packages_application STATIC
   src/explore_search.cpp
+  src/history_presentation.cpp
   src/package_list_use_case.cpp
   src/idle_monitor.cpp
   src/orphan_package_filter.cpp

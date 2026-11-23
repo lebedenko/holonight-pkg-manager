@@ -3,12 +3,14 @@ include(GoogleTest)
 # Libalpm-free, Qt Quick-free checks executable (REQ-NF-007). Keep it fast: every test has a 10 s TIMEOUT.
 add_executable(test_holonight_packages_checks
   checks_main.cpp
+  domain/history_source_test.cpp
   domain/update_checker_test.cpp
   domain/transaction_error_test.cpp
   domain/transaction_plan_test.cpp
   domain/transaction_request_test.cpp
   domain/transaction_service_test.cpp
   application/fake_clock_test.cpp
+  application/history_presentation_test.cpp
   application/transaction_ports_test.cpp
   application/plan_store_test.cpp
   application/plan_service_test.cpp
@@ -56,6 +58,9 @@ add_executable(test_holonight_packages
   backends/alpm_package_source_test.cpp
   backends/alpm_update_checker_test.cpp
   backends/alpm_update_source_test.cpp
+  backends/pacman_log_history_source_test.cpp
+  backends/pacman_log_parser_test.cpp
+  backends/pacman_log_timestamp_test.cpp
   backends/repository_catalog_test.cpp
   backends/file_repo_fixture_test.cpp
   backends/pacman_config_test.cpp
@@ -89,6 +94,7 @@ add_executable(test_holonight_packages
   apps/helper_wire_test.cpp
   apps/transaction_messages_test.cpp
   apps/model_list_refresh_test.cpp
+  apps/history_model_refresh_test.cpp
   apps/explore_view_test.cpp
   apps/snapshot_file_reader_test.cpp
   apps/update_check_client_test.cpp
@@ -101,6 +107,8 @@ add_executable(test_holonight_packages
   ${PROJECT_SOURCE_DIR}/apps/packages/app/UpdatesModel.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/ExploreModel.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/ModelListRefresh.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/HistoryModel.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/HistoryFilterModel.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/HelperWire.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/TransactionMessages.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/DataFreshness.cpp
@@ -191,6 +199,11 @@ qt_add_executable(test_runtime_controls
   runtime/main.cpp runtime/test_runtime_controls.cpp
   runtime/test_transaction_dialogs.cpp
   apps/installed_packages_view_test.cpp
+  history/history_view_test.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/HistoryModel.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/HistoryModel.h
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/HistoryFilterModel.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/HistoryFilterModel.h
   ${PROJECT_SOURCE_DIR}/apps/packages/app/TransactionController.cpp
   ${PROJECT_SOURCE_DIR}/apps/packages/app/TransactionController.h
   ${PROJECT_SOURCE_DIR}/apps/packages/app/TransactionRowModel.cpp
@@ -230,6 +243,7 @@ qt_add_resources(test_runtime_controls runtime_style_config
   FILES "${PROJECT_SOURCE_DIR}/apps/packages/qtquickcontrols2.conf")
 target_include_directories(test_runtime_controls PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/application" "${CMAKE_CURRENT_SOURCE_DIR}/apps"
+  "${CMAKE_CURRENT_SOURCE_DIR}/history" "${CMAKE_CURRENT_SOURCE_DIR}/support"
   "${PROJECT_SOURCE_DIR}/apps/packages/app")
 target_link_libraries(test_runtime_controls PRIVATE
   holonight_package_icons
@@ -269,6 +283,7 @@ add_executable(test_holonight_transaction
   transaction/execution_test.cpp
   transaction/fixture_root_test.cpp
   transaction/gpg_keyring_test.cpp
+  transaction/history_tag_test.cpp
   transaction/hook_preview_test.cpp
   transaction/plan_resolver_test.cpp
   transaction/question_policy_test.cpp
@@ -278,10 +293,14 @@ add_executable(test_holonight_transaction
 )
 target_include_directories(test_holonight_transaction PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/support
+  ${CMAKE_CURRENT_SOURCE_DIR}/application
   ${PROJECT_SOURCE_DIR}/src/transaction/src)
 target_compile_features(test_holonight_transaction PRIVATE cxx_std_23)
+# The history tag test runs PlanService over the real engine and reads the fixture log through the History adapter
+# (transaction-history DESIGN 7.4, T-027).
 target_link_libraries(test_holonight_transaction PRIVATE
-  GTest::gtest GTest::gmock holonight_transaction_test_support PkgConfig::Alpm holonight_packages_pacman_config)
+  GTest::gtest GTest::gmock holonight_transaction_test_support PkgConfig::Alpm holonight_packages_pacman_config
+  holonight_packages_application holonight_packages_backends)
 add_executable(holonight_lock_finalization_child transaction/lock_finalization_child.cpp)
 target_include_directories(holonight_lock_finalization_child PRIVATE
   ${PROJECT_SOURCE_DIR}/src/transaction/src)
@@ -357,6 +376,40 @@ gtest_discover_tests(test_holonight_packages_transactions
 # this binary does not depend on QtDBus directly (its own NEEDED entries).
 add_test(NAME holonight_packages_transactions_no_qtdbus
   COMMAND sh -c "! readelf -d \"$1\" | grep -q 'NEEDED.*libQt6DBus'" sh $<TARGET_FILE:test_holonight_packages_transactions>)
+
+# The History view-model and page against a fake HistorySource. It links no backends target: the view-model reaches
+# history only through the domain port (transaction-history REQ-F-034).
+add_executable(test_holonight_packages_history
+  history/main.cpp
+  history/history_model_test.cpp
+  history/history_filter_model_test.cpp
+  history/history_view_test.cpp
+  history/sidebar_history_test.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/HistoryModel.cpp
+  ${PROJECT_SOURCE_DIR}/apps/packages/app/HistoryFilterModel.cpp
+)
+set_target_properties(test_holonight_packages_history PROPERTIES AUTOMOC ON)
+qt_add_resources(test_holonight_packages_history history_workspace_assets
+  PREFIX "/HolonightPackages"
+  BASE "${PROJECT_SOURCE_DIR}"
+  FILES "${PROJECT_SOURCE_DIR}/assets/holonight-pkg-manager.svg")
+target_include_directories(test_holonight_packages_history PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/history
+  ${CMAKE_CURRENT_SOURCE_DIR}/support
+  ${PROJECT_SOURCE_DIR}/apps/packages/app)
+target_compile_features(test_holonight_packages_history PRIVATE cxx_std_23)
+target_compile_definitions(test_holonight_packages_history PRIVATE
+  HOLONIGHT_QML_IMPORT_PATH="${HOLONIGHT_QML_IMPORT_PATH}"
+  HOLONIGHT_QML_SOURCE_DIR="${PROJECT_SOURCE_DIR}/qml")
+target_link_libraries(test_holonight_packages_history PRIVATE
+  GTest::gtest GTest::gmock Qt6::Gui Qt6::Quick Qt6::Qml Qt6::Test Qt6::Concurrent
+  holonight_packages_application holonight_packages_domain)
+gtest_discover_tests(test_holonight_packages_history
+  TEST_PREFIX "holonight_history."
+  DISCOVERY_MODE PRE_TEST
+  PROPERTIES TIMEOUT 30 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;LD_LIBRARY_PATH=$<TARGET_FILE_DIR:HoloNight::Config>")
+add_test(NAME holonight_packages_history_no_libalpm
+  COMMAND sh -c "! ldd \"$1\" | grep -q libalpm" sh $<TARGET_FILE:test_holonight_packages_history>)
 
 # The GUI's helper client against a scripted fake helper on a private dbus-daemon. Every test here needs the daemon,
 # so with it missing no test in this binary passes (REQ-NF-005, REQ-NF-006).
@@ -448,3 +501,18 @@ add_test(NAME installed_icon_consumer
 add_test(NAME build_identity COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/test_build_identity.py")
 add_test(NAME build_diagnostics COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/test_build_diagnostics.py"
   "$<TARGET_FILE:holonight-packages>" "$<TARGET_FILE:holonight-packaged>" "$<TARGET_FILE:holonight-package-helper>")
+
+# transaction-history REQ-NF-001..003: parse budgets and the event-latency probe. The target always builds; it is a
+# test only in Release builds (`task bench:history`), so Debug runs never time it.
+add_executable(test_holonight_history_bench
+  backends/history_bench_test.cpp
+  support/history_log_generator.cpp
+)
+target_include_directories(test_holonight_history_bench PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/support)
+target_compile_features(test_holonight_history_bench PRIVATE cxx_std_23)
+target_link_libraries(test_holonight_history_bench PRIVATE
+  GTest::gtest Qt6::Core Qt6::Concurrent holonight_packages_backends)
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  add_test(NAME holonight_history_bench COMMAND test_holonight_history_bench)
+  set_tests_properties(holonight_history_bench PROPERTIES LABELS bench TIMEOUT 120)
+endif()

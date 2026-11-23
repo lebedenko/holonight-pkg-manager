@@ -4,6 +4,7 @@
 #include "commit_gate.h"
 #include "event_mapper.h"
 #include "failure_reporter.h"
+#include "history_tag.h"
 #include "holonight_packages_domain/transaction_engine.h"
 #include "holonight_packages_transaction/transaction_seams.h"
 #include "scratch_dbpath.h"
@@ -62,6 +63,7 @@ class UpgradeDriver {
   std::unique_ptr<EventMapper> mapper_;
   std::vector<holonight_packages_domain::ChangedPackage> changed_;
   std::vector<holonight_packages_domain::WarningToken> warnings_;
+  HistoryTagWriter tag_writer_;
   int injectedFault_ = 0;
   bool keyDeferred_ = false;
 };

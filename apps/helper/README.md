@@ -71,6 +71,29 @@ with status 0 without releasing the mutex. Worker acquisition, release and handl
 If the worker released first, a foreign replacement lock is preserved. Filesystem removal errors do not prevent exit.
 After an external kill, check that no package manager is running before removing a stale lock by hand.
 
+## The history tag in the pacman log
+
+Just before each libalpm commit the helper writes one line into the pacman log (`LogFile` in `pacman.conf`) that names
+the run and the Unix user who asked for it, so the GUI's History page can tell its own runs from pacman's
+(`docs/sdd/transaction-history/`):
+
+```
+[2026-11-23T10:05:18+0200] [HOLONIGHT] Running 'install foo bar' (uid N)
+[2026-11-23T10:07:02+0200] [HOLONIGHT] Running 'remove foo' (uid N)
+[2026-11-23T10:09:40+0200] [HOLONIGHT] Running 'upgrade' (uid N)
+```
+
+- The format is fixed: `Running '<install|remove> <names…>' (uid N)` or `Running 'upgrade' (uid N)`, nothing after the
+  closing parenthesis. The names are the validated request names; no free text is part of the line.
+- `N` is the uid of the bus connection that owns the plan, never a D-Bus argument.
+- It is written after the last re-validation and the cancel check, right before `alpm_trans_commit`: once per Execute
+  (a corrupt-package retry writes no second line), and once per libalpm commit of an upgrade, so an upgrade with a
+  keyring step writes two lines. A refused, denied or cancelled-before-commit run writes nothing.
+- A failed write is a journal warning (`the history tag was not written to the pacman log; the transaction continues`)
+  and the transaction runs as usual; History then shows that run with origin `unknown`.
+- `alpm_logaction` is called in `src/transaction/src/history_tag.cpp` only (layering rule H-014). The D-Bus interface
+  is unchanged.
+
 ## Building and testing
 
 ```bash

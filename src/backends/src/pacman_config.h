@@ -42,4 +42,18 @@ struct PacmanConfig {
 // inflate the update count.
 [[nodiscard]] std::expected<PacmanConfig, std::string> parsePacmanConfig(const std::filesystem::path& path);
 
+// Where pacman writes its log and keeps its database lock, for the read-only history source (transaction-history
+// REQ-F-005, OQ-H1). Kept apart from PacmanConfig on purpose: the helper's PacmanSettings must not carry a database
+// path (pacman_settings.h).
+struct PacmanLogLocations {
+  // [options] LogFile and DBPath as written; empty means "use the built-in default".
+  std::filesystem::path log_file;
+  std::filesystem::path db_path;
+
+  bool operator==(const PacmanLogLocations&) const = default;
+};
+
+// Same file rules and errors as parsePacmanConfig.
+[[nodiscard]] std::expected<PacmanLogLocations, std::string> parsePacmanLogLocations(const std::filesystem::path& path);
+
 }  // namespace holonight_packages_backends

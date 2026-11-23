@@ -111,7 +111,8 @@ UpgradeDriver::UpgradeDriver(const TransactionConfig& config, LogSink journal, c
       workspace_(&workspace),
       context_(&context),
       scratch_{.root = workspace.scratch_root},
-      reporter_(approved.upgrade ? plannedNames(*approved.upgrade) : std::vector<std::string>{}) {}
+      reporter_(approved.upgrade ? plannedNames(*approved.upgrade) : std::vector<std::string>{}),
+      tag_writer_(seams, journal_) {}
 
 void UpgradeDriver::observe(std::string_view stage) const {
   if (seams_->observe) {
@@ -512,6 +513,10 @@ ExecutionResult UpgradeDriver::commitStep(AlpmSession& live, const char* step, s
   if (fault(std::string(step) + "-commit") != 0) {
     return partial(step);
   }
+  // One tag per libalpm commit, so a keyring step and the main step each get their own (transaction-history
+  // REQ-F-001, DESIGN 7.3).
+  static_cast<void>(
+      tag_writer_.write(handle, holonight_packages_domain::PlanAction::Upgrade, {}, context_->caller_uid));
   live.clearLog();
   alpm_list_t* data = nullptr;
   const int status = alpm_trans_commit(handle, &data);

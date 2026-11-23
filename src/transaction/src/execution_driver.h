@@ -6,6 +6,7 @@
 #include "error_mapping.h"
 #include "event_mapper.h"
 #include "failure_reporter.h"
+#include "history_tag.h"
 #include "holonight_packages_domain/transaction_engine.h"
 #include "holonight_packages_transaction/transaction_seams.h"
 
@@ -55,6 +56,8 @@ class ExecutionDriver {
   alpm_handle_t* handle_ = nullptr;
   std::vector<holonight_packages_domain::ChangedPackage> changed_;
   std::vector<holonight_packages_domain::WarningToken> warnings_;
+  HistoryTagWriter tag_writer_;
+  bool tag_written_ = false;
 };
 
 }  // namespace holonight_packages_transaction

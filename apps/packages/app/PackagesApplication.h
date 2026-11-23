@@ -7,6 +7,7 @@
 class QQuickView;
 class PackageIconResolver;
 class ExploreModel;
+class HistoryModel;
 class InstalledPackagesModel;
 class UpdatesModel;
 class UpdateStatusClient;
@@ -45,6 +46,7 @@ class PackagesApplication : public QGuiApplication {
   std::unique_ptr<SnapshotFileReader> snapshot_reader_;
   std::unique_ptr<UpdateCheckModel> update_check_model_;
   std::unique_ptr<DBusTransactionService> transaction_service_;
+  std::unique_ptr<HistoryModel> history_model_;
   std::unique_ptr<ModelListRefresh> list_refresh_;
   std::unique_ptr<TransactionController> transaction_controller_;
   std::unique_ptr<QQuickView> view_;

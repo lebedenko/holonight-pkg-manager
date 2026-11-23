@@ -93,8 +93,10 @@ Item {
             HnNavigationDelegate {
                 objectName: "sidebarHistoryNav"
                 title: qsTr("History")
-                enabled: false
+                checked: root.currentPage === "history"
                 Layout.fillWidth: true
+
+                onClicked: root.pageRequested("history")
 
                 leadingContent: HnLabel {
                     role: HnTypographyRole.Body

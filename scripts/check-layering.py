@@ -9,7 +9,7 @@ Scans the sources under DIR (default: the repository) and prints one line per vi
     RULE path:line: offending text
 
 Exits 1 when anything is found. With --base, additionally checks (against that git ref) that the pre-existing D-Bus
-`Updates` interface block is byte-identical.
+`Updates` interface block is byte-identical and that apps/packaged and apps/helper/dbus are unchanged (Y-004).
 """
 from __future__ import annotations
 
@@ -154,6 +154,33 @@ RULES: list[Rule] = [
          include=("src/domain", "src/application", "apps/packages", "qml"),
          exclude=("apps/packages/app/DBusTransactionService.h", "apps/packages/app/DBusTransactionService.cpp",
                   "apps/packages/app/HelperWire.h", "apps/packages/app/HelperWire.cpp")),
+    # transaction-history: the log adapter and its port stay Qt-free and libalpm-free (REQ-C-001, REQ-F-034).
+    Rule("Y-001", "the pacman log adapter is Qt-free and libalpm-free",
+         rx(r"#\s*include\s*[<\"](?:Q|alpm)"),
+         include=("src/backends/src",),
+         name_prefixes=("pacman_log_",)),
+    Rule("Y-001", "the pacman log adapter and the history port are Qt-free and libalpm-free",
+         rx(r"#\s*include\s*[<\"](?:Q|alpm)"),
+         include=("src/backends/include/holonight_packages_backends/pacman_log_history_source.h",
+                  "src/domain/include/holonight_packages_domain/history_source.h",
+                  "src/domain/src/history_source.cpp")),
+    Rule("Y-002", "the History view-model and page reach history through the port only and never the helper",
+         rx(r"pacman_log_history_source|DBusTransactionService|HelperWire|TransactionController|"
+            r"org\.holonight\.PackageHelper1"),
+         include=("apps/packages/app",),
+         name_prefixes=("History",)),
+    Rule("Y-002", "the History view-model and page reach history through the port only and never the helper",
+         rx(r"pacman_log_history_source|DBusTransactionService|HelperWire|TransactionController|"
+            r"org\.holonight\.PackageHelper1"),
+         include=("qml/history",)),
+    Rule("Y-005", "no D-Bus interface gains a history method or property (REQ-F-035)",
+         rx(r"History"),
+         include=("apps/packaged/dbus", "apps/helper/dbus"),
+         suffixes=(".xml",)),
+    Rule("H-014", "only the history tag writer writes to the pacman log (transaction-history REQ-F-001)",
+         rx(r"\balpm_logaction\b"),
+         include=("src", "apps"),
+         exclude=("src/transaction/src/history_tag.cpp",)),
     Rule("F-007", "the installed-versus-available comparison exists once",
          rx(r"\balpm_pkg_vercmp\b"),
          include=("src", "apps"),
@@ -198,7 +225,52 @@ def scan(root: Path) -> list[str]:
                     found.append(f"{rule.rule_id} {relative}:{number}: {line.strip()}")
     found.extend(check_carve_out(root))
     found.extend(check_key_material(root))
+    found.extend(check_history_sidebar(root))
     return found
+
+
+def delegate_blocks(text: str, type_name: str) -> list[tuple[int, str]]:
+    """The `type_name { ... }` blocks of a QML file, in order, as (line number, block text), by brace matching."""
+    blocks: list[tuple[int, str]] = []
+    for match in re.finditer(rf"\b{type_name}\s*\{{", text):
+        depth = 0
+        for index in range(match.end() - 1, len(text)):
+            if text[index] == "{":
+                depth += 1
+            elif text[index] == "}":
+                depth -= 1
+                if depth == 0:
+                    blocks.append((text.count("\n", 0, match.start()) + 1, text[match.start():index + 1]))
+                    break
+    return blocks
+
+
+SIDEBAR = "qml/workspace/Sidebar.qml"
+FOOTER_ENTRIES = {"sidebarSettingsNav"}
+
+
+def check_history_sidebar(root: Path) -> list[str]:
+    """Y-003: History is an enabled page entry that requests the history page, and the last one (REQ-F-023)."""
+    path = root / SIDEBAR
+    if not path.exists():
+        return []
+    entries: list[tuple[int, str, str]] = []
+    for line, block in delegate_blocks(path.read_text(encoding="utf-8"), "HnNavigationDelegate"):
+        name = re.search(r'objectName:\s*"(\w+)"', block)
+        entries.append((line, name.group(1) if name else "", block))
+    pages = [entry for entry in entries if entry[1] not in FOOTER_ENTRIES]
+    history = [entry for entry in pages if entry[1] == "sidebarHistoryNav"]
+    if not history:
+        return [f"Y-003 {SIDEBAR}:1: no sidebarHistoryNav page entry"]
+    line, _, block = history[0]
+    problems: list[str] = []
+    if re.search(r"\benabled:\s*false\b", block):
+        problems.append(f"Y-003 {SIDEBAR}:{line}: sidebarHistoryNav is disabled")
+    if 'pageRequested("history")' not in block:
+        problems.append(f"Y-003 {SIDEBAR}:{line}: sidebarHistoryNav does not request the history page")
+    if pages[-1][1] != "sidebarHistoryNav":
+        problems.append(f"Y-003 {SIDEBAR}:{line}: sidebarHistoryNav is not the last page entry")
+    return problems
 
 
 KEY_FILE_SUFFIXES = {".gpg", ".kbx", ".asc"}
@@ -255,6 +327,11 @@ def check_against_base(root: Path, base: str) -> list[str]:
         print(f"check-layering: base ref '{base}' not found; skipping the base comparison", file=sys.stderr)
         return []
     problems: list[str] = []
+    # transaction-history REQ-F-035: holonight-packaged and the helper's D-Bus interface stay untouched.
+    for frozen in ("apps/packaged", "apps/helper/dbus"):
+        changed = git(root, "diff", "--name-only", base, "--", frozen).stdout.split()
+        changed += git(root, "ls-files", "--others", "--exclude-standard", "--", frozen).stdout.split()
+        problems.extend(f"Y-004 {name}: changed against {base}; {frozen} must stay unchanged" for name in changed)
     xml = "apps/packaged/dbus/org.holonight.Packages1.Updates.xml"
     before = git(root, "show", f"{base}:{xml}")
     if before.returncode == 0 and (root / xml).exists():

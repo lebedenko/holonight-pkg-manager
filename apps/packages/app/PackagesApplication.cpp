@@ -3,6 +3,7 @@
 #include "DBusTransactionService.h"
 #include "DBusUpdateCheckClient.h"
 #include "ExploreModel.h"
+#include "HistoryModel.h"
 #include "InstalledPackagesModel.h"
 #include "ModelListRefresh.h"
 #include "PackageIconResolver.h"
@@ -18,6 +19,7 @@
 #include "holonight_packages_backends/alpm_package_source.h"
 #include "holonight_packages_backends/alpm_update_source.h"
 #include "holonight_packages_backends/pacman_defaults.h"
+#include "holonight_packages_backends/pacman_log_history_source.h"
 #include "holonight_packages_persistence/cache_locations.h"
 #include "holonight_packages_persistence/json_update_snapshot_store.h"
 
@@ -66,6 +68,13 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
       });
   explore_model_ = std::make_unique<ExploreModel>(std::move(explore_source));
 
+  // Transaction history from the pacman log, read-only and only once the History page is first opened
+  // (transaction-history REQ-F-017, REQ-F-036).
+  holonight_packages_backends::PacmanLogHistorySourceOptions history_options;
+  history_options.pacman_conf_path = holonight_packages_backends::kDefaultPacmanConfPath;
+  history_model_ = std::make_unique<HistoryModel>(
+      std::make_shared<holonight_packages_backends::PacmanLogHistorySource>(std::move(history_options)));
+
   icon_resolver_ = std::make_unique<PackageIconResolver>();
   installed_packages_model_->setIconResolver(icon_resolver_.get());
   updates_model_->setIconResolver(icon_resolver_.get());
@@ -96,6 +105,7 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
   });
   list_refresh_ = std::make_unique<ModelListRefresh>(*installed_packages_model_, *explore_model_);
   list_refresh_->setUpgradeTargets(updates_model_.get(), update_check_client_.get());
+  list_refresh_->setHistoryTarget(history_model_.get());
   transaction_controller_ = std::make_unique<TransactionController>(*transaction_service_, *list_refresh_);
 
   view_ = std::make_unique<QQuickView>();
@@ -117,6 +127,7 @@ PackagesApplication::PackagesApplication(int& argc, char** argv) : QGuiApplicati
       {QStringLiteral("installedPackagesModel"), QVariant::fromValue(installed_packages_model_.get())},
       {QStringLiteral("updatesModel"), QVariant::fromValue(updates_model_.get())},
       {QStringLiteral("exploreModel"), QVariant::fromValue(explore_model_.get())},
+      {QStringLiteral("historyModel"), QVariant::fromValue(history_model_.get())},
       {QStringLiteral("updateStatusClient"), QVariant::fromValue(update_status_client_.get())},
       {QStringLiteral("updateCheckModel"), QVariant::fromValue(update_check_model_.get())},
       {QStringLiteral("transactionController"), QVariant::fromValue(transaction_controller_.get())},
@@ -140,6 +151,7 @@ PackagesApplication::~PackagesApplication() {
   view_.reset();
   transaction_controller_.reset();
   list_refresh_.reset();
+  history_model_.reset();
   transaction_service_.reset();
   update_check_model_.reset();
   snapshot_reader_.reset();

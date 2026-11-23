@@ -157,6 +157,64 @@ TEST(PacmanConfig, ParsesTheHelperOptions) {
   EXPECT_TRUE(config->disable_sandbox_syscalls);
 }
 
+TEST(PacmanLogLocations, ParsesLogFileAndDatabasePath) {
+  const ConfigFile file("[options]\nLogFile = /srv/log/pacman.log\nDBPath = /srv/pacman/db/  \nHoldPkg = x\n");
+  const auto locations = parsePacmanLogLocations(file.path());
+  ASSERT_TRUE(locations.has_value()) << locations.error();
+  EXPECT_EQ(locations->log_file, "/srv/log/pacman.log");
+  EXPECT_EQ(locations->db_path, "/srv/pacman/db/");
+}
+
+TEST(PacmanLogLocations, EmptyWhenNotSetInOptions) {
+  const ConfigFile file("[options]\nCheckSpace\n[core]\nDBPath = /ignored\nLogFile = /ignored\n");
+  const auto locations = parsePacmanLogLocations(file.path());
+  ASSERT_TRUE(locations.has_value()) << locations.error();
+  EXPECT_EQ(*locations, PacmanLogLocations{});
+}
+
+TEST(PacmanLogLocations, NestedGlobsInheritSectionAndKeepFirstPaths) {
+  const QTemporaryDir directory;
+  ASSERT_TRUE(directory.isValid());
+  const std::filesystem::path root(directory.path().toStdString());
+  const auto relative = std::filesystem::relative(root);
+  std::filesystem::create_directory(root / "conf");
+  const auto config = root / "conf/pacman.conf";
+  std::ofstream(config) << "[options]\nInclude = " << (relative / "*.inc").string()
+                        << "\nLogFile = /parent.log\nDBPath = /parent/db\n";
+  std::ofstream(root / "20.inc") << "LogFile = /second.log\nDBPath = /second/db\n";
+  std::ofstream(root / "10.inc") << "LogFile = /first.log\nInclude = " << (relative / "nested.conf").string() << '\n';
+  std::ofstream(root / "nested.conf") << "DBPath = /nested/db\n[core]\nLogFile = /ignored.log\n";
+
+  const auto locations = parsePacmanLogLocations(config);
+  ASSERT_TRUE(locations.has_value()) << locations.error();
+  EXPECT_EQ(locations->log_file, "/first.log");
+  EXPECT_EQ(locations->db_path, "/nested/db");
+
+  const auto helper_config = parsePacmanConfig(config);
+  ASSERT_TRUE(helper_config.has_value()) << helper_config.error();
+  EXPECT_EQ(helper_config->log_file, "/parent.log");
+}
+
+TEST(PacmanLogLocations, UnreadableIncludeAndExcessiveNestingAreErrors) {
+  const ConfigFile file("[options]\n");
+  std::ofstream(file.path(), std::ios::app)
+      << "Include = " << (file.path().parent_path() / "missing*").string() << '\n';
+  const auto missing = parsePacmanLogLocations(file.path());
+  ASSERT_FALSE(missing.has_value());
+  EXPECT_NE(missing.error().find("missing"), std::string::npos);
+
+  std::ofstream(file.path()) << "[options]\nInclude = " << file.path().string() << '\n';
+  const auto recursive = parsePacmanLogLocations(file.path());
+  ASSERT_FALSE(recursive.has_value());
+  EXPECT_NE(recursive.error().find("depth"), std::string::npos);
+}
+
+TEST(PacmanLogLocations, MissingFileIsAnError) {
+  const auto locations = parsePacmanLogLocations("/nonexistent/holonight/pacman.conf");
+  ASSERT_FALSE(locations.has_value());
+  EXPECT_NE(locations.error().find("/nonexistent/holonight/pacman.conf"), std::string::npos);
+}
+
 TEST(PacmanConfig, DisableSandboxImpliesBothHalvesAndBadNumbersFallBackToZero) {
   const ConfigFile file("[options]\nDisableSandbox\nParallelDownloads = lots\n");
   const auto config = parsePacmanConfig(file.path());

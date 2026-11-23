@@ -52,7 +52,8 @@ ExecutionDriver::ExecutionDriver(const TransactionConfig& config, LogSink journa
           names.push_back(change.name);
         }
         return names;
-      }()) {}
+      }()),
+      tag_writer_(seams, journal_) {}
 
 void ExecutionDriver::observe(std::string_view stage) const {
   if (seams_->observe) {
@@ -219,6 +220,12 @@ ExecutionResult ExecutionDriver::commit(AlpmSession& session) {
   // A cancel that arrived while the re-resolution ran never starts the commit.
   if (gate_.cancelRequested()) {
     return ExecutionResult::cancelled();
+  }
+  // The history tag goes in once per Execute, just before libalpm's own "transaction started" line: a retry after a
+  // corrupt package file commits the same request again and writes no second tag (transaction-history REQ-F-001).
+  if (!tag_written_) {
+    tag_written_ = true;
+    static_cast<void>(tag_writer_.write(handle_, request_->action, request_->names, context_->caller_uid));
   }
   alpm_list_t* data = nullptr;
   const int status = alpm_trans_commit(handle_, &data);

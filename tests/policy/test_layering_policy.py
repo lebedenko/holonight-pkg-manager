@@ -19,6 +19,25 @@ BASELINE = {
     "CLAUDE.md": f"# Notes\n{CARVE_OUT}.\n",
 }
 
+SIDEBAR_OK = """Item {
+    ColumnLayout {
+        HnNavigationDelegate {
+            objectName: "sidebarInstalledNav"
+            onClicked: root.pageRequested("installed")
+        }
+        HnNavigationDelegate {
+            objectName: "sidebarHistoryNav"
+            onClicked: root.pageRequested("history")
+            leadingContent: HnLabel { rawText: "x" }
+        }
+    }
+    HnNavigationDelegate {
+        objectName: "sidebarSettingsNav"
+        enabled: false
+    }
+}
+"""
+
 # name -> (expected rule id or None, files overlaid on the baseline)
 CASES = {
     # Legitimate code that must pass.
@@ -154,6 +173,46 @@ CASES = {
     "u002-per-package-upgrade": ("U-002", {"apps/packages/app/TransactionController.h": "Q_INVOKABLE void upgradePackage();\n"}),
     "u002-standalone-refresh-in-qml": ("U-002", {"qml/updates/UpdatesView.qml": "onClicked: controller.refreshDatabases()\n"}),
     "u003-focus-automation": ("U-003", {"tests/transactions/x_test.cpp": "item->forceActiveFocus();\n"}),
+    # transaction-history: the log adapter, the History view-model, the sidebar entry and the log writer.
+    "legit-history-adapter-clean": (None, {
+        "src/backends/src/pacman_log_parser.cpp": "#include \"pacman_log_parser.h\"\n#include <string_view>\n",
+        "src/backends/include/holonight_packages_backends/pacman_log_history_source.h": "#include <filesystem>\n",
+        "src/domain/include/holonight_packages_domain/history_source.h": "#include <chrono>\n",
+        "src/backends/src/alpm_update_checker.cpp": "#include <alpm.h>\n#include <QString>\n",
+    }),
+    "y001-qt-include-in-history-adapter": ("Y-001", {
+        "src/backends/src/pacman_log_history_source.cpp": "#include <QString>\n"}),
+    "y001-alpm-include-in-history-adapter": ("Y-001", {"src/backends/src/pacman_log_parser.cpp": "#include <alpm.h>\n"}),
+    "y001-qt-include-in-history-port": ("Y-001", {
+        "src/domain/include/holonight_packages_domain/history_source.h": "#include <QDateTime>\n"}),
+    "legit-history-model-uses-port": (None, {
+        "apps/packages/app/HistoryModel.cpp": "#include \"holonight_packages_domain/history_source.h\"\n",
+        "apps/packages/app/PackagesApplication.cpp": "#include \"holonight_packages_backends/pacman_log_history_source.h\"\n",
+    }),
+    "y002-adapter-header-in-view-model": ("Y-002", {
+        "apps/packages/app/HistoryModel.cpp": "#include \"holonight_packages_backends/pacman_log_history_source.h\"\n"}),
+    "y002-helper-client-in-view-model": ("Y-002", {
+        "apps/packages/app/HistoryFilterModel.cpp": "#include \"TransactionController.h\"\n"}),
+    "y002-helper-call-in-history-page": ("Y-002", {
+        "qml/history/HistoryToolbar.qml": "Item { property var c: TransactionController }\n"}),
+    "legit-history-sidebar": (None, {"qml/workspace/Sidebar.qml": SIDEBAR_OK}),
+    "y003-history-nav-disabled": ("Y-003", {"qml/workspace/Sidebar.qml": SIDEBAR_OK.replace(
+        'onClicked: root.pageRequested("history")', 'enabled: false')}),
+    "y003-history-nav-not-last": ("Y-003", {"qml/workspace/Sidebar.qml": SIDEBAR_OK.replace(
+        '"sidebarInstalledNav"', '"sidebarPlaceholder"').replace(
+        '"sidebarHistoryNav"', '"sidebarInstalledNav"', 1).replace(
+        '"sidebarPlaceholder"', '"sidebarHistoryNav"').replace(
+        'pageRequested("installed")', 'pageRequested("history")', 1)}),
+    "y003-history-nav-missing": ("Y-003", {"qml/workspace/Sidebar.qml": "Item {}\n"}),
+    "y005-history-in-dbus-xml": ("Y-005", {
+        "apps/packaged/dbus/org.holonight.Packages1.Updates.xml": '<property name="HistoryCount" type="u"/>\n'}),
+    "legit-logaction-in-history-tag": (None, {
+        "src/transaction/src/history_tag.cpp": 'alpm_logaction(handle, "HOLONIGHT", "%s\\n", text);\n'}),
+    "h014-logaction-in-driver": ("H-014", {
+        "src/transaction/src/execution_driver.cpp": 'alpm_logaction(handle_, "HOLONIGHT", "x\\n");\n'}),
+    "h014-logaction-in-gui": ("H-014", {"apps/packages/app/Leak.cpp": "alpm_logaction(h, p, f);\n"}),
+    "c005-trans-in-history-source": ("C-005", {
+        "src/backends/src/pacman_log_parser.cpp": "alpm_trans_release(handle);\n"}),
     # One comparison loop.
     "f007-second-vercmp": ("F-007", {"src/backends/src/other.cpp": "if (alpm_pkg_vercmp(a, b) > 0) {}\n"}),
 }
@@ -181,13 +240,56 @@ def run(case: str, expected: str | None, overlay: dict[str, str | None]) -> str 
     return None
 
 
+def git(root: Path, *args: str) -> None:
+    subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@example.invalid", *args], cwd=root, check=True,
+                   capture_output=True)
+
+
+def base_cases() -> list[str]:
+    """Y-004: with --base, a change in apps/packaged or apps/helper/dbus fails and other changes pass."""
+    failures: list[str] = []
+    changes = {
+        "legit-base-unchanged-frozen-dirs": (None, "apps/packages/app/HistoryModel.cpp"),
+        "y004-packaged-changed": ("Y-004", "apps/packaged/UpdateService.cpp"),
+        "y004-helper-dbus-changed": ("Y-004", "apps/helper/dbus/org.holonight.PackageHelper1.xml"),
+        "y004-packaged-new-file": ("Y-004", "apps/packaged/HistoryService.cpp"),
+    }
+    for case, (expected, changed) in changes.items():
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            files = dict(BASELINE)
+            files.update({
+                "apps/packaged/UpdateService.cpp": "int x;\n",
+                "apps/helper/dbus/org.holonight.PackageHelper1.xml": "<node/>\n",
+                "apps/packages/app/HistoryModel.cpp": "int y;\n",
+            })
+            for relative, content in files.items():
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content)
+            git(root, "init", "-q")
+            git(root, "add", "-A")
+            git(root, "commit", "-q", "-m", "base")
+            target = root / changed
+            target.write_text((target.read_text() if target.exists() else "") + "// changed\n")
+            result = subprocess.run([sys.executable, str(CHECKER), "--root", str(root), "--base", "HEAD"],
+                                    capture_output=True, text=True)
+        fired = any(line.startswith("Y-004 ") for line in result.stdout.splitlines())
+        if expected is None and result.returncode != 0:
+            failures.append(f"{case}: expected a clean run, got:\n{result.stdout}{result.stderr}")
+        if expected is not None and not fired:
+            failures.append(f"{case}: expected Y-004, got:\n{result.stdout}{result.stderr}")
+    return failures
+
+
 def main() -> int:
     failures = [message for case, (expected, overlay) in CASES.items() if (message := run(case, expected, overlay))]
+    failures += base_cases()
     for message in failures:
         print(message, file=sys.stderr)
     if failures:
         return 1
-    print(f"Layering policy fixtures passed ({len(CASES)} cases)")
+    print(f"Layering policy fixtures passed ({len(CASES)} cases, 4 base cases)")
     return 0
 
 

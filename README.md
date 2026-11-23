@@ -19,8 +19,11 @@ private copy of the databases, shows every upgrade, replacement, new and held-ba
 the system only after you confirm. An install that would need a newer version of an installed package (a partial
 upgrade) is refused, and its dialog offers **Update system…**. The Updates page also has an opt-in **Check now**
 control, and `holonight-packaged` checks online on a schedule: it refreshes a private copy of the sync databases under
-`$XDG_CACHE_HOME/holonight-packages/checkdb`, never the system databases. Per-package updates, AUR support and
-transaction history are not implemented; see `apps/packages/README.md` for the manual verification checklist.
+`$XDG_CACHE_HOME/holonight-packages/checkdb`, never the system databases. A read-only **History** page lists past
+transactions from the pacman log (`LogFile` in `pacman.conf`, normally `/var/log/pacman.log`), newest first, with
+their origin (`pacman`, or `Packages` for runs tagged by the helper), package changes, hooks and warnings; it never
+writes to the log. Per-package updates and AUR support are not implemented; see `apps/packages/README.md` for the
+manual verification checklist.
 
 ## Requirements
 
@@ -80,12 +83,12 @@ The code is a modular monolith with dependency direction toward the domain:
 
 | Target | Responsibility |
 | --- | --- |
-| `holonight_packages_domain` | `Package`/`PendingUpdate`/`SyncPackage` models, `PackageSource`/`UpdateSource`/`ExploreSource` ports, source/trust/install-reason concepts |
-| `holonight_packages_application` | Use cases and pure helpers (e.g. `PackageListUseCase`, `summarizeUpdates`, `ExploreIndex`/`searchPackages`) — no Qt/QML types |
-| `holonight_packages_backends` | Native package-manager adapters (`AlpmPackageSource`, `AlpmUpdateSource`, `AlpmExploreSource`, via libalpm) |
+| `holonight_packages_domain` | `Package`/`PendingUpdate`/`SyncPackage`/`HistoryEntry` models, `PackageSource`/`UpdateSource`/`ExploreSource`/`HistorySource` ports, source/trust/install-reason concepts |
+| `holonight_packages_application` | Use cases and pure helpers (e.g. `PackageListUseCase`, `summarizeUpdates`, `ExploreIndex`/`searchPackages`, history presentation) — no Qt/QML types |
+| `holonight_packages_backends` | Native package-manager adapters (`AlpmPackageSource`, `AlpmUpdateSource`, `AlpmExploreSource` via libalpm; `PacmanLogHistorySource` reads the pacman log) |
 | `holonight_packages_snapshot_store` | libalpm-free JSON store for the last online update snapshot (`update-snapshot.json` under the XDG cache) |
 | `holonight_packages_advisor` | Deterministic update assessment and evidence collection |
-| `holonight_packages_persistence` | Cache (e.g. `AlpmConnectionCache`), settings, and transaction history |
+| `holonight_packages_persistence` | Cache (e.g. `AlpmConnectionCache`) and settings |
 | `holonight_packages_platform` | D-Bus, notifications, systemd, and desktop integration |
 | `holonight-packages` | Qt Quick user interface, QML-facing view-models, and composition root |
 

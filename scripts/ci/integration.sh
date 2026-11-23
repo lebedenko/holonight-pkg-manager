@@ -38,3 +38,7 @@ PY_ASSERT
     grep -Fx "Exec=$stage/bin/holonight-packaged" "$service"
     test -x "$(sed -n 's/^Exec=//p' "$service")"
     cp -a "$stage" /work/output/stage
+    # transaction-history REQ-NF-001..003: the History parse budgets in a Release build (the same as task bench:history).
+    cmake --preset dev -B build/bench -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON
+    cmake --build build/bench --target test_holonight_history_bench
+    ctest --test-dir build/bench -L bench --output-on-failure

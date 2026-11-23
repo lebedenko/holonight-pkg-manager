@@ -1,6 +1,6 @@
 # holonight-packages
 
-The Qt Quick GUI of HoloNight Packages. It shows the Installed, Updates and Explore pages and can **install** one
+The Qt Quick GUI of HoloNight Packages. It shows the Installed, Updates, Explore and History pages and can **install** one
 official-repository package (Explore details panel), **remove** one (Installed details panel), or **update the whole
 system** ("Update system…" on the Updates page). It never changes
 packages itself: every change is a request to the privileged `holonight-package-helper` on the system bus
@@ -50,6 +50,40 @@ Where the code lives:
 | View-model, row models, message table | `apps/packages/app/TransactionController.*`, `TransactionRowModel.*`, `TransactionMessages.*` |
 | Window close guard | `apps/packages/app/WindowCloseGuard.*` |
 | Dialogs | `qml/transactions/` |
+
+## The History page
+
+History is the last page entry of the sidebar. It lists the transactions recorded in the pacman log (`LogFile` in
+`/etc/pacman.conf`, by default `/var/log/pacman.log`), newest first and grouped by local day. The design and the
+requirements are in `docs/sdd/transaction-history/`. History follows nested `Include` directives in pacman order
+and takes the first `LogFile` and `DBPath` definitions in `[options]`.
+
+- **Read-only.** The page only reads the log (opened `O_RDONLY`) and `pacman.conf`; it writes no file, setting or cache,
+  has no action that changes a package, and never calls the helper.
+- **When it reads.** Nothing is read at startup. The first open runs one full parse on a worker thread and shows a
+  loading state; later refreshes (the refresh button, or after any install, remove or upgrade from this app) read only
+  the appended bytes and keep the rows and the selection. A shrunk or replaced log (rotation) is parsed again in full
+  and selects the newest transaction that matches the current search.
+- **Rows.** Time, origin, a summary such as `12 upgraded · 1 installed · 2 removed`, and the status: `Completed`,
+  `In progress` (the transaction is still open and pacman's lock is held) or `Interrupted`. Origin is `Packages` for
+  runs of this app by the current user (`Packages · <user>` for another user's), `pacman` for runs of pacman itself,
+  and `unknown` when the log names neither (`apps/helper/README.md` describes the `[HOLONIGHT]` tag).
+- **Filter.** The search field keeps the transactions that touched a package whose name contains the text, ignoring
+  case.
+- **Details.** Each package with `old → new` versions, the hooks that ran before and after the transaction, the
+  warnings and errors, and for pacman runs the command line. Scriptlet output is never shown. On short windows,
+  scroll the page below the toolbar to reach the detail panel.
+- **Empty state.** A missing or unreadable log, `pacman.conf`, or included configuration file is shown inline with its reason, never as a dialog.
+
+| Part | Code |
+|---|---|
+| Log reader (Qt-free, libalpm-free) | `src/backends/src/pacman_log_*`, `holonight_packages_backends/pacman_log_history_source.h` |
+| Port and labels | `holonight_packages_domain/history_source.h`, `holonight_packages_application/history_presentation.h` |
+| View-models | `apps/packages/app/HistoryModel.*`, `HistoryFilterModel.*` |
+| Page | `qml/history/` |
+
+`task bench:history` measures the parse budgets in a Release build; `HOLONIGHT_HISTORY_BENCH_LOG=<log>` adds a
+measurement of a real log to it.
 
 ## Running it with the helper
 

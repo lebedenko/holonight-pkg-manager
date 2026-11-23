@@ -14,6 +14,11 @@ target_include_directories(holonight_packages_pacman_config PUBLIC ${CMAKE_CURRE
 target_compile_features(holonight_packages_pacman_config PUBLIC cxx_std_23)
 
 add_library(holonight_packages_backends STATIC
+  src/pacman_log_history_source.cpp
+  src/pacman_log_parser.h
+  src/pacman_log_parser.cpp
+  src/pacman_log_timestamp.h
+  src/pacman_log_timestamp.cpp
   src/alpm_package_conversion.h
   src/alpm_error_mapping.h
   src/alpm_error_mapping.cpp

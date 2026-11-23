@@ -1,6 +1,7 @@
 #include "ModelListRefresh.h"
 
 #include "ExploreModel.h"
+#include "HistoryModel.h"
 #include "InstalledPackagesModel.h"
 #include "UpdateCheckClient.h"
 #include "UpdatesModel.h"
@@ -16,6 +17,15 @@ ModelListRefresh::~ModelListRefresh() = default;
 void ModelListRefresh::refreshAfterOutcome() {
   refreshInstalled();
   refreshExplore();
+  refreshHistory();  // an upgrade reaches it through refreshAfterUpgrade() -> refreshAfterOutcome(), once
+}
+
+void ModelListRefresh::setHistoryTarget(HistoryModel* history) { history_ = history; }
+
+void ModelListRefresh::refreshHistory() {
+  if (history_ != nullptr) {
+    history_->refreshIfLoaded();
+  }
 }
 
 void ModelListRefresh::setUpgradeTargets(UpdatesModel* updates, UpdateCheckClient* check) {

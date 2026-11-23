@@ -77,6 +77,12 @@ tasks:
     cmds:
     - cmake --preset release
     - cmake --build --preset release
+  bench:history:
+    desc: Release benchmark of the History parse budgets and event latency (transaction-history REQ-NF-001..003)
+    cmds:
+    - cmake --preset dev -B build/bench -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON {{.CLI_ARGS}}
+    - cmake --build build/bench --target test_holonight_history_bench
+    - ctest --test-dir build/bench -L bench --output-on-failure
   format:
     desc: Format with the pinned container tools
     cmds:

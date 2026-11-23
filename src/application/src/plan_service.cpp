@@ -327,6 +327,7 @@ void PlanService::startRunning() {
   auto plan = std::make_shared<ResolvedPlan>(active_->plan);
   auto workspace = std::make_shared<std::optional<holonight_packages_domain::UpgradeWorkspace>>(active_->workspace);
   ExecutionContext context;
+  context.caller_uid = active_->owner.uid;  // from the bus connection, never from a D-Bus argument
   context.progress = [this, plan_id, owner](const holonight_packages_domain::ProgressUpdate& update) {
     if (progressForward_) {
       progressForward_(owner, plan_id, update);

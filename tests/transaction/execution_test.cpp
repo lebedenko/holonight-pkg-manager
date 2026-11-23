@@ -529,12 +529,21 @@ TEST_F(ExecutionTest, ACorruptPackageIsDownloadedAgainOnceAndTheRetryUsesAFreshL
       lockAtResolved.push_back(fs::exists(world_.lockPath()));
     }
   };
-  const ExecutionResult result = run(approved);
+  ExecutionContext context;
+  context.caller_uid = 1000;
+  const ExecutionResult result = run(approved, context);
   ASSERT_EQ(result.outcome, ExecutionOutcome::Succeeded) << transactionErrorName(result.failure.code);
   EXPECT_EQ(fetch.packageFetches(), 2);
   EXPECT_EQ(lockAtResolved, (std::vector<bool>{true, true}));  // each attempt re-resolves under the lock
   EXPECT_TRUE(world_.isInstalled("app"));
   EXPECT_FALSE(fs::exists(world_.lockPath()));
+  // Both attempts commit the same request: the history tag is written once (transaction-history DESIGN 7.3).
+  std::ifstream log(world_.base() / "pacman.log");
+  int tags = 0;
+  for (std::string line; std::getline(log, line);) {
+    tags += line.contains("[HOLONIGHT] Running 'install app' (uid 1000)") ? 1 : 0;
+  }
+  EXPECT_EQ(tags, 1);
 }
 
 TEST_F(ExecutionTest, ASecondCorruptionFailsWithAnEmptyChangedListAndIsNotRetriedAgain) {

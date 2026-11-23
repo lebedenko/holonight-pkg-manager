@@ -203,6 +203,18 @@ TEST_F(PlanServiceTest, ExpiredPlansReplyPlanExpiredOnceAndThenPlanNotFound) {
   EXPECT_THAT(authorizer.requests(), ::testing::IsEmpty());
 }
 
+// transaction-history REQ-F-001: the uid for the pacman log tag is the plan owner's bus connection uid.
+TEST_F(PlanServiceTest, ExecuteCarriesTheOwnersUidToTheEngine) {
+  std::optional<std::uint32_t> seen;
+  engine.executeScript = [&seen](const auto&, const auto&, const ExecutionContext& context) {
+    seen = context.caller_uid;
+    return ExecutionResult::succeeded({});
+  };
+  const PlanId plan_id = preparedId(":1.11");
+  ASSERT_TRUE(execute(":1.11", plan_id).has_value());
+  EXPECT_EQ(seen, std::optional<std::uint32_t>(1001));
+}
+
 TEST_F(PlanServiceTest, ASuccessfulExecuteConsumesThePlan) {
   const PlanId plan_id = preparedId();
   engine.executeResult = ExecutionResult::succeeded({

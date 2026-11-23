@@ -7,9 +7,11 @@
 #include "holonight_packages_domain/transaction_result.h"
 #include "holonight_packages_domain/upgrade_plan.h"
 
+#include <cstdint>
 #include <expected>
 #include <filesystem>
 #include <functional>
+#include <optional>
 #include <vector>
 
 namespace holonight_packages_domain {
@@ -35,6 +37,9 @@ struct ExecutionContext {
   ProgressSink progress;
   // Called once with the control when the execution starts and once with nullptr when it ends.
   std::function<void(ExecutionControl*)> control_changed;
+  // The Unix user of the bus connection that owns the plan (transaction-history REQ-F-001). The engine writes it into
+  // the pacman log tag before each commit; empty writes no tag.
+  std::optional<std::uint32_t> caller_uid;
 };
 
 // A prepared system upgrade: the preview and the guard snapshot of the live sync databases (system-upgrade DESIGN 4.2).

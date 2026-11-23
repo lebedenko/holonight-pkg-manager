@@ -23,6 +23,8 @@ add_library(holonight_packages_transaction STATIC
   src/execution_driver.cpp
   src/failure_reporter.cpp
   src/guard_snapshot.cpp
+  src/history_tag.h
+  src/history_tag.cpp
   src/promotion.cpp
   src/scratch_dbpath.cpp
   src/sync_refresher.cpp

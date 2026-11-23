@@ -36,6 +36,10 @@ edits. Final umbrella integration uses its gitlinks; never substitute sibling mo
 Provider sources are built with ordinary CMake into a disposable prefix. QMarkdown is
 an independently installed package in the shared image and is not owned by our installer.
 
+`task bench:history` configures a Release build in `build/bench` and runs the History parse budgets (CTest label
+`bench`; the bench is registered only in Release builds, so it never runs from `task test`). Pass extra CMake
+arguments after `--`. Set `HOLONIGHT_HISTORY_BENCH_LOG=/var/log/pacman.log` to also time a real log, read-only.
+
 Routine fixes need tests and a commit explanation. Substantial designs use one SDD;
 cross-project work uses one umbrella contract note. Keep execution logs out of Git.
 

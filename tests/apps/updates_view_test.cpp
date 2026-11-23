@@ -1,4 +1,6 @@
 #include "ExploreModel.h"
+#include "HistoryFilterModel.h"
+#include "HistoryModel.h"
 #include "InstalledPackagesFilterModel.h"
 #include "InstalledPackagesModel.h"
 #include "UpdatesModel.h"
@@ -74,6 +76,9 @@ class UpdatesViewTest : public ::testing::Test {
                                              QStringLiteral("Provided by the test"));
     qmlRegisterUncreatableType<ExploreModel>("HolonightPackages", 1, 0, "ExploreModel",
                                              QStringLiteral("Provided by the test"));
+    qmlRegisterUncreatableType<HistoryModel>("HolonightPackages", 1, 0, "HistoryModel",
+                                             QStringLiteral("Provided by the test"));
+    qmlRegisterType<HistoryFilterModel>("HolonightPackages", 1, 0, "HistoryFilterModel");
   }
 
   void SetUp() override { rejectQmlWarnings(engine_); }

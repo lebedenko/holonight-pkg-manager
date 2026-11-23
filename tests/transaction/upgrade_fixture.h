@@ -216,6 +216,7 @@ class UpgradeTest : public ::testing::Test {
   // A context that records progress and keeps the published control.
   [[nodiscard]] ExecutionContext recordingContext() {
     ExecutionContext context;
+    context.caller_uid = callerUid;
     context.progress = [this](const ProgressUpdate& update) {
       const std::scoped_lock lock(stagesMutex_);
       progress_.push_back(update);
@@ -304,6 +305,8 @@ class UpgradeTest : public ::testing::Test {
   std::function<int(const std::string&, const std::string&, bool)> fetchSeam;
   std::function<std::optional<std::uint64_t>(const fs::path&)> freeSpace;
   bool promoteByCopy = false;
+  // The caller uid an Execute passes to the engine; the history tag carries it (transaction-history T-026).
+  std::optional<std::uint32_t> callerUid;
   std::atomic<ExecutionControl*> control_{nullptr};
   mutable std::mutex stagesMutex_;
   std::vector<std::string> stages_;

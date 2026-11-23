@@ -10,6 +10,10 @@ qt_add_executable(holonight-packages
   app/InstalledPackagesModel.cpp
   app/InstalledPackagesFilterModel.h
   app/InstalledPackagesFilterModel.cpp
+  app/HistoryModel.h
+  app/HistoryModel.cpp
+  app/HistoryFilterModel.h
+  app/HistoryFilterModel.cpp
   app/DataFreshness.h
   app/DataFreshness.cpp
   app/UpdatesModel.h
@@ -66,6 +70,7 @@ qt_add_qml_module(holonight-packages
   NO_IMPORT_SCAN
   QML_FILES ${HOLONIGHT_PACKAGES_QML_FILES}
   SOURCES app/InstalledPackagesModel.h app/InstalledPackagesFilterModel.h app/UpdatesModel.h app/ExploreModel.h
+          app/HistoryModel.h app/HistoryFilterModel.h
           app/UpdateStatusClient.h app/UpdateCheckModel.h app/TransactionController.h app/TransactionRowModel.h
   RESOURCES ${HOLONIGHT_PACKAGES_RESOURCES}
 )

@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Holonight.Core
 import HolonightPackages
 import "../explore"
+import "../history"
 import "../packages"
 import "../transactions"
 import "../updates"
@@ -19,10 +20,12 @@ Rectangle {
     property var updateCheckModel: null
     // Optional: the install/remove view-model. Null leaves the Install and Remove controls disabled and shows no dialog.
     property var transactionController: null
+    // Optional: the History page model (transaction-history). Null leaves the History page empty.
+    property var historyModel: null
 
     // Installed stays the landing page until the Updates page gains an advisor and update actions.
     property string currentPage: "installed"
-    readonly property var pageIndex: ({ installed: 0, updates: 1, explore: 2 })
+    readonly property var pageIndex: ({ installed: 0, updates: 1, explore: 2, history: 3 })
 
     width: 1360
     height: 890
@@ -70,6 +73,12 @@ Rectangle {
                 objectName: "explorePage"
                 exploreModel: root.exploreModel
                 transactionController: root.transactionController
+            }
+
+            HistoryView {
+                objectName: "historyPage"
+                historyModel: root.historyModel
+                active: root.currentPage === "history"
             }
         }
     }

@@ -8,8 +8,10 @@ class InstalledPackagesModel;
 class ExploreModel;
 class UpdatesModel;
 class UpdateCheckClient;
+class HistoryModel;
 
-// Re-reads the Installed list and the Explore index after a transaction outcome (REQ-F-019, DESIGN section 9).
+// Re-reads the Installed list, the Explore index and the opened History page after a transaction outcome (REQ-F-019,
+// DESIGN section 9; transaction-history REQ-F-031).
 // Both models are single-flight: a refresh requested while a load runs would be dropped and the list could keep
 // showing pre-transaction content. So a request that arrives during a load is repeated once the load ends.
 class ModelListRefresh final : public QObject, public holonight_packages_application::PackageListRefresh {
@@ -30,10 +32,13 @@ class ModelListRefresh final : public QObject, public holonight_packages_applica
 
   // The Updates list and the update-check client that a system upgrade refreshes. Either may stay null.
   void setUpgradeTargets(UpdatesModel* updates, UpdateCheckClient* check);
+  // The History page model; may stay null. It queues its own repeat and reads nothing before the page was opened.
+  void setHistoryTarget(HistoryModel* history);
 
  private:
   void refreshInstalled();
   void refreshExplore();
+  void refreshHistory();
   void onInstalledStatusChanged();
   void onExploreStateChanged();
   void onUpdatesStateChanged();
@@ -45,4 +50,5 @@ class ModelListRefresh final : public QObject, public holonight_packages_applica
   UpdatesModel* updates_ = nullptr;
   UpdateCheckClient* check_ = nullptr;
   bool updates_pending_ = false;
+  HistoryModel* history_ = nullptr;
 };
